@@ -1,0 +1,10 @@
+backups/
+frontend/certs/
+backend/uploads/
+backend/.env
+.env
+*.pem
+__pycache__/
+*.pyc
+*.pyo
+

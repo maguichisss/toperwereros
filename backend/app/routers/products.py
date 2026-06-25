@@ -1,0 +1,99 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models import Product, Category, Color
+from app.schemas import ProductCreate, ProductResponse
+
+router = APIRouter()
+
+
+@router.get("", response_model=list[ProductResponse])
+def list_products(category_id: int | None = None, db: Session = Depends(get_db)):
+    q = db.query(Product).join(Category)
+    if category_id:
+        q = q.filter(Product.category_id == category_id)
+    return q.order_by(Product.created_at.desc()).all()
+
+
+@router.get("/{product_id}", response_model=ProductResponse)
+def get_product(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(404, "Product not found")
+    return product
+
+
+@router.post("", response_model=ProductResponse, status_code=201)
+def create_product(data: ProductCreate, db: Session = Depends(get_db)):
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(400, "Name is required")
+    code = data.code.strip()
+    if not code:
+        raise HTTPException(400, "Code is required")
+    if data.price is None or data.price < 0:
+        raise HTTPException(400, "Valid price is required")
+    category = db.query(Category).filter(Category.id == data.category_id).first()
+    if not category:
+        raise HTTPException(400, "Category not found")
+    colors = []
+    if data.color_ids:
+        colors = db.query(Color).filter(Color.id.in_(data.color_ids)).all()
+        if len(colors) != len(data.color_ids):
+            raise HTTPException(400, "One or more colors not found")
+    product = Product(
+        name=name,
+        code=code,
+        stock=data.stock,
+        description=data.description,
+        price=data.price,
+        image_url=data.image_url,
+        category_id=data.category_id,
+        colors=colors,
+    )
+    db.add(product)
+    db.commit()
+    db.refresh(product)
+    return product
+
+
+@router.put("/{product_id}", response_model=ProductResponse)
+def update_product(product_id: int, data: ProductCreate, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(404, "Product not found")
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(400, "Name is required")
+    if data.price is None or data.price < 0:
+        raise HTTPException(400, "Valid price is required")
+    if data.category_id and not db.query(Category).filter(Category.id == data.category_id).first():
+        raise HTTPException(400, "Category not found")
+    code = data.code.strip()
+    if not code:
+        raise HTTPException(400, "Code is required")
+    colors = product.colors
+    if data.color_ids is not None:
+        colors = db.query(Color).filter(Color.id.in_(data.color_ids)).all()
+        if len(colors) != len(data.color_ids):
+            raise HTTPException(400, "One or more colors not found")
+    product.name = name
+    product.code = code
+    product.stock = data.stock
+    product.description = data.description
+    product.price = data.price
+    product.image_url = data.image_url
+    product.category_id = data.category_id
+    product.colors = colors
+    db.commit()
+    db.refresh(product)
+    return product
+
+
+@router.delete("/{product_id}", status_code=204)
+def delete_product(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(404, "Product not found")
+    db.delete(product)
+    db.commit()
