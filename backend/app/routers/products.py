@@ -31,6 +31,9 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db)):
     code = data.code.strip()
     if not code:
         raise HTTPException(400, "Code is required")
+    existing = db.query(Product).filter(Product.code == code).first()
+    if existing:
+        raise HTTPException(400, f"Ya existe un producto con ese código: '{existing.name}'")
     if data.price is None or data.price < 0:
         raise HTTPException(400, "Valid price is required")
     category = db.query(Category).filter(Category.id == data.category_id).first()
@@ -72,6 +75,9 @@ def update_product(product_id: int, data: ProductCreate, db: Session = Depends(g
     code = data.code.strip()
     if not code:
         raise HTTPException(400, "Code is required")
+    existing = db.query(Product).filter(Product.code == code, Product.id != product_id).first()
+    if existing:
+        raise HTTPException(400, f"Ya existe un producto con ese código: '{existing.name}'")
     colors = product.colors
     if data.color_ids is not None:
         colors = db.query(Color).filter(Color.id.in_(data.color_ids)).all()

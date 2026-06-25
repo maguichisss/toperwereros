@@ -6,9 +6,11 @@ export default function BarcodeScanner({ onDetected, onCancel }) {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const scannerRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cameraReady, setCameraReady] = useState(false);
+  const [noCamera, setNoCamera] = useState(false);
   const [borderColor, setBorderColor] = useState('');
 
   useEffect(() => {
@@ -38,7 +40,17 @@ export default function BarcodeScanner({ onDetected, onCancel }) {
 
         if (!stopped) setCameraReady(true);
       } catch {
-        onCancel();
+        const el = document.getElementById('_html5qr_temp') || document.createElement('div');
+        el.id = '_html5qr_temp';
+        el.style.display = 'none';
+        if (!el.parentNode) document.body.appendChild(el);
+        try {
+          const scanner = new Html5Qrcode('_html5qr_temp', {
+            formatsToSupport: Object.values(Html5QrcodeSupportedFormats).filter(v => typeof v === 'number')
+          });
+          scannerRef.current = scanner;
+        } catch {}
+        if (!stopped) setNoCamera(true);
       }
     }
 
@@ -96,41 +108,84 @@ export default function BarcodeScanner({ onDetected, onCancel }) {
     setLoading(false);
   }
 
+  async function handleFileScan(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLoading(true);
+    setError('');
+    try {
+      const decoded = await scannerRef.current.scanFile(file, false);
+      if (decoded) {
+        onDetected(decoded);
+        return;
+      }
+      setError('No se encontró código de barras');
+    } catch {
+      setError('No se encontró código de barras');
+    }
+    setLoading(false);
+  }
+
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal barcode-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Escanear código de barras</h2>
-        <div
-          className="scanner-viewfinder"
-          style={{
-            border: borderColor ? `3px solid ${borderColor}` : 'none',
-            transition: 'border-color 0.2s'
-          }}
-        >
-          {!cameraReady && !error && (
-            <div className="scanner-loading">Iniciando cámara...</div>
-          )}
-          <video ref={videoRef} playsInline muted style={!cameraReady ? { display: 'none' } : {}} />
-          <canvas ref={canvasRef} style={{ display: 'none' }} />
-        </div>
-        {loading && (
-          <p style={{ textAlign: 'center', color: '#555', marginTop: '0.5rem' }}>
-            Leyendo código de barras...
-          </p>
+
+        {noCamera ? (
+          <div style={{ padding: '1rem 0', textAlign: 'center' }}>
+            <p style={{ marginBottom: '1rem', color: '#555' }}>
+              Cámara no disponible. Selecciona una imagen que contenga un código de barras:
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileScan}
+              disabled={loading}
+            />
+            {loading && (
+              <p style={{ marginTop: '0.5rem', color: '#555' }}>
+                Leyendo código de barras...
+              </p>
+            )}
+          </div>
+        ) : (
+          <>
+            <div
+              className="scanner-viewfinder"
+              style={{
+                border: borderColor ? `3px solid ${borderColor}` : 'none',
+                transition: 'border-color 0.2s'
+              }}
+            >
+              {!cameraReady && !error && (
+                <div className="scanner-loading">Iniciando cámara...</div>
+              )}
+              <video ref={videoRef} playsInline muted style={!cameraReady ? { display: 'none' } : {}} />
+              <canvas ref={canvasRef} style={{ display: 'none' }} />
+            </div>
+            {loading && (
+              <p style={{ textAlign: 'center', color: '#555', marginTop: '0.5rem' }}>
+                Leyendo código de barras...
+              </p>
+            )}
+            <div className="camera-controls" style={{ marginTop: '0.5rem' }}>
+              <button
+                type="button"
+                className="shutter-btn"
+                disabled={loading || !cameraReady}
+                onClick={handleCapture}
+              />
+            </div>
+          </>
         )}
+
         {error && (
           <p className="error-text" style={{ textAlign: 'center', marginTop: '0.5rem' }}>
             {error}
           </p>
         )}
-        <div className="camera-controls" style={{ marginTop: '0.5rem' }}>
-          <button
-            type="button"
-            className="shutter-btn"
-            disabled={loading || !cameraReady}
-            onClick={handleCapture}
-          />
-        </div>
+
         <div className="form-actions" style={{ marginTop: '0.5rem' }}>
           <button type="button" className="btn btn-secondary" onClick={onCancel}>
             Cancelar

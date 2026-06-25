@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { productsApi, uploadApi, colorsApi } from '../api/client.js';
 import ColorSwatches from './ColorSwatches.jsx';
 import CameraCapture from './CameraCapture.jsx';
 import BarcodeScanner from './BarcodeScanner.jsx';
+import Toast from './Toast.jsx';
 
 export default function ProductForm({ product, categories, onSave, onCancel }) {
   const [name, setName] = useState(product?.name ?? '');
@@ -20,7 +21,9 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
   const [selectedColorIds, setSelectedColorIds] = useState(
     product?.colors?.map((c) => c.id) ?? []
   );
-
+  const codeRef = useRef(null);
+  const nameRef = useRef(null);
+  const priceRef = useRef(null);
   useEffect(() => {
     colorsApi.list().then(setColors).catch(() => {});
   }, []);
@@ -28,11 +31,11 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    if (!name.trim()) return setError('El nombre es obligatorio');
-    if (!code.trim()) return setError('Código requerido');
+    if (!name.trim()) { setError('El nombre es obligatorio'); nameRef.current?.focus(); return; }
+    if (!code.trim()) { setError('Código requerido'); codeRef.current?.focus(); return; }
     if (!price || isNaN(Number(price)) || Number(price) < 0)
-      return setError('Precio válido requerido');
-    if (!categoryId) return setError('Categoría requerida');
+      { setError('Precio válido requerido'); priceRef.current?.focus(); return; }
+    if (!categoryId) { setError('Categoría requerida'); return; }
 
     try {
       const data = {
@@ -53,6 +56,9 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
       onSave();
     } catch (err) {
       setError(err.message);
+      if (err.message.toLowerCase().includes('código') || err.message.toLowerCase().includes('codigo')) {
+        codeRef.current?.focus();
+      }
     }
   }
 
@@ -62,7 +68,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
   }
 
   function handleBarcode(code) {
-    setCode(code.replace(/[^0-9]/g, ''));
+    setCode(code.replace(/[^A-Za-z0-9-]/g, ''));
     setShowScanner(false);
   }
 
@@ -76,10 +82,10 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
             <label>Código</label>
             <div className="code-input-wrap">
               <input
-                type="number"
-                step="1"
+                ref={codeRef}
+                type="text"
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))}
+                onChange={(e) => setCode(e.target.value.replace(/[^A-Za-z0-9-]/g, ''))}
               />
               <button type="button" className="btn-scan" onClick={() => setShowScanner(true)} title="Escanear código de barras">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -92,15 +98,16 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
           <div className="form-group">
             <label>Nombre</label>
             <input
+              ref={nameRef}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              autoFocus
             />
           </div>
           <div className="form-row">
             <div className="form-group">
               <label>Precio ($)</label>
               <input
+                ref={priceRef}
                 type="number"
                 step="0.01"
                 min="0"
@@ -176,7 +183,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
-          {error && <p className="error-text">{error}</p>}
+          <Toast message={error} type="error" onClose={() => setError('')} />
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={onCancel}>
               Cancelar
