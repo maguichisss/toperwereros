@@ -67,103 +67,6 @@ header nav button:hover {
   background: rgba(255, 255, 255, 0.35);
 }
 
-.table-wrap {
-  overflow-x: auto;
-}
-
-.product-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-}
-
-.product-table th {
-  text-align: left;
-  padding: 0.6rem 0.75rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #555;
-  background: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.product-table td {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.85rem;
-  border-bottom: 1px solid #f0f0f0;
-  vertical-align: middle;
-}
-
-.product-table tr:last-child td {
-  border-bottom: none;
-}
-
-.td-thumb img {
-  width: 96px;
-  height: 128px;
-  border-radius: 4px;
-  object-fit: cover;
-  cursor: pointer;
-  display: block;
-}
-
-.no-thumb {
-  width: 96px;
-  height: 128px;
-  border-radius: 4px;
-  background: #eee;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #aaa;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.td-code {
-  font-family: monospace;
-  font-size: 0.8rem;
-  color: #555;
-  white-space: nowrap;
-}
-
-.td-name {
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.td-price {
-  font-weight: 600;
-  color: #1a73e8;
-  white-space: nowrap;
-}
-
-.td-stock {
-  white-space: nowrap;
-}
-
-.td-cat {
-  font-size: 0.8rem;
-  white-space: nowrap;
-}
-
-.td-colors {
-  min-width: 60px;
-}
-
-.td-actions {
-  white-space: nowrap;
-}
-
-.td-actions .btn {
-  padding: 0.3rem 0.6rem;
-  font-size: 0.75rem;
-  margin-right: 0.25rem;
-}
-
 .product-code {
   font-size: 0.75rem;
   color: #888;
@@ -200,21 +103,24 @@ header nav button:hover {
   color: #1a73e8;
 }
 
-.card-body .category-badge {
-  display: inline-block;
-  background: #e8f0fe;
-  color: #1a73e8;
-  padding: 0.15rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-}
-
 .card-actions {
   padding: 0.5rem 0.75rem;
   border-top: 1px solid #eee;
   display: flex;
   gap: 0.5rem;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.product-card {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn {
@@ -543,7 +449,6 @@ header nav button:hover {
   gap: 0.2rem;
   margin-bottom: 0.3rem;
   flex-wrap: wrap;
-  max-width: 72px;
 }
 
 .color-dot {
@@ -659,5 +564,12 @@ header nav button:hover {
   }
   .filter-bar .search-input {
     width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
   }
 }

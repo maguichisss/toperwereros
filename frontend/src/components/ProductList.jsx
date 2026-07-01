@@ -76,6 +76,7 @@ export default function ProductList() {
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+        <span className="total-count">{filtered.length} producto{filtered.length !== 1 ? 's' : ''}</span>
         <button className="btn btn-add" onClick={() => setShowForm(true)}>
           + Añadir Producto
         </button>
@@ -87,55 +88,38 @@ export default function ProductList() {
         </div>
       )}
 
-      <div className="table-wrap">
-        <table className="product-table">
-          <thead>
-            <tr>
-              <th>Código</th>
-              <th>Nombre</th>
-              <th>Precio</th>
-              <th>Stock</th>
-              <th>Colores</th>
-              <th></th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p) => (
-              <tr key={p.id}>
-                <td className="td-code">{p.code}</td>
-                <td className="td-name">{p.name}</td>
-                <td className="td-price">${Number(p.price).toFixed(2)}</td>
-                <td className="td-stock">{p.stock ?? 1}</td>
-                <td className="td-colors">
-                  {p.colors?.length > 0 && (
-                    <div className="color-indicators">
-                      {p.colors.map((c) => (
-                        <span
-                          key={c.id}
-                          className="color-dot"
-                          style={{ backgroundColor: c.hex }}
-                          title={c.name}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </td>
-                <td className="td-thumb">
-                  {p.image_url ? (
-                    <img src={p.image_url} alt={p.name} onClick={() => handleEdit(p)} />
-                  ) : (
-                    <div className="no-thumb" onClick={() => handleEdit(p)}>—</div>
-                  )}
-                </td>
-                <td className="td-actions">
-                  <button className="btn btn-primary" onClick={() => handleEdit(p)}>Editar</button>
-                  <button className="btn btn-danger" onClick={() => handleDelete(p.id)}>Eliminar</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="product-grid">
+        {filtered.map((p) => (
+          <div key={p.id} className="product-card">
+            {p.image_url ? (
+              <img className="card-image" src={p.image_url} alt={p.name} onClick={() => handleEdit(p)} />
+            ) : (
+              <div className="no-image" onClick={() => handleEdit(p)}>—</div>
+            )}
+            <div className="card-body">
+              <h3 onClick={() => handleEdit(p)}>{p.name}</h3>
+              <div className="product-code">{p.code}</div>
+              <div className="price">${Number(p.price).toFixed(2)}</div>
+              <div className="product-stock">Stock: {p.stock ?? 1}{p.ubicacion ? ` | ${p.ubicacion}` : ''}</div>
+              {p.colors?.length > 0 && (
+                <div className="color-indicators">
+                  {p.colors.map((c) => (
+                    <span
+                      key={c.id}
+                      className="color-dot"
+                      style={{ backgroundColor: c.hex }}
+                      title={c.name}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="card-actions">
+              <button className="btn btn-primary" onClick={() => handleEdit(p)}>Editar</button>
+              <button className="btn btn-danger" onClick={() => handleDelete(p.id)}>Eliminar</button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {showForm && (
