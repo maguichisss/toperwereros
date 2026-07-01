@@ -10,11 +10,13 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
   const [code, setCode] = useState(product?.code ?? '');
   const [stock, setStock] = useState(product?.stock ?? 1);
   const [description, setDescription] = useState(product?.description ?? '');
+  const [ubicacion, setUbicacion] = useState(product?.ubicacion ?? '');
   const [price, setPrice] = useState(product?.price ?? '');
   const [categoryId, setCategoryId] = useState(product?.category_id ?? '');
   const [imageUrl, setImageUrl] = useState(product?.image_url ?? '');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [categoryError, setCategoryError] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [colors, setColors] = useState([]);
@@ -31,11 +33,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    if (!name.trim()) { setError('El nombre es obligatorio'); nameRef.current?.focus(); return; }
-    if (!code.trim()) { setError('Código requerido'); codeRef.current?.focus(); return; }
-    if (!price || isNaN(Number(price)) || Number(price) < 0)
-      { setError('Precio válido requerido'); priceRef.current?.focus(); return; }
-    if (!categoryId) { setError('Categoría requerida'); return; }
+    if (!categoryId) { setCategoryError(true); return; }
 
     try {
       const data = {
@@ -43,6 +41,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
         code: code.trim(),
         stock: Number(stock),
         description: description.trim() || null,
+        ubicacion: ubicacion.trim() || null,
         price: Number(price),
         categoryId: Number(categoryId),
         imageUrl: imageUrl || null,
@@ -84,6 +83,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
               <input
                 ref={codeRef}
                 type="text"
+                required
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/[^A-Za-z0-9-]/g, ''))}
               />
@@ -97,11 +97,12 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
           </div>
           <div className="form-group">
             <label>Nombre</label>
-            <input
-              ref={nameRef}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+              <input
+                ref={nameRef}
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
           </div>
           <div className="form-row">
             <div className="form-group">
@@ -111,6 +112,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
                 type="number"
                 step="0.01"
                 min="0"
+                required
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
               />
@@ -133,12 +135,13 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
                   key={c.id}
                   type="button"
                   className={`chip ${Number(categoryId) === c.id ? 'chip-active' : ''}`}
-                  onClick={() => setCategoryId(c.id)}
+                  onClick={() => { setCategoryId(c.id); setCategoryError(false); }}
                 >
                   {c.name}
                 </button>
               ))}
             </div>
+            {categoryError && <p className="error-text">Selecciona una categoría</p>}
           </div>
           <div className="form-group">
             <label>Imagen</label>
@@ -181,6 +184,14 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label>Ubicación</label>
+            <input
+              value={ubicacion}
+              onChange={(e) => setUbicacion(e.target.value)}
+              placeholder="Ej: Bodega A, estante 3"
             />
           </div>
           <Toast message={error} type="error" onClose={() => setError('')} />

@@ -8,7 +8,7 @@ export default function ProductList() {
   const [colors, setColors] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [filters, setFilters] = useState({ code: '', name: '', price: '', stock: '', category: '' });
+  const [filters, setFilters] = useState({ code: '', name: '', price: '', stock: '' });
   const [colorQuery, setColorQuery] = useState('');
   const [selectedColor, setSelectedColor] = useState(null);
   const [showColorDropdown, setShowColorDropdown] = useState(false);
@@ -71,7 +71,6 @@ export default function ProductList() {
     if (filters.name && !p.name.toLowerCase().includes(filters.name.toLowerCase())) return false;
     if (filters.price && !String(p.price).includes(filters.price)) return false;
     if (filters.stock && !String(p.stock ?? 1).includes(filters.stock)) return false;
-    if (filters.category && p.category && !p.category.name.toLowerCase().includes(filters.category.toLowerCase())) return false;
     if (selectedColor && !p.colors?.some(c => c.id === selectedColor.id)) return false;
     return true;
   });
@@ -98,7 +97,6 @@ export default function ProductList() {
               <th>Nombre</th>
               <th>Precio</th>
               <th>Stock</th>
-              <th>Categoría</th>
               <th>Colores</th>
               <th></th>
               <th></th>
@@ -108,7 +106,6 @@ export default function ProductList() {
               <th><input placeholder="Filtrar nombre" value={filters.name} onChange={e => setFilter('name', e.target.value)} /></th>
               <th><input placeholder="Filtrar precio" value={filters.price} onChange={e => setFilter('price', e.target.value)} /></th>
               <th><input placeholder="Filtrar stock" value={filters.stock} onChange={e => setFilter('stock', e.target.value)} /></th>
-              <th><input placeholder="Filtrar categoría" value={filters.category} onChange={e => setFilter('category', e.target.value)} /></th>
               <th className="th-color-filter">
                 <input
                   placeholder="Filtrar color"
@@ -145,7 +142,6 @@ export default function ProductList() {
                 <td className="td-name">{p.name}</td>
                 <td className="td-price">${Number(p.price).toFixed(2)}</td>
                 <td className="td-stock">{p.stock ?? 1}</td>
-                <td className="td-cat">{p.category?.name}</td>
                 <td className="td-colors">
                   {p.colors?.length > 0 && (
                     <div className="color-indicators">

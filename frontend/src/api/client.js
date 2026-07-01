@@ -39,4 +39,7 @@ export const uploadApi = {
 
 export const colorsApi = {
   list: () => request('/colors'),
+  create: (data) => request('/colors', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => request(`/colors/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  remove: (id) => request(`/colors/${id}`, { method: 'DELETE' }),
 }

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import ProductList from './components/ProductList.jsx';
 import CategoryManager from './components/CategoryManager.jsx';
+import ColorManager from './components/ColorManager.jsx';
 
 const TABS = [
   { key: 'products', label: 'Productos' },
+  { key: 'colors', label: 'Colores' },
   { key: 'categories', label: 'Categorías' },
 ];
 
@@ -30,6 +32,7 @@ export default function App() {
       </header>
       <main className="container">
         {tab === 'products' && <ProductList />}
+        {tab === 'colors' && <ColorManager />}
         {tab === 'categories' && <CategoryManager />}
       </main>
     </>

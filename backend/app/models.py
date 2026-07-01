@@ -39,6 +39,7 @@ class Product(Base):
     code = Column(String, nullable=False)
     stock = Column(Integer, default=1)
     description = Column(String, nullable=True)
+    ubicacion = Column(String, nullable=True)
     price = Column(Numeric(10, 2), nullable=False)
     image_url = Column(String, nullable=True)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)

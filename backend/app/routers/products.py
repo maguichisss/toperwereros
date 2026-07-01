@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -49,6 +50,7 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db)):
         code=code,
         stock=data.stock,
         description=data.description,
+        ubicacion=data.ubicacion,
         price=data.price,
         image_url=data.image_url,
         category_id=data.category_id,
@@ -87,6 +89,7 @@ def update_product(product_id: int, data: ProductCreate, db: Session = Depends(g
     product.code = code
     product.stock = data.stock
     product.description = data.description
+    product.ubicacion = data.ubicacion
     product.price = data.price
     product.image_url = data.image_url
     product.category_id = data.category_id
@@ -101,5 +104,14 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(404, "Product not found")
+
+    if product.image_url:
+        filename = product.image_url.lstrip("/uploads/")
+        filepath = os.path.join(os.getcwd(), "uploads", filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        else:
+            print(f"Image file not found for product {product.id}: {filepath}")
+
     db.delete(product)
     db.commit()

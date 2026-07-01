@@ -28,6 +28,15 @@ class CategoryResponse(BaseModel):
     updated_at: datetime
 
 
+class ColorCreate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+    name: str
+    hex: str
+
+
 class ColorResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -44,6 +53,7 @@ class ProductBase(BaseModel):
     code: str
     stock: int = 1
     description: str | None = None
+    ubicacion: str | None = None
     price: Decimal
     image_url: str | None = None
     category_id: int
@@ -61,6 +71,7 @@ class ProductResponse(BaseModel):
     code: str
     stock: int = 1
     description: str | None = None
+    ubicacion: str | None = None
     price: Decimal
     image_url: str | None = None
     category_id: int
