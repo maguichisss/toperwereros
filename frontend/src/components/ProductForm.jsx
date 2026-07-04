@@ -87,6 +87,35 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
     setShowCamera(false);
   }
 
+  async function rotateImage() {
+    let file = imageFile;
+    if (!file && imageUrl) {
+      const resp = await fetch(imageUrl);
+      const blob = await resp.blob();
+      file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+    }
+    if (!file) return;
+
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = img.height;
+      canvas.height = img.width;
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(-90 * Math.PI / 180);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      canvas.toBlob((blob) => {
+        const rotated = new File([blob], file.name, { type: 'image/jpeg' });
+        URL.revokeObjectURL(url);
+        setImageFile(rotated);
+        setImageUrl('');
+      }, 'image/jpeg');
+    };
+    img.src = url;
+  }
+
   function handleBarcode(code) {
     setCode(code.replace(/[^A-Za-z0-9-]/g, ''));
     setShowScanner(false);
@@ -169,14 +198,22 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
             {(imageUrl || imageFile) && (
               <div className="image-preview" style={{ marginBottom: '0.5rem' }}>
                 <img src={previewUrl || imageUrl} alt="Preview" />
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  style={{ marginTop: '0.25rem' }}
-                  onClick={() => { setImageUrl(''); setImageFile(null); }}
-                >
-                  Eliminar
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={rotateImage}
+                  >
+                    Rotar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() => { setImageUrl(''); setImageFile(null); }}
+                  >
+                    Eliminar
+                  </button>
+                </div>
               </div>
             )}
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>

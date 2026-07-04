@@ -4,10 +4,8 @@ export default function CameraCapture({ onCapture }) {
   const videoRef = useRef();
   const canvasRef = useRef();
   const [stream, setStream] = useState(null);
-  const [captured, setCaptured] = useState(null);
   const [error, setError] = useState('');
   const [noCamera, setNoCamera] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState(null);
 
   const startCamera = useCallback(async () => {
     try {
@@ -33,12 +31,6 @@ export default function CameraCapture({ onCapture }) {
     };
   }, [startCamera]);
 
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
-
   function capture() {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -49,9 +41,6 @@ export default function CameraCapture({ onCapture }) {
     canvas.toBlob((blob) => {
       if (!blob) return;
       const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setCaptured(file);
-      setPreviewUrl(URL.createObjectURL(file));
       onCapture(file);
     }, 'image/jpeg');
   }
@@ -60,17 +49,7 @@ export default function CameraCapture({ onCapture }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setError('');
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setCaptured(file);
-    setPreviewUrl(URL.createObjectURL(file));
     onCapture(file);
-  }
-
-  function retake() {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setCaptured(null);
-    setPreviewUrl(null);
-    setError('');
   }
 
   return (
@@ -89,34 +68,16 @@ export default function CameraCapture({ onCapture }) {
         </div>
       ) : (
         <>
-          {!captured && (
-            <video ref={videoRef} autoPlay playsInline muted />
-          )}
-          {previewUrl && (
-            <img src={previewUrl} alt="Captured" />
-          )}
+          <video ref={videoRef} autoPlay playsInline muted />
           <canvas ref={canvasRef} hidden />
-
           <div className="camera-controls">
-            {!captured ? (
-              <button
-                type="button"
-                className="shutter-btn"
-                onClick={capture}
-              />
-            ) : (
-              <button type="button" className="btn btn-secondary" onClick={retake}>
-                Repetir
-              </button>
-            )}
+            <button
+              type="button"
+              className="shutter-btn"
+              onClick={capture}
+            />
           </div>
         </>
-      )}
-
-      {captured && (
-        <p style={{ fontSize: '0.8rem', color: '#4caf50', marginTop: '0.25rem' }}>
-          Foto capturada
-        </p>
       )}
     </div>
   );
