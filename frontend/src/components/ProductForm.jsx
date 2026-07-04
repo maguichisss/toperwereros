@@ -14,6 +14,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
   const [price, setPrice] = useState(product?.price ?? '');
   const [categoryId, setCategoryId] = useState(product?.category_id ?? '');
   const [imageUrl, setImageUrl] = useState(product?.image_url ?? '');
+  const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [categoryError, setCategoryError] = useState(false);
@@ -26,9 +27,19 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
   const codeRef = useRef(null);
   const nameRef = useRef(null);
   const priceRef = useRef(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   useEffect(() => {
     colorsApi.list().then(setColors).catch(() => {});
   }, []);
+  useEffect(() => {
+    if (imageFile) {
+      const url = URL.createObjectURL(imageFile);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [imageFile]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -36,6 +47,12 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
     if (!categoryId) { setCategoryError(true); return; }
 
     try {
+      let url = imageUrl;
+      if (imageFile) {
+        setUploading(true);
+        const result = await uploadApi.upload(imageFile);
+        url = result.image_url || result.url;
+      }
       const data = {
         name: name.trim(),
         code: code.trim(),
@@ -44,7 +61,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
         ubicacion: ubicacion.trim() || null,
         price: Number(price),
         categoryId: Number(categoryId),
-        imageUrl: imageUrl || null,
+        imageUrl: url || null,
         colorIds: selectedColorIds,
       };
       if (product) {
@@ -58,11 +75,15 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
       if (err.message.toLowerCase().includes('código') || err.message.toLowerCase().includes('codigo')) {
         codeRef.current?.focus();
       }
+    } finally {
+      setUploading(false);
     }
   }
 
-  function handleCameraCapture(url) {
-    setImageUrl(url);
+  function handleCameraCapture(file) {
+    if (imageFile) URL.revokeObjectURL(imageFile._preview);
+    setImageFile(file);
+    setImageUrl('');
     setShowCamera(false);
   }
 
@@ -145,14 +166,14 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
           </div>
           <div className="form-group">
             <label>Imagen</label>
-            {imageUrl && (
+            {(imageUrl || imageFile) && (
               <div className="image-preview" style={{ marginBottom: '0.5rem' }}>
-                <img src={imageUrl} alt="Preview" />
+                <img src={previewUrl || imageUrl} alt="Preview" />
                 <button
                   type="button"
                   className="btn btn-danger"
                   style={{ marginTop: '0.25rem' }}
-                  onClick={() => setImageUrl('')}
+                  onClick={() => { setImageUrl(''); setImageFile(null); }}
                 >
                   Eliminar
                 </button>

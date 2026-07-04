@@ -36,6 +36,7 @@ header {
   color: #fff;
   padding: 1rem 0;
   margin-bottom: 2rem;
+  position: relative;
 }
 
 header .container {
@@ -65,6 +66,37 @@ header nav button {
 header nav button.active,
 header nav button:hover {
   background: rgba(255, 255, 255, 0.35);
+}
+
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.hamburger span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: #fff;
+  border-radius: 2px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.hamburger.open span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.hamburger.open span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.open span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
 }
 
 .product-code {
@@ -564,6 +596,38 @@ header nav button:hover {
   }
   .filter-bar .search-input {
     width: 100%;
+  }
+
+  .hamburger {
+    display: flex;
+  }
+
+  header nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #1a73e8;
+    flex-direction: column;
+    z-index: 50;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  header nav.nav-open {
+    display: flex;
+  }
+
+  header nav button {
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    border-radius: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  header nav button:last-child {
+    border-bottom: none;
   }
 }
 

@@ -11,18 +11,31 @@ const TABS = [
 
 export default function App() {
   const [tab, setTab] = useState('products');
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  function handleTabClick(key) {
+    setTab(key);
+    setMenuOpen(false);
+  }
 
   return (
     <>
       <header>
         <div className="container">
           <h1>Catálogo de Productos</h1>
-          <nav>
+          <button
+            className={`hamburger ${menuOpen ? 'open' : ''}`}
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Menú"
+          >
+            <span /><span /><span />
+          </button>
+          <nav className={menuOpen ? 'nav-open' : ''}>
             {TABS.map((t) => (
               <button
                 key={t.key}
                 className={tab === t.key ? 'active' : ''}
-                onClick={() => setTab(t.key)}
+                onClick={() => handleTabClick(t.key)}
               >
                 {t.label}
               </button>

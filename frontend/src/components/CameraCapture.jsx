@@ -1,14 +1,13 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { uploadApi } from '../api/client.js';
 
 export default function CameraCapture({ onCapture }) {
   const videoRef = useRef();
   const canvasRef = useRef();
   const [stream, setStream] = useState(null);
   const [captured, setCaptured] = useState(null);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [noCamera, setNoCamera] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   const startCamera = useCallback(async () => {
     try {
@@ -34,6 +33,12 @@ export default function CameraCapture({ onCapture }) {
     };
   }, [startCamera]);
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   function capture() {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -41,42 +46,30 @@ export default function CameraCapture({ onCapture }) {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext('2d').drawImage(video, 0, 0);
-    canvas.toBlob(async (blob) => {
+    canvas.toBlob((blob) => {
       if (!blob) return;
       const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
-      setUploading(true);
-      try {
-        const result = await uploadApi.upload(file);
-        const url = result.image_url || result.url;
-        setCaptured(url);
-        onCapture(url);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setUploading(false);
-      }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setCaptured(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      onCapture(file);
     }, 'image/jpeg');
   }
 
-  async function handleFileSelect(e) {
+  function handleFileSelect(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
     setError('');
-    try {
-      const result = await uploadApi.upload(file);
-      const url = result.image_url || result.url;
-      setCaptured(url);
-      onCapture(url);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setUploading(false);
-    }
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setCaptured(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    onCapture(file);
   }
 
   function retake() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
     setCaptured(null);
+    setPreviewUrl(null);
     setError('');
   }
 
@@ -92,7 +85,6 @@ export default function CameraCapture({ onCapture }) {
             type="file"
             accept="image/*"
             onChange={handleFileSelect}
-            disabled={uploading}
           />
         </div>
       ) : (
@@ -100,8 +92,8 @@ export default function CameraCapture({ onCapture }) {
           {!captured && (
             <video ref={videoRef} autoPlay playsInline muted />
           )}
-          {captured && (
-            <img src={captured} alt="Captured" />
+          {previewUrl && (
+            <img src={previewUrl} alt="Captured" />
           )}
           <canvas ref={canvasRef} hidden />
 
@@ -111,7 +103,6 @@ export default function CameraCapture({ onCapture }) {
                 type="button"
                 className="shutter-btn"
                 onClick={capture}
-                disabled={uploading}
               />
             ) : (
               <button type="button" className="btn btn-secondary" onClick={retake}>
@@ -120,12 +111,6 @@ export default function CameraCapture({ onCapture }) {
             )}
           </div>
         </>
-      )}
-
-      {uploading && (
-        <p style={{ fontSize: '0.8rem', color: '#555', marginTop: '0.25rem' }}>
-          Subiendo imagen...
-        </p>
       )}
 
       {captured && (

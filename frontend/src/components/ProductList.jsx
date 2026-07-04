@@ -48,7 +48,6 @@ export default function ProductList() {
   function handleClose() {
     setShowForm(false);
     setEditing(null);
-    if (window.history.state?.modal) window.history.back()
   }
 
   function handleSaved() {
