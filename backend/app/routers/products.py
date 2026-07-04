@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -91,6 +92,19 @@ def update_product(product_id: int, data: ProductCreate, db: Session = Depends(g
     product.description = data.description
     product.ubicacion = data.ubicacion
     product.price = data.price
+    if data.image_url != product.image_url:
+        if product.image_url and data.image_url:
+            old_path = os.path.join(os.getcwd(), "uploads", product.image_url.lstrip("/uploads/"))
+            new_path = os.path.join(os.getcwd(), "uploads", data.image_url.lstrip("/uploads/"))
+            if os.path.exists(new_path) and os.path.exists(old_path):
+                with open(old_path, "wb") as dst:
+                    dst.write(open(new_path, "rb").read())
+                product.updated_at = datetime.now()
+            data.image_url = product.image_url
+        elif product.image_url and not data.image_url:
+            old_path = os.path.join(os.getcwd(), "uploads", product.image_url.lstrip("/uploads/"))
+            if os.path.exists(old_path):
+                os.remove(old_path)
     product.image_url = data.image_url
     product.category_id = data.category_id
     product.colors = colors
