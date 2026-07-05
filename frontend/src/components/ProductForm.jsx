@@ -13,7 +13,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
   const [ubicacion, setUbicacion] = useState(product?.ubicacion ?? '');
   const [price, setPrice] = useState(product?.price ?? '');
   const [categoryId, setCategoryId] = useState(product?.category_id ?? '');
-  const [imageUrl, setImageUrl] = useState(product?.image_url ?? '');
+  const [imageUrl, setImageUrl] = useState(product?.image_url ?? null);
   const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -83,7 +83,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
   function handleCameraCapture(file) {
     if (imageFile) URL.revokeObjectURL(imageFile._preview);
     setImageFile(file);
-    setImageUrl('');
+    setImageUrl(null);
     setShowCamera(false);
   }
 
@@ -110,7 +110,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
         const rotated = new File([blob], file.name, { type: 'image/jpeg' });
         URL.revokeObjectURL(url);
         setImageFile(rotated);
-        setImageUrl('');
+        setImageUrl(null);
       }, 'image/jpeg');
     };
     img.src = url;
@@ -209,7 +209,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
                   <button
                     type="button"
                     className="btn btn-danger"
-                    onClick={() => { setImageUrl(''); setImageFile(null); }}
+                    onClick={() => { setImageUrl(null); setImageFile(null); }}
                   >
                     Eliminar
                   </button>

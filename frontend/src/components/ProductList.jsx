@@ -91,7 +91,7 @@ export default function ProductList() {
         {filtered.map((p) => (
           <div key={p.id} className="product-card">
             {p.image_url ? (
-              <img className="card-image" src={p.image_url} alt={p.name} onClick={() => handleEdit(p)} />
+              <img className="card-image" src={`${p.image_url}?t=${p.updated_at}`} alt={p.name} onClick={() => handleEdit(p)} />
             ) : (
               <div className="no-image" onClick={() => handleEdit(p)}>—</div>
             )}
