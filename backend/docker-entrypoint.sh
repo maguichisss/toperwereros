@@ -26,6 +26,28 @@ Base.metadata.create_all(engine)
 print('Tables created successfully.')
 "
 
+echo "Migrating to many-to-many categories..."
+python -c "
+from app.database import engine
+from sqlalchemy import text, inspect
+
+inspector = inspect(engine)
+columns = [c['name'] for c in inspector.get_columns('products')]
+
+if 'category_id' in columns:
+    with engine.connect() as conn:
+        conn.execute(text('''
+            INSERT INTO product_categories (product_id, category_id)
+            SELECT id, category_id FROM products WHERE category_id IS NOT NULL
+            ON CONFLICT DO NOTHING
+        '''))
+        conn.execute(text('ALTER TABLE products DROP COLUMN category_id'))
+        conn.commit()
+    print('Migration completed: product_categories populated, category_id dropped.')
+else:
+    print('Migration already applied, skipping.')
+"
+
 echo "Seeding categories..."
 python -c "
 from app.database import SessionLocal

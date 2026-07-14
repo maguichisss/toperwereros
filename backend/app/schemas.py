@@ -56,7 +56,7 @@ class ProductBase(BaseModel):
     ubicacion: str | None = None
     price: Decimal
     image_url: str | None = None
-    category_id: int
+    category_ids: list[int] = []
     color_ids: list[int] = []
 
 
@@ -74,8 +74,7 @@ class ProductResponse(BaseModel):
     ubicacion: str | None = None
     price: Decimal
     image_url: str | None = None
-    category_id: int
     created_at: datetime
     updated_at: datetime
-    category: CategoryResponse
+    categories: list[CategoryResponse] = []
     colors: list[ColorResponse] = []

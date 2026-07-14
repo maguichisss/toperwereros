@@ -63,7 +63,8 @@ const ProductList = forwardRef(function ProductList(props, ref) {
       p.name.toLowerCase().includes(q) ||
       p.ubicacion?.toLowerCase().includes(q) ||
       String(p.price).includes(q) ||
-      p.colors?.some(c => c.name.toLowerCase().includes(q))
+      p.colors?.some(c => c.name.toLowerCase().includes(q)) ||
+      p.categories?.some(c => c.name.toLowerCase().includes(q))
     );
   });
 
@@ -96,7 +97,7 @@ const ProductList = forwardRef(function ProductList(props, ref) {
       <div className="filter-bar">
         <input
           className="search-input"
-          placeholder="Buscar por código, nombre, ubicación, precio o color"
+          placeholder="Buscar por código, nombre, categoría, ubicación, precio o color"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />

@@ -6,8 +6,15 @@ from app.database import Base
 product_colors = Table(
     "product_colors",
     Base.metadata,
-    Column("product_id", Integer, ForeignKey("products.id"), primary_key=True),
-    Column("color_id", Integer, ForeignKey("colors.id"), primary_key=True),
+    Column("product_id", Integer, ForeignKey("products.id", ondelete="CASCADE"), primary_key=True),
+    Column("color_id", Integer, ForeignKey("colors.id", ondelete="CASCADE"), primary_key=True),
+)
+
+product_categories = Table(
+    "product_categories",
+    Base.metadata,
+    Column("product_id", Integer, ForeignKey("products.id", ondelete="CASCADE"), primary_key=True),
+    Column("category_id", Integer, ForeignKey("categories.id", ondelete="CASCADE"), primary_key=True),
 )
 
 
@@ -28,8 +35,6 @@ class Category(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    products = relationship("Product", back_populates="category", cascade="all, delete-orphan")
-
 
 class Product(Base):
     __tablename__ = "products"
@@ -42,9 +47,8 @@ class Product(Base):
     ubicacion = Column(String, nullable=True)
     price = Column(Numeric(10, 2), nullable=False)
     image_url = Column(String, nullable=True)
-    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    category = relationship("Category", back_populates="products")
+    categories = relationship("Category", secondary=product_categories)
     colors = relationship("Color", secondary=product_colors, backref="products")

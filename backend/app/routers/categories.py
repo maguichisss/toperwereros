@@ -50,7 +50,5 @@ def delete_category(category_id: int, db: Session = Depends(get_db)):
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
         raise HTTPException(404, "Category not found")
-    if category.products:
-        raise HTTPException(409, "Cannot delete category with existing products")
     db.delete(category)
     db.commit()

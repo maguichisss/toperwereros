@@ -12,7 +12,9 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
   const [description, setDescription] = useState(product?.description ?? '');
   const [ubicacion, setUbicacion] = useState(product?.ubicacion ?? '');
   const [price, setPrice] = useState(product?.price ?? '');
-  const [categoryId, setCategoryId] = useState(product?.category_id ?? '');
+  const [categoryIds, setCategoryIds] = useState(
+    product?.categories?.map((c) => c.id) ?? []
+  );
   const [imageUrl, setImageUrl] = useState(product?.image_url ?? null);
   const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -44,7 +46,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    if (!categoryId) { setCategoryError(true); return; }
+    if (!categoryIds.length) { setCategoryError(true); return; }
 
     try {
       let url = imageUrl;
@@ -60,7 +62,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
         description: description.trim() || null,
         ubicacion: ubicacion.trim() || null,
         price: Number(price),
-        categoryId: Number(categoryId),
+        categoryIds: categoryIds,
         imageUrl: url || null,
         colorIds: selectedColorIds,
       };
@@ -178,20 +180,27 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
             </div>
           </div>
           <div className="form-group">
-            <label>Categoría</label>
+            <label>Categorías</label>
             <div className="category-chips">
               {categories.map((c) => (
                 <button
                   key={c.id}
                   type="button"
-                  className={`chip ${Number(categoryId) === c.id ? 'chip-active' : ''}`}
-                  onClick={() => { setCategoryId(c.id); setCategoryError(false); }}
+                  className={`chip ${categoryIds.includes(c.id) ? 'chip-active' : ''}`}
+                  onClick={() => {
+                    setCategoryIds(prev =>
+                      prev.includes(c.id)
+                        ? prev.filter(id => id !== c.id)
+                        : [...prev, c.id]
+                    );
+                    setCategoryError(false);
+                  }}
                 >
                   {c.name}
                 </button>
               ))}
             </div>
-            {categoryError && <p className="error-text">Selecciona una categoría</p>}
+            {categoryError && <p className="error-text">Selecciona al menos una categoría</p>}
           </div>
           <div className="form-group">
             <label>Imagen</label>

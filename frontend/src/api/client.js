@@ -22,7 +22,7 @@ export const categoriesApi = {
 }
 
 export const productsApi = {
-  list: (categoryId) => request(categoryId ? `/products?category_id=${categoryId}` : '/products'),
+  list: (categoryIds) => request(categoryIds?.length ? `/products?category_ids=${categoryIds.join(',')}` : '/products'),
   get: (id) => request(`/products/${id}`),
   create: (data) => request('/products', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => request(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

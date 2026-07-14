@@ -9,10 +9,11 @@ router = APIRouter()
 
 
 @router.get("", response_model=list[ProductResponse])
-def list_products(category_id: int | None = None, db: Session = Depends(get_db)):
-    q = db.query(Product).join(Category)
-    if category_id:
-        q = q.filter(Product.category_id == category_id)
+def list_products(category_ids: str | None = None, db: Session = Depends(get_db)):
+    q = db.query(Product)
+    if category_ids:
+        ids = [int(x) for x in category_ids.split(",")]
+        q = q.filter(Product.categories.any(Category.id.in_(ids)))
     return q.order_by(Product.created_at.desc()).all()
 
 
@@ -37,9 +38,11 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db)):
         raise HTTPException(400, f"Ya existe un producto con ese código: '{existing.name}'")
     if data.price is None or data.price < 0:
         raise HTTPException(400, "Valid price is required")
-    category = db.query(Category).filter(Category.id == data.category_id).first()
-    if not category:
-        raise HTTPException(400, "Category not found")
+    categories = []
+    if data.category_ids:
+        categories = db.query(Category).filter(Category.id.in_(data.category_ids)).all()
+        if len(categories) != len(data.category_ids):
+            raise HTTPException(400, "One or more categories not found")
     colors = []
     if data.color_ids:
         colors = db.query(Color).filter(Color.id.in_(data.color_ids)).all()
@@ -53,7 +56,7 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db)):
         ubicacion=data.ubicacion,
         price=data.price,
         image_url=data.image_url,
-        category_id=data.category_id,
+        categories=categories,
         colors=colors,
     )
     db.add(product)
@@ -72,8 +75,6 @@ def update_product(product_id: int, data: ProductCreate, db: Session = Depends(g
         raise HTTPException(400, "Name is required")
     if data.price is None or data.price < 0:
         raise HTTPException(400, "Valid price is required")
-    if data.category_id and not db.query(Category).filter(Category.id == data.category_id).first():
-        raise HTTPException(400, "Category not found")
     code = data.code.strip()
     if not code:
         raise HTTPException(400, "Code is required")
@@ -96,7 +97,11 @@ def update_product(product_id: int, data: ProductCreate, db: Session = Depends(g
         if os.path.exists(old_path):
             os.remove(old_path)
     product.image_url = data.image_url
-    product.category_id = data.category_id
+    if data.category_ids is not None:
+        categories = db.query(Category).filter(Category.id.in_(data.category_ids)).all()
+        if len(categories) != len(data.category_ids):
+            raise HTTPException(400, "One or more categories not found")
+        product.categories = categories
     product.colors = colors
     db.commit()
     db.refresh(product)
