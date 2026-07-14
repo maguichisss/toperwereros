@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { productsApi, categoriesApi } from '../api/client.js';
 import ProductForm from './ProductForm.jsx';
 
-const ProductList = forwardRef(function ProductList(props, ref) {
+export default function ProductList({ showcase = false }) {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -55,7 +55,9 @@ const ProductList = forwardRef(function ProductList(props, ref) {
     load();
   }
 
-  const filtered = products.filter(p => {
+  const source = showcase ? products.slice(0, 12) : products;
+
+  const filtered = source.filter(p => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -90,18 +92,28 @@ const ProductList = forwardRef(function ProductList(props, ref) {
     URL.revokeObjectURL(url)
   }
 
-  useImperativeHandle(ref, () => ({ downloadCSV }), [filtered])
-
   return (
     <div>
+      {showcase && (
+        <p className="showcase-header">12 productos más recientes</p>
+      )}
       <div className="filter-bar">
-        <input
-          className="search-input"
-          placeholder="Buscar por código, nombre, categoría, ubicación, precio o color"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-        <span className="total-count">{filtered.length} producto{filtered.length !== 1 ? 's' : ''}</span>
+        {!showcase && (
+          <>
+            <input
+              className="search-input"
+              placeholder="Buscar por código, nombre, categoría, ubicación, precio o color"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <span className="total-count">{filtered.length} producto{filtered.length !== 1 ? 's' : ''}</span>
+          </>
+        )}
+        {!showcase && (
+          <button className="btn btn-secondary" onClick={downloadCSV}>
+            CSV
+          </button>
+        )}
         <button className="btn btn-add" onClick={() => setShowForm(true)}>
           + Añadir Producto
         </button>
@@ -157,6 +169,4 @@ const ProductList = forwardRef(function ProductList(props, ref) {
       )}
     </div>
   );
-});
-
-export default ProductList;
+}

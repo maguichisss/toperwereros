@@ -1,18 +1,18 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import ProductList from './components/ProductList.jsx';
 import CategoryManager from './components/CategoryManager.jsx';
 import ColorManager from './components/ColorManager.jsx';
 
 const TABS = [
-  { key: 'products', label: 'Productos' },
+  { key: 'tupperwereros', label: 'Tupperwereros' },
+  { key: 'productos', label: 'Productos' },
   { key: 'colors', label: 'Colores' },
   { key: 'categories', label: 'Categorías' },
 ];
 
 export default function App() {
-  const [tab, setTab] = useState('products');
+  const [tab, setTab] = useState('tupperwereros');
   const [menuOpen, setMenuOpen] = useState(false);
-  const productListRef = useRef();
 
   function handleTabClick(key) {
     setTab(key);
@@ -44,14 +44,12 @@ export default function App() {
             <button onClick={() => { window.open('/api/catalog/pdf', '_blank'); setMenuOpen(false); }}>
               Catálogo PDF
             </button>
-            <button onClick={() => { productListRef.current?.downloadCSV(); setMenuOpen(false); }}>
-              CSV
-            </button>
           </nav>
         </div>
       </header>
       <main className="container">
-        {tab === 'products' && <ProductList ref={productListRef} />}
+        {tab === 'tupperwereros' && <ProductList showcase />}
+        {tab === 'productos' && <ProductList />}
         {tab === 'colors' && <ColorManager />}
         {tab === 'categories' && <CategoryManager />}
       </main>
