@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { productsApi, categoriesApi } from '../api/client.js';
 import ProductForm from './ProductForm.jsx';
 
-export default function ProductList() {
+const ProductList = forwardRef(function ProductList(props, ref) {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -61,17 +61,42 @@ export default function ProductList() {
     return (
       p.code.toLowerCase().includes(q) ||
       p.name.toLowerCase().includes(q) ||
+      p.ubicacion?.toLowerCase().includes(q) ||
       String(p.price).includes(q) ||
       p.colors?.some(c => c.name.toLowerCase().includes(q))
     );
   });
+
+  function downloadCSV() {
+    const headers = ['codigo', 'nombre', 'precio', 'stock', 'ubicacion', 'total']
+    const rows = filtered.map(p => [
+      p.code,
+      p.name,
+      p.price,
+      p.stock ?? 1,
+      p.ubicacion || '',
+      ((p.stock ?? 1) * p.price).toFixed(2),
+    ])
+    const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'productos.csv'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  useImperativeHandle(ref, () => ({ downloadCSV }), [filtered])
 
   return (
     <div>
       <div className="filter-bar">
         <input
           className="search-input"
-          placeholder="Buscar por código, nombre, precio o color"
+          placeholder="Buscar por código, nombre, ubicación, precio o color"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -131,4 +156,6 @@ export default function ProductList() {
       )}
     </div>
   );
-}
+});
+
+export default ProductList;
