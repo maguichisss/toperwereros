@@ -78,6 +78,9 @@ export default function ColorManager() {
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           style={{ flex: 1 }}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck="false"
         />
         <input
           type="color"
@@ -105,6 +108,9 @@ export default function ColorManager() {
                 onKeyDown={(e) => e.key === 'Enter' && handleUpdate(c.id)}
                 autoFocus
                 style={{ flex: 1, padding: '0.3rem 0.5rem' }}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
               />
               <input
                 type="color"

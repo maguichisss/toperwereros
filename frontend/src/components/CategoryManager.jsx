@@ -55,6 +55,9 @@ export default function CategoryManager() {
           placeholder="Nombre de nueva categoría"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck="false"
         />
         <button type="submit" className="btn btn-primary">
           Añadir
@@ -75,6 +78,9 @@ export default function CategoryManager() {
                 onKeyDown={(e) => e.key === 'Enter' && handleUpdate(c.id)}
                 autoFocus
                 style={{ flex: 1, padding: '0.3rem 0.5rem' }}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
               />
               <div style={{ display: 'flex', gap: '0.25rem' }}>
                 <button

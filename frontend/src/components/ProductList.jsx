@@ -133,6 +133,9 @@ export default function ProductList() {
           placeholder="Buscar por código, nombre, categoría, ubicación, precio o color"
           value={search}
           onChange={e => handleSearchChange(e.target.value)}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck="false"
         />
         <div className="filter-actions">
           <span className="total-count">{total} producto{total !== 1 ? 's' : ''}</span>

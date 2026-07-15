@@ -138,6 +138,9 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/[^A-Za-z0-9-]/g, ''))}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
               />
               <button type="button" className="btn-scan" onClick={() => setShowScanner(true)} title="Escanear código de barras">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -154,6 +157,9 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
               />
           </div>
           <div className="form-row">
@@ -167,6 +173,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
                 required
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
+                autoComplete="off"
               />
             </div>
             <div className="form-group">
@@ -176,6 +183,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
                 min="0"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
+                autoComplete="off"
               />
             </div>
           </div>
@@ -251,6 +259,9 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
             />
           </div>
           <div className="form-group">
@@ -259,6 +270,9 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
               value={ubicacion}
               onChange={(e) => setUbicacion(e.target.value)}
               placeholder="Ej: Bodega A, estante 3"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
             />
           </div>
           <Toast message={error} type="error" onClose={() => setError('')} />
