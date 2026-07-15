@@ -40,9 +40,6 @@ export default function App() {
                 {t.label}
               </button>
             ))}
-            <button onClick={() => { window.open('/api/catalog/pdf', '_blank'); setMenuOpen(false); }}>
-              Catálogo PDF
-            </button>
           </nav>
         </div>
       </header>
