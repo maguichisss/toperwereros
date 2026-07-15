@@ -41,13 +41,13 @@ def cover_image(path):
 
 
 @router.get("/pdf")
-def catalog_pdf(db: Session = Depends(get_db)):
-    products = (
-        db.query(Product)
-        .filter(Product.stock > 0)
-        .order_by(Product.name.asc())
-        .all()
-    )
+def catalog_pdf(ids: str = "", db: Session = Depends(get_db)):
+    products = db.query(Product).filter(Product.stock > 0)
+    if ids:
+        id_list = [int(x) for x in ids.split(",") if x.strip()]
+        if id_list:
+            products = products.filter(Product.id.in_(id_list))
+    products = products.order_by(Product.name.asc()).all()
 
     pdf = FPDF()
     pdf.set_auto_page_break(auto=False)

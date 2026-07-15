@@ -114,6 +114,20 @@ export default function ProductList({ showcase = false }) {
             CSV
           </button>
         )}
+        {!showcase && (
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              const hasFilter = search.trim().length > 0;
+              const url = hasFilter && filtered.length
+                ? `/api/catalog/pdf?ids=${filtered.map(p => p.id).join(',')}`
+                : '/api/catalog/pdf';
+              window.open(url, '_blank');
+            }}
+          >
+            PDF
+          </button>
+        )}
         <button className="btn btn-add" onClick={() => setShowForm(true)}>
           + Añadir Producto
         </button>
