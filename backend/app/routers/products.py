@@ -1,20 +1,53 @@
 import os
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_, String
+from sqlalchemy.orm import Session, selectinload
 from app.database import get_db
 from app.models import Product, Category, Color
-from app.schemas import ProductCreate, ProductResponse
+from app.schemas import ProductCreate, ProductResponse, ProductListResponse
 
 router = APIRouter()
 
 
-@router.get("", response_model=list[ProductResponse])
-def list_products(category_ids: str | None = None, db: Session = Depends(get_db)):
-    q = db.query(Product)
+@router.get("", response_model=ProductListResponse)
+def list_products(
+    category_ids: str | None = None,
+    q: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=200),
+    export: bool = False,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Product).options(
+        selectinload(Product.categories),
+        selectinload(Product.colors),
+    )
     if category_ids:
         ids = [int(x) for x in category_ids.split(",")]
-        q = q.filter(Product.categories.any(Category.id.in_(ids)))
-    return q.order_by(Product.created_at.desc()).all()
+        query = query.filter(Product.categories.any(Category.id.in_(ids)))
+    if q:
+        pattern = f"%{q}%"
+        query = query.filter(
+            or_(
+                Product.code.ilike(pattern),
+                Product.name.ilike(pattern),
+                Product.ubicacion.ilike(pattern),
+                Product.price.cast(String).ilike(pattern),
+                Product.categories.any(Category.name.ilike(pattern)),
+                Product.colors.any(Color.name.ilike(pattern)),
+            )
+        )
+    total = query.count()
+    if export:
+        products = query.order_by(Product.created_at.desc()).all()
+    else:
+        products = (
+            query.order_by(Product.created_at.desc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+    return ProductListResponse(products=products, total=total)
 
 
 @router.get("/{product_id}", response_model=ProductResponse)

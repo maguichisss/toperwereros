@@ -22,7 +22,22 @@ export const categoriesApi = {
 }
 
 export const productsApi = {
-  list: (categoryIds) => request(categoryIds?.length ? `/products?category_ids=${categoryIds.join(',')}` : '/products'),
+  list: ({ categoryIds, q, page, perPage } = {}) => {
+    const params = new URLSearchParams()
+    if (categoryIds?.length) params.set('category_ids', categoryIds.join(','))
+    if (q) params.set('q', q)
+    if (page) params.set('page', page)
+    if (perPage) params.set('per_page', perPage)
+    const qs = params.toString()
+    return request(`/products${qs ? '?' + qs : ''}`)
+  },
+  listAll: ({ categoryIds, q } = {}) => {
+    const params = new URLSearchParams()
+    if (categoryIds?.length) params.set('category_ids', categoryIds.join(','))
+    if (q) params.set('q', q)
+    params.set('export', 'true')
+    return request(`/products?${params.toString()}`)
+  },
   get: (id) => request(`/products/${id}`),
   create: (data) => request('/products', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => request(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

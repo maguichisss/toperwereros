@@ -201,6 +201,39 @@ header nav button:hover {
   background: #388e3c;
 }
 
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 1.5rem 0;
+}
+
+.btn-pagination {
+  min-width: 2.2rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #333;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.btn-pagination:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.btn-pagination.active {
+  background: #1976d2;
+  color: #fff;
+  border-color: #1976d2;
+}
+
+.btn-pagination:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -385,6 +418,19 @@ header nav button:hover {
   border: 1px solid #ccc;
   border-radius: 4px;
   outline: none;
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .filter-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 .filter-bar .search-input:focus {
@@ -599,7 +645,6 @@ header nav button:hover {
   .filter-bar .search-input {
     width: 100%;
   }
-
   .hamburger {
     display: flex;
   }

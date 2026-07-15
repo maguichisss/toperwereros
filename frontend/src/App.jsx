@@ -4,14 +4,13 @@ import CategoryManager from './components/CategoryManager.jsx';
 import ColorManager from './components/ColorManager.jsx';
 
 const TABS = [
-  { key: 'tupperwereros', label: 'Toperwereros' },
   { key: 'productos', label: 'Productos' },
   { key: 'colors', label: 'Colores' },
   { key: 'categories', label: 'Categorías' },
 ];
 
 export default function App() {
-  const [tab, setTab] = useState('tupperwereros');
+  const [tab, setTab] = useState('productos');
   const [menuOpen, setMenuOpen] = useState(false);
 
   function handleTabClick(key) {
@@ -23,7 +22,7 @@ export default function App() {
     <>
       <header>
         <div className="container">
-          <h1 onClick={() => handleTabClick('tupperwereros')} style={{ cursor: 'pointer' }}>Catálogo de Productos</h1>
+          <h1 onClick={() => handleTabClick('productos')} style={{ cursor: 'pointer' }}>Catálogo de Productos</h1>
           <button
             className={`hamburger ${menuOpen ? 'open' : ''}`}
             onClick={() => setMenuOpen(!menuOpen)}
@@ -48,7 +47,6 @@ export default function App() {
         </div>
       </header>
       <main className="container">
-        {tab === 'tupperwereros' && <ProductList showcase />}
         {tab === 'productos' && <ProductList />}
         {tab === 'colors' && <ColorManager />}
         {tab === 'categories' && <CategoryManager />}

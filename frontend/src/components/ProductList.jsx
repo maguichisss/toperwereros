@@ -1,24 +1,33 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { productsApi, categoriesApi } from '../api/client.js';
 import ProductForm from './ProductForm.jsx';
+import ProductCard from './ProductCard.jsx';
 
-export default function ProductList({ showcase = false }) {
+export default function ProductList() {
   const [products, setProducts] = useState([]);
+  const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pendingSearch, setPendingSearch] = useState('');
+  const searchTimer = useRef(null);
+  const perPage = 20;
 
   const load = useCallback(async () => {
     try {
-      const [p, c] = await Promise.all([
-        productsApi.list(),
+      const params = { page, perPage };
+      if (pendingSearch) params.q = pendingSearch;
+      const [res, c] = await Promise.all([
+        productsApi.list(params),
         categoriesApi.list(),
       ]);
-      setProducts(p);
+      setProducts(res.products);
+      setTotal(res.total);
       setCategories(c);
     } catch {}
-  }, []);
+  }, [page, perPage, pendingSearch]);
 
   useEffect(() => {
     load();
@@ -31,6 +40,19 @@ export default function ProductList({ showcase = false }) {
     window.addEventListener('popstate', handler)
     return () => window.removeEventListener('popstate', handler)
   }, [showForm])
+
+  function handleSearchChange(value) {
+    setSearch(value);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setPendingSearch(value);
+      setPage(1);
+    }, 300);
+  }
+
+  useEffect(() => {
+    return () => clearTimeout(searchTimer.current);
+  }, []);
 
   async function handleDelete(id) {
     if (!confirm('¿Eliminar este producto?')) return;
@@ -55,123 +77,112 @@ export default function ProductList({ showcase = false }) {
     load();
   }
 
-  const source = showcase ? products.slice(0, 12) : products;
+  const totalPages = Math.ceil(total / perPage);
 
-  const filtered = source.filter(p => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      p.code.toLowerCase().includes(q) ||
-      p.name.toLowerCase().includes(q) ||
-      p.ubicacion?.toLowerCase().includes(q) ||
-      String(p.price).includes(q) ||
-      p.colors?.some(c => c.name.toLowerCase().includes(q)) ||
-      p.categories?.some(c => c.name.toLowerCase().includes(q))
-    );
-  });
+  function pageNumbers() {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
+  }
 
-  function downloadCSV() {
-    const headers = ['codigo', 'nombre', 'precio', 'stock', 'ubicacion', 'total']
-    const rows = filtered.map(p => [
-      p.code,
-      p.name,
-      p.price,
-      p.stock ?? 1,
-      p.ubicacion || '',
-      ((p.stock ?? 1) * p.price).toFixed(2),
-    ])
-    const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'productos.csv'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+  async function downloadCSV() {
+    try {
+      const res = await productsApi.listAll({ q: pendingSearch });
+      const all = res.products;
+      const headers = ['codigo', 'nombre', 'precio', 'stock', 'ubicacion', 'total']
+      const rows = all.map(p => [
+        p.code, p.name, p.price, p.stock ?? 1, p.ubicacion || '',
+        ((p.stock ?? 1) * p.price).toFixed(2),
+      ])
+      const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n')
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'productos.csv'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch {}
+  }
+
+  async function openPDF() {
+    if (pendingSearch) {
+      const res = await productsApi.listAll({ q: pendingSearch });
+      const ids = res.products.map(p => p.id);
+      if (ids.length) {
+        window.open(`/api/catalog/pdf?ids=${ids.join(',')}`, '_blank');
+        return;
+      }
+    }
+    window.open('/api/catalog/pdf', '_blank');
   }
 
   return (
     <div>
-      {showcase && (
-        <p className="showcase-header">12 productos más recientes</p>
-      )}
       <div className="filter-bar">
-        {!showcase && (
-          <>
-            <input
-              className="search-input"
-              placeholder="Buscar por código, nombre, categoría, ubicación, precio o color"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-            <span className="total-count">{filtered.length} producto{filtered.length !== 1 ? 's' : ''}</span>
-          </>
-        )}
-        {!showcase && (
-          <button className="btn btn-secondary" onClick={downloadCSV}>
-            CSV
-          </button>
-        )}
-        {!showcase && (
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              const hasFilter = search.trim().length > 0;
-              const url = hasFilter && filtered.length
-                ? `/api/catalog/pdf?ids=${filtered.map(p => p.id).join(',')}`
-                : '/api/catalog/pdf';
-              window.open(url, '_blank');
-            }}
-          >
-            PDF
-          </button>
-        )}
+        <input
+          className="search-input"
+          placeholder="Buscar por código, nombre, categoría, ubicación, precio o color"
+          value={search}
+          onChange={e => handleSearchChange(e.target.value)}
+        />
+        <div className="filter-actions">
+          <span className="total-count">{total} producto{total !== 1 ? 's' : ''}</span>
+          <button className="btn btn-secondary" onClick={downloadCSV}>CSV</button>
+          <button className="btn btn-secondary" onClick={openPDF}>PDF</button>
+        </div>
         <button className="btn btn-add" onClick={() => setShowForm(true)}>
           + Añadir Producto
         </button>
       </div>
 
-      {filtered.length === 0 && (
+      {products.length === 0 && (
         <div className="empty-state">
           <p>No hay productos aún. Haz clic en "Añadir Producto" para empezar.</p>
         </div>
       )}
 
       <div className="product-grid">
-        {filtered.map((p) => (
-          <div key={p.id} className="product-card">
-            {p.image_url ? (
-              <img className="card-image" src={`${p.image_url}?t=${p.updated_at}`} alt={p.name} onClick={() => handleEdit(p)} />
-            ) : (
-              <div className="no-image" onClick={() => handleEdit(p)}>—</div>
-            )}
-            <div className="card-body">
-              <h3 onClick={() => handleEdit(p)}>{p.name}</h3>
-              <div className="product-code">{p.code}</div>
-              <div className="price">${Number(p.price).toFixed(2)}</div>
-              <div className="product-stock">Stock: {p.stock ?? 1}{p.ubicacion ? ` | ${p.ubicacion}` : ''}</div>
-              {p.colors?.length > 0 && (
-                <div className="color-indicators">
-                  {p.colors.map((c) => (
-                    <span
-                      key={c.id}
-                      className="color-dot"
-                      style={{ backgroundColor: c.hex }}
-                      title={c.name}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="card-actions">
-              <button className="btn btn-primary" onClick={() => handleEdit(p)}>Editar</button>
-              <button className="btn btn-danger" onClick={() => handleDelete(p.id)}>Eliminar</button>
-            </div>
-          </div>
+        {products.map((p) => (
+          <ProductCard key={p.id} product={p} onEdit={handleEdit} onDelete={handleDelete} />
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button
+            className="btn btn-pagination"
+            disabled={page <= 1}
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+          >
+            ‹
+          </button>
+          {pageNumbers().map(n => (
+            <button
+              key={n}
+              className={`btn btn-pagination${n === page ? ' active' : ''}`}
+              onClick={() => setPage(n)}
+            >
+              {n}
+            </button>
+          ))}
+          <button
+            className="btn btn-pagination"
+            disabled={page >= totalPages}
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+          >
+            ›
+          </button>
+        </div>
+      )}
 
       {showForm && (
         <ProductForm

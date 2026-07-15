@@ -78,3 +78,32 @@ class ProductResponse(BaseModel):
     updated_at: datetime
     categories: list[CategoryResponse] = []
     colors: list[ColorResponse] = []
+
+
+class CategoryName(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+
+class ColorName(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    hex: str
+
+class ProductListItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    code: str
+    stock: int = 1
+    ubicacion: str | None = None
+    price: Decimal
+    image_url: str | None = None
+    updated_at: datetime
+    categories: list[CategoryName] = []
+    colors: list[ColorName] = []
+
+class ProductListResponse(BaseModel):
+    products: list[ProductListItem]
+    total: int
