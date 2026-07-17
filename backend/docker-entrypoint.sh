@@ -21,7 +21,7 @@ echo "Database is ready."
 echo "Creating database tables..."
 python -c "
 from app.database import engine, Base
-from app.models import Color, Category, Product
+from app.models import Color, Category, Product, Sale, SaleItem, Customer, Layaway, LayawayItem, LayawayPayment
 Base.metadata.create_all(engine)
 print('Tables created successfully.')
 "

@@ -58,3 +58,39 @@ export const colorsApi = {
   update: (id, data) => request(`/colors/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   remove: (id) => request(`/colors/${id}`, { method: 'DELETE' }),
 }
+
+export const salesApi = {
+  create: (data) => request('/sales', { method: 'POST', body: JSON.stringify(data) }),
+  list: ({ page, perPage } = {}) => {
+    const params = new URLSearchParams()
+    if (page) params.set('page', page)
+    if (perPage) params.set('per_page', perPage)
+    const qs = params.toString()
+    return request(`/sales${qs ? '?' + qs : ''}`)
+  },
+  get: (id) => request(`/sales/${id}`),
+}
+
+export const customersApi = {
+  list: (q) => request(`/customers${q ? '?q=' + encodeURIComponent(q) : ''}`),
+  create: (data) => request('/customers', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => request(`/customers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  get: (id) => request(`/customers/${id}`),
+  remove: (id) => request(`/customers/${id}`, { method: 'DELETE' }),
+}
+
+export const layawaysApi = {
+  create: (data) => request('/layaways', { method: 'POST', body: JSON.stringify(data) }),
+  list: ({ status, customerId, page, perPage } = {}) => {
+    const params = new URLSearchParams()
+    if (status) params.set('status', status)
+    if (customerId) params.set('customer_id', customerId)
+    if (page) params.set('page', page)
+    if (perPage) params.set('per_page', perPage)
+    return request(`/layaways?${params.toString()}`)
+  },
+  get: (id) => request(`/layaways/${id}`),
+  addPayment: (id, amount) => request(`/layaways/${id}/payments`, { method: 'POST', body: JSON.stringify({ amount }) }),
+  cancel: (id) => request(`/layaways/${id}/cancel`, { method: 'PATCH' }),
+  complete: (id) => request(`/layaways/${id}/complete`, { method: 'PATCH' }),
+}

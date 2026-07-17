@@ -2,9 +2,15 @@ import { useState } from 'react';
 import ProductList from './components/ProductList.jsx';
 import CategoryManager from './components/CategoryManager.jsx';
 import ColorManager from './components/ColorManager.jsx';
+import SaleCart from './components/SaleCart.jsx';
+import LayawayView from './components/LayawayView.jsx';
+import CustomerManager from './components/CustomerManager.jsx';
 
 const TABS = [
   { key: 'productos', label: 'Productos' },
+  { key: 'ventas', label: 'Ventas' },
+  { key: 'apartados', label: 'Apartados' },
+  { key: 'customers', label: 'Clientes' },
   { key: 'colors', label: 'Colores' },
   { key: 'categories', label: 'Categorías' },
 ];
@@ -45,6 +51,9 @@ export default function App() {
       </header>
       <main className="container">
         {tab === 'productos' && <ProductList />}
+        {tab === 'ventas' && <SaleCart />}
+        {tab === 'apartados' && <LayawayView />}
+        {tab === 'customers' && <CustomerManager />}
         {tab === 'colors' && <ColorManager />}
         {tab === 'categories' && <CategoryManager />}
       </main>

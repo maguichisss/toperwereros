@@ -107,3 +107,103 @@ class ProductListItem(BaseModel):
 class ProductListResponse(BaseModel):
     products: list[ProductListItem]
     total: int
+
+
+class SaleItemCreate(BaseModel):
+    product_id: int
+    quantity: int = 1
+
+
+class SaleCreate(BaseModel):
+    items: list[SaleItemCreate]
+
+
+class SaleItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    product_id: int
+    quantity: int
+    unit_price: Decimal
+    product_name: str | None = None
+    product_code: str | None = None
+
+
+class SaleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    total: Decimal
+    created_at: datetime
+    items: list[SaleItemResponse]
+
+
+class CustomerCreate(BaseModel):
+    name: str
+    phone: str | None = None
+    email: str | None = None
+    notes: str | None = None
+
+
+class CustomerResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    phone: str | None = None
+    email: str | None = None
+    notes: str | None = None
+    created_at: datetime
+
+
+class LayawayItemCreate(BaseModel):
+    product_id: int
+    quantity: int = 1
+
+
+class LayawayCreate(BaseModel):
+    customer_id: int | None = None
+    customer: CustomerCreate | None = None
+    deposit: Decimal
+    items: list[LayawayItemCreate]
+    notes: str | None = None
+
+
+class LayawayItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    product_id: int
+    quantity: int
+    unit_price: Decimal
+    product_name: str | None = None
+    product_code: str | None = None
+
+
+class LayawayPaymentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    amount: Decimal
+    created_at: datetime
+
+
+class LayawayResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    customer_id: int
+    customer_name: str | None = None
+    total: Decimal
+    deposit: Decimal
+    balance: Decimal
+    status: str
+    sale_id: int | None = None
+    notes: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    items: list[LayawayItemResponse]
+    payments: list[LayawayPaymentResponse]
+
+
+class LayawayListResponse(BaseModel):
+    layaways: list[LayawayResponse]
+    total: int
+
+
+class PaymentCreate(BaseModel):
+    amount: Decimal
