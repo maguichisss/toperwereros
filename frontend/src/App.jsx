@@ -1,28 +1,38 @@
-import { useState } from 'react';
-import ProductList from './components/ProductList.jsx';
-import CategoryManager from './components/CategoryManager.jsx';
-import ColorManager from './components/ColorManager.jsx';
-import SaleCart from './components/SaleCart.jsx';
-import LayawayView from './components/LayawayView.jsx';
-import CustomerManager from './components/CustomerManager.jsx';
+import { useState } from 'react'
+import { AuthProvider, useAuth } from './context/AuthContext.jsx'
+import LoginPage from './components/LoginPage.jsx'
+import ProductList from './components/ProductList.jsx'
+import SaleCart from './components/SaleCart.jsx'
+import LayawayView from './components/LayawayView.jsx'
+import ProfilePage from './components/ProfilePage.jsx'
+import ManagementPage from './components/ManagementPage.jsx'
 
 const TABS = [
   { key: 'productos', label: 'Productos' },
   { key: 'ventas', label: 'Ventas' },
   { key: 'apartados', label: 'Apartados' },
-  { key: 'customers', label: 'Clientes' },
-  { key: 'colors', label: 'Colores' },
-  { key: 'categories', label: 'Categorías' },
-];
+  { key: 'management', label: 'Administración' },
+  { key: 'perfil', label: 'Perfil' },
+]
 
-export default function App() {
-  const [tab, setTab] = useState('productos');
-  const [menuOpen, setMenuOpen] = useState(false);
+function AppContent() {
+  const { user, logout, can } = useAuth()
+  const [tab, setTab] = useState('productos')
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  if (!user) {
+    return <LoginPage />
+  }
 
   function handleTabClick(key) {
-    setTab(key);
-    setMenuOpen(false);
+    setTab(key)
+    setMenuOpen(false)
   }
+
+  const visibleTabs = TABS.filter(t => {
+    if (t.key === 'management') return can('user.manage')
+    return true
+  })
 
   return (
     <>
@@ -37,15 +47,33 @@ export default function App() {
             <span /><span /><span />
           </button>
           <nav className={menuOpen ? 'nav-open' : ''}>
-            {TABS.map((t) => (
+            {visibleTabs.map((t) => (
               <button
                 key={t.key}
                 className={tab === t.key ? 'active' : ''}
                 onClick={() => handleTabClick(t.key)}
+                title={t.key === 'perfil' ? 'Perfil' : undefined}
+                style={t.key === 'perfil' ? { display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem 0.6rem', background: 'rgba(255,255,255,0.1)' } : undefined}
               >
-                {t.label}
+                {t.key === 'perfil' ? (
+                  user.image_url ? (
+                    <img src={user.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  )
+                ) : t.label}
               </button>
             ))}
+            <button onClick={logout} title="Cerrar sesión" style={{ background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem 0.6rem' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
           </nav>
         </div>
       </header>
@@ -53,10 +81,17 @@ export default function App() {
         {tab === 'productos' && <ProductList />}
         {tab === 'ventas' && <SaleCart />}
         {tab === 'apartados' && <LayawayView />}
-        {tab === 'customers' && <CustomerManager />}
-        {tab === 'colors' && <ColorManager />}
-        {tab === 'categories' && <CategoryManager />}
+        {tab === 'management' && <ManagementPage />}
+        {tab === 'perfil' && <ProfilePage />}
       </main>
     </>
-  );
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  )
 }

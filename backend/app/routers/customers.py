@@ -1,14 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Customer
+from app.models import Customer, User
 from app.schemas import CustomerCreate, CustomerResponse
+from app.auth import require_permission
 
 router = APIRouter()
 
 
 @router.get("")
-def list_customers(q: str | None = Query(None), db: Session = Depends(get_db)):
+def list_customers(q: str | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(require_permission("customer.view"))):
     query = db.query(Customer)
     if q:
         query = query.filter(
@@ -19,7 +20,7 @@ def list_customers(q: str | None = Query(None), db: Session = Depends(get_db)):
 
 
 @router.get("/{customer_id}")
-def get_customer(customer_id: int, db: Session = Depends(get_db)):
+def get_customer(customer_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("customer.view"))):
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(404, "Cliente no encontrado")
@@ -27,7 +28,7 @@ def get_customer(customer_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", status_code=201)
-def create_customer(data: CustomerCreate, db: Session = Depends(get_db)):
+def create_customer(data: CustomerCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("customer.create"))):
     customer = Customer(
         name=data.name,
         phone=data.phone,
@@ -41,7 +42,7 @@ def create_customer(data: CustomerCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{customer_id}")
-def update_customer(customer_id: int, data: CustomerCreate, db: Session = Depends(get_db)):
+def update_customer(customer_id: int, data: CustomerCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("customer.edit"))):
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(404, "Cliente no encontrado")
@@ -55,7 +56,7 @@ def update_customer(customer_id: int, data: CustomerCreate, db: Session = Depend
 
 
 @router.delete("/{customer_id}")
-def delete_customer(customer_id: int, db: Session = Depends(get_db)):
+def delete_customer(customer_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("customer.delete"))):
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(404, "Cliente no encontrado")

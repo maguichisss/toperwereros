@@ -623,6 +623,10 @@ header nav button:hover {
   background: #43a047;
 }
 
+.toast-info {
+  background: #1a73e8;
+}
+
 .toast-close {
   font-size: 1.4rem;
   line-height: 1;
@@ -809,6 +813,36 @@ header nav button:hover {
   .catalog-no-image {
     height: 200px;
   }
+}
+
+/* Management sub-tabs */
+.sub-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0;
+}
+
+.sub-tabs button {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  color: #555;
+  font-size: 0.9rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.sub-tabs button:hover {
+  color: #1a73e8;
+}
+
+.sub-tabs button.active {
+  color: #1a73e8;
+  border-bottom-color: #1a73e8;
+  font-weight: 600;
 }
 
 /* Sales */

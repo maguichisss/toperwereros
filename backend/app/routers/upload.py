@@ -1,6 +1,8 @@
 import os
 import uuid
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from app.models import User
+from app.auth import require_permission
 
 router = APIRouter()
 
@@ -12,7 +14,7 @@ MAX_SIZE = 5 * 1024 * 1024
 
 
 @router.post("")
-def upload_image(image: UploadFile = File(...)):
+def upload_image(image: UploadFile = File(...), current_user: User = Depends(require_permission("product.edit"))):
     if image.content_type not in ALLOWED_TYPES:
         raise HTTPException(400, "Only JPEG, PNG, and WebP images are allowed")
     ext = os.path.splitext(image.filename or "image.jpg")[1]

@@ -3,8 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.database import get_db
-from app.models import Color, product_colors
+from app.models import Color, product_colors, User
 from app.schemas import ColorCreate, ColorResponse
+from app.auth import require_permission
 
 router = APIRouter()
 
@@ -12,12 +13,12 @@ HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
 @router.get("", response_model=list[ColorResponse])
-def list_colors(db: Session = Depends(get_db)):
+def list_colors(db: Session = Depends(get_db), current_user: User = Depends(require_permission("color.view"))):
     return db.query(Color).order_by(Color.name).all()
 
 
 @router.post("", response_model=ColorResponse, status_code=201)
-def create_color(data: ColorCreate, db: Session = Depends(get_db)):
+def create_color(data: ColorCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("color.create"))):
     name = data.name.strip()
     hex_val = data.hex.strip()
     if not name:
@@ -39,7 +40,7 @@ def create_color(data: ColorCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{color_id}", response_model=ColorResponse)
-def update_color(color_id: int, data: ColorCreate, db: Session = Depends(get_db)):
+def update_color(color_id: int, data: ColorCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("color.edit"))):
     name = data.name.strip()
     hex_val = data.hex.strip()
     if not name:
@@ -64,7 +65,7 @@ def update_color(color_id: int, data: ColorCreate, db: Session = Depends(get_db)
 
 
 @router.delete("/{color_id}", status_code=204)
-def delete_color(color_id: int, db: Session = Depends(get_db)):
+def delete_color(color_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("color.delete"))):
     color = db.query(Color).filter(Color.id == color_id).first()
     if not color:
         raise HTTPException(404, "Color no encontrado")

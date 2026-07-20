@@ -10,6 +10,7 @@ function daysElapsed(dateStr) {
 export default function LayawayView() {
   const [mode, setMode] = useState('active');
   const [activeLayaways, setActiveLayaways] = useState([]);
+  const [allLayaways, setAllLayaways] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedLayaway, setSelectedLayaway] = useState(null);
 
@@ -22,19 +23,28 @@ export default function LayawayView() {
     } catch {}
   }, []);
 
+  const loadAll = useCallback(async () => {
+    try {
+      const res = await layawaysApi.list({ perPage: 100 });
+      setAllLayaways(res.layaways || []);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (mode === 'active') loadActive();
-  }, [mode, loadActive]);
+    if (mode === 'all') loadAll();
+  }, [mode, loadActive, loadAll]);
 
   function handleSelect(id) {
     setSelectedId(id);
+    setSelectedLayaway(null);
     setMode('detail');
   }
 
   function handleBack() {
     setSelectedId(null);
     setSelectedLayaway(null);
-    setMode('active');
+    if (mode === 'detail') setMode('active');
   }
 
   async function handleCancel(id) {
@@ -72,14 +82,17 @@ export default function LayawayView() {
     }
   }
 
-  if (mode === 'detail' && !selectedLayaway && selectedId) {
-    layawaysApi.get(selectedId).then(setSelectedLayaway).catch(() => {});
-  }
+  useEffect(() => {
+    if (mode === 'detail' && selectedId && !selectedLayaway) {
+      layawaysApi.get(selectedId).then(setSelectedLayaway).catch(() => {});
+    }
+  }, [mode, selectedId, selectedLayaway]);
 
   return (
     <div className="layaway-view">
       <div className="sales-tabs">
-        <button className={mode === 'active' ? 'active' : ''} onClick={handleBack}>Apartados Activos</button>
+        <button className={mode === 'active' ? 'active' : ''} onClick={() => setMode('active')}>Apartados Activos</button>
+        <button className={mode === 'all' ? 'active' : ''} onClick={() => setMode('all')}>Todos</button>
         <button className={mode === 'create' ? 'active' : ''} onClick={() => { setMode('create'); setError(''); }}>Nuevo Apartado</button>
       </div>
 
@@ -91,6 +104,15 @@ export default function LayawayView() {
           onSelect={handleSelect}
           onCancel={handleCancel}
           onRefresh={loadActive}
+        />
+      )}
+
+      {mode === 'all' && (
+        <AllList
+          layaways={allLayaways}
+          onSelect={handleSelect}
+          onCancel={handleCancel}
+          onRefresh={loadAll}
         />
       )}
 
@@ -143,6 +165,51 @@ function ActiveList({ layaways, onSelect, onCancel, onRefresh }) {
               >
                 Cancelar
               </button>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function AllList({ layaways, onSelect, onCancel, onRefresh }) {
+  useEffect(() => { onRefresh(); }, [onRefresh]);
+
+  const statusLabel = { active: 'Activo', completed: 'Completado', cancelled: 'Cancelado' };
+  const statusColor = { active: '#1a73e8', completed: '#43a047', cancelled: '#888' };
+
+  return (
+    <div className="layaway-list">
+      {layaways.length === 0 ? (
+        <p className="empty-state">No hay apartados registrados.</p>
+      ) : (
+        layaways.map(l => {
+          const days = daysElapsed(l.created_at);
+          const overdue = days > DAYS_OVERDUE && l.status === 'active';
+          return (
+            <div
+              key={l.id}
+              className={`layaway-card ${overdue ? 'layaway-overdue' : ''}`}
+              onClick={() => onSelect(l.id)}
+            >
+              <div className="layaway-card-main">
+                <span className="layaway-customer">{l.customer_name}</span>
+                <span className="layaway-items-count">{l.items?.length || 0} artículo(s)</span>
+              </div>
+              <div className="layaway-card-details">
+                <span style={{ color: statusColor[l.status], fontWeight: 600, fontSize: '0.8rem' }}>{statusLabel[l.status]}</span>
+                <span className="layaway-days">{days} día(s)</span>
+                <span className="layaway-balance">${parseFloat(l.balance).toFixed(2)}</span>
+              </div>
+              {l.status === 'active' && (
+                <button
+                  className="btn btn-danger layaway-cancel-btn"
+                  onClick={e => { e.stopPropagation(); onCancel(l.id); }}
+                >
+                  Cancelar
+                </button>
+              )}
             </div>
           );
         })

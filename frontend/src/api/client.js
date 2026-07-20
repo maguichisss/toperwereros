@@ -1,11 +1,24 @@
 const API_BASE = '/api'
 
-async function request(url, options = {}) {
+function getToken() {
+  return localStorage.getItem('store_token')
+}
+
+export async function request(url, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...options.headers }
+  const token = getToken()
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
   const res = await fetch(`${API_BASE}${url}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
+    headers,
     ...options,
   })
   if (res.status === 204) return null
+  if (res.status === 401) {
+    localStorage.removeItem('store_token')
+    window.location.reload()
+  }
   const data = await res.json()
   if (!res.ok) {
     const msg = Array.isArray(data.detail) ? data.detail.map(e => e.msg).join('; ') : (data.detail || 'Request failed')
@@ -48,7 +61,10 @@ export const uploadApi = {
   upload: (file) => {
     const form = new FormData()
     form.append('image', file)
-    return fetch(`${API_BASE}/upload`, { method: 'POST', body: form }).then((r) => r.json())
+    const headers = {}
+    const token = getToken()
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    return fetch(`${API_BASE}/upload`, { method: 'POST', headers, body: form }).then((r) => r.json())
   },
 }
 
@@ -77,6 +93,23 @@ export const customersApi = {
   update: (id, data) => request(`/customers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   get: (id) => request(`/customers/${id}`),
   remove: (id) => request(`/customers/${id}`, { method: 'DELETE' }),
+}
+
+export const usersApi = {
+  register: (data) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+}
+
+export const authApi = {
+  changePassword: (data) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
+  updateProfile: (data) => request('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }),
+  uploadAvatar: (file) => {
+    const form = new FormData()
+    form.append('image', file)
+    const headers = {}
+    const token = getToken()
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    return fetch(`${API_BASE}/auth/avatar`, { method: 'POST', headers, body: form }).then(r => r.json())
+  },
 }
 
 export const layawaysApi = {

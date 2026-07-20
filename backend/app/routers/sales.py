@@ -2,8 +2,9 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, selectinload
 from app.database import get_db
-from app.models import Product, Sale, SaleItem
+from app.models import Product, Sale, SaleItem, User
 from app.schemas import SaleCreate, SaleResponse, SaleItemResponse
+from app.auth import require_permission
 
 router = APIRouter()
 
@@ -13,6 +14,8 @@ def serialize_sale(sale):
     return SaleResponse(
         id=sale.id,
         total=sale.total,
+        created_by=sale.created_by,
+        created_by_name=sale.creator.username if sale.creator else None,
         created_at=sale.created_at,
         items=[
             SaleItemResponse(
@@ -33,12 +36,14 @@ def list_sales(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("sale.view")),
 ):
     total = db.query(Sale).count()
     sales = (
         db.query(Sale)
         .options(
             selectinload(Sale.items).selectinload(SaleItem.product),
+            selectinload(Sale.creator),
         )
         .order_by(Sale.created_at.desc())
         .offset((page - 1) * per_page)
@@ -49,11 +54,12 @@ def list_sales(
 
 
 @router.get("/{sale_id}")
-def get_sale(sale_id: int, db: Session = Depends(get_db)):
+def get_sale(sale_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("sale.view"))):
     sale = (
         db.query(Sale)
         .options(
             selectinload(Sale.items).selectinload(SaleItem.product),
+            selectinload(Sale.creator),
         )
         .filter(Sale.id == sale_id)
         .first()
@@ -64,7 +70,7 @@ def get_sale(sale_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", status_code=201)
-def create_sale(data: SaleCreate, db: Session = Depends(get_db)):
+def create_sale(data: SaleCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("sale.create"))):
     if not data.items:
         raise HTTPException(400, "La venta debe tener al menos un artículo")
 
@@ -88,7 +94,7 @@ def create_sale(data: SaleCreate, db: Session = Depends(get_db)):
             unit_price=unit_price,
         ))
 
-    sale = Sale(total=total, items=sale_items)
+    sale = Sale(total=total, items=sale_items, created_by=current_user.id)
     db.add(sale)
     db.commit()
     db.refresh(sale)

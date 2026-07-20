@@ -3,8 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_, String
 from sqlalchemy.orm import Session, selectinload
 from app.database import get_db
-from app.models import Product, Category, Color
+from app.models import Product, Category, Color, User
 from app.schemas import ProductCreate, ProductResponse, ProductListResponse
+from app.auth import require_permission
 
 router = APIRouter()
 
@@ -17,6 +18,7 @@ def list_products(
     per_page: int = Query(20, ge=1, le=200),
     export: bool = False,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("product.view")),
 ):
     query = db.query(Product).options(
         selectinload(Product.categories),
@@ -51,7 +53,7 @@ def list_products(
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
-def get_product(product_id: int, db: Session = Depends(get_db)):
+def get_product(product_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("product.view"))):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(404, "Product not found")
@@ -59,7 +61,7 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=ProductResponse, status_code=201)
-def create_product(data: ProductCreate, db: Session = Depends(get_db)):
+def create_product(data: ProductCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("product.create"))):
     name = data.name.strip()
     if not name:
         raise HTTPException(400, "Name is required")
@@ -99,7 +101,7 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{product_id}", response_model=ProductResponse)
-def update_product(product_id: int, data: ProductCreate, db: Session = Depends(get_db)):
+def update_product(product_id: int, data: ProductCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("product.edit"))):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(404, "Product not found")
@@ -142,7 +144,7 @@ def update_product(product_id: int, data: ProductCreate, db: Session = Depends(g
 
 
 @router.delete("/{product_id}", status_code=204)
-def delete_product(product_id: int, db: Session = Depends(get_db)):
+def delete_product(product_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("product.delete"))):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(404, "Product not found")

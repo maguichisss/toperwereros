@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from fpdf import FPDF
 from PIL import Image as PILImage
 from app.database import get_db
-from app.models import Product
+from app.models import Product, User
+from app.auth import require_permission
 
 router = APIRouter()
 
@@ -41,7 +42,7 @@ def cover_image(path):
 
 
 @router.get("/pdf")
-def catalog_pdf(ids: str = "", db: Session = Depends(get_db)):
+def catalog_pdf(ids: str = "", db: Session = Depends(get_db), current_user: User = Depends(require_permission("product.view"))):
     products = db.query(Product).filter(Product.stock > 0)
     if ids:
         id_list = [int(x) for x in ids.split(",") if x.strip()]

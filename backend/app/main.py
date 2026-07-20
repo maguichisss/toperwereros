@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.responses import JSONResponse
-from app.routers import categories, products, upload, colors, catalog, sales, customers, layaways
+from app.routers import categories, products, upload, colors, catalog, sales, customers, layaways, auth
 
 app = FastAPI(title="Store Catalog API", redirect_slashes=False)
 
@@ -35,6 +35,7 @@ app.include_router(products.router, prefix="/api/products")
 app.include_router(upload.router, prefix="/api/upload")
 app.include_router(colors.router, prefix="/api/colors")
 app.include_router(catalog.router, prefix="/api/catalog")
+app.include_router(auth.router, prefix="/api/auth")
 app.include_router(sales.router, prefix="/api/sales")
 app.include_router(customers.router, prefix="/api/customers")
 app.include_router(layaways.router, prefix="/api/layaways")

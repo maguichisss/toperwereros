@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { productsApi, categoriesApi } from '../api/client.js';
 import ProductForm from './ProductForm.jsx';
 import ProductCard from './ProductCard.jsx';
+import Toast from './Toast.jsx';
 
 export default function ProductList() {
   const [products, setProducts] = useState([]);
@@ -10,6 +11,7 @@ export default function ProductList() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
+  const [toast, setToast] = useState(null);
   const [page, setPage] = useState(1);
   const [pendingSearch, setPendingSearch] = useState('');
   const searchTimer = useRef(null);
@@ -113,16 +115,39 @@ export default function ProductList() {
     } catch {}
   }
 
+  function showToast(message, type) { setToast({ message, type }) }
+
   async function openPDF() {
-    if (pendingSearch) {
-      const res = await productsApi.listAll({ q: pendingSearch });
-      const ids = res.products.map(p => p.id);
-      if (ids.length) {
-        window.open(`/api/catalog/pdf?ids=${ids.join(',')}`, '_blank');
-        return;
+    try {
+      showToast('Generando PDF…', 'info')
+      let url = '/api/catalog/pdf'
+      if (pendingSearch) {
+        const res = await productsApi.listAll({ q: pendingSearch })
+        const ids = res.products.map(p => p.id)
+        if (ids.length) url += `?ids=${ids.join(',')}`
       }
+      const token = localStorage.getItem('store_token')
+      const r = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      if (!r.ok) throw new Error('Error al generar PDF')
+      const blob = await r.blob()
+      const disposition = r.headers.get('Content-Disposition')
+      let filename = 'catalogo.pdf'
+      if (disposition) {
+        const match = disposition.match(/filename=(.+)/)
+        if (match) filename = match[1]
+      }
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(blobUrl)
+      showToast('PDF descargado', 'success')
+    } catch (err) {
+      showToast(err.message || 'Error al generar PDF')
     }
-    window.open('/api/catalog/pdf', '_blank');
   }
 
   return (
@@ -186,6 +211,8 @@ export default function ProductList() {
           </button>
         </div>
       )}
+
+      <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
 
       {showForm && (
         <ProductForm

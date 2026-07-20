@@ -2,19 +2,20 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.database import get_db
-from app.models import Category
+from app.models import Category, User
 from app.schemas import CategoryCreate, CategoryResponse
+from app.auth import require_permission
 
 router = APIRouter()
 
 
 @router.get("", response_model=list[CategoryResponse])
-def list_categories(db: Session = Depends(get_db)):
+def list_categories(db: Session = Depends(get_db), current_user: User = Depends(require_permission("category.view"))):
     return db.query(Category).order_by(Category.name).all()
 
 
 @router.post("", response_model=CategoryResponse, status_code=201)
-def create_category(data: CategoryCreate, db: Session = Depends(get_db)):
+def create_category(data: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("category.create"))):
     name = data.name.strip()
     if not name:
         raise HTTPException(400, "Name is required")
@@ -29,7 +30,7 @@ def create_category(data: CategoryCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{category_id}", response_model=CategoryResponse)
-def update_category(category_id: int, data: CategoryCreate, db: Session = Depends(get_db)):
+def update_category(category_id: int, data: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("category.edit"))):
     name = data.name.strip()
     if not name:
         raise HTTPException(400, "Name is required")
@@ -46,7 +47,7 @@ def update_category(category_id: int, data: CategoryCreate, db: Session = Depend
 
 
 @router.delete("/{category_id}", status_code=204)
-def delete_category(category_id: int, db: Session = Depends(get_db)):
+def delete_category(category_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("category.delete"))):
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
         raise HTTPException(404, "Category not found")

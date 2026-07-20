@@ -97,4 +97,64 @@ finally:
     db.close()
 "
 
+echo "Adding created_by columns (if not present)..."
+python -c "
+from app.database import engine
+from sqlalchemy import text, inspect
+
+inspector = inspect(engine)
+sales_columns = [c['name'] for c in inspector.get_columns('sales')]
+layaways_columns = [c['name'] for c in inspector.get_columns('layaways')]
+users_columns = [c['name'] for c in inspector.get_columns('users')]
+
+with engine.connect() as conn:
+    if 'created_by' not in sales_columns:
+        conn.execute(text('ALTER TABLE sales ADD COLUMN created_by INTEGER REFERENCES users(id)'))
+        print('Added created_by to sales')
+    if 'created_by' not in layaways_columns:
+        conn.execute(text('ALTER TABLE layaways ADD COLUMN created_by INTEGER REFERENCES users(id)'))
+        print('Added created_by to layaways')
+    if 'image_url' not in users_columns:
+        conn.execute(text('ALTER TABLE users ADD COLUMN image_url VARCHAR'))
+        print('Added image_url to users')
+    conn.commit()
+"
+
+echo "Seeding roles and admin user..."
+python -c "
+from app.database import SessionLocal
+from app.models import Role, User
+from app.auth import hash_password
+
+db = SessionLocal()
+try:
+    admin_role = db.query(Role).filter(Role.name == 'admin').first()
+    if not admin_role:
+        admin_role = Role(name='admin')
+        db.add(admin_role)
+    employee_role = db.query(Role).filter(Role.name == 'employee').first()
+    if not employee_role:
+        employee_role = Role(name='employee')
+        db.add(employee_role)
+    viewer_role = db.query(Role).filter(Role.name == 'viewer').first()
+    if not viewer_role:
+        viewer_role = Role(name='viewer')
+        db.add(viewer_role)
+    db.flush()
+
+    admin_user = db.query(User).filter(User.username == 'admin').first()
+    if not admin_user:
+        admin_user = User(
+            username='admin',
+            hashed_password=hash_password('admin123'),
+            role_id=admin_role.id,
+            active=True,
+        )
+        db.add(admin_user)
+    db.commit()
+    print('Roles and admin user seeded successfully.')
+finally:
+    db.close()
+"
+
 exec "$@"

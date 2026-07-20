@@ -109,6 +109,45 @@ class ProductListResponse(BaseModel):
     total: int
 
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class ProfileUpdateRequest(BaseModel):
+    email: str | None = None
+    image_url: str | None = None
+
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    email: str | None = None
+    role_id: int
+
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    username: str
+    email: str | None = None
+    image_url: str | None = None
+    active: bool
+    role_id: int
+    role_name: str | None = None
+    created_at: datetime
+
+
 class SaleItemCreate(BaseModel):
     product_id: int
     quantity: int = 1
@@ -132,6 +171,8 @@ class SaleResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     total: Decimal
+    created_by: int | None = None
+    created_by_name: str | None = None
     created_at: datetime
     items: list[SaleItemResponse]
 
@@ -193,6 +234,8 @@ class LayawayResponse(BaseModel):
     balance: Decimal
     status: str
     sale_id: int | None = None
+    created_by: int | None = None
+    created_by_name: str | None = None
     notes: str | None = None
     created_at: datetime
     updated_at: datetime

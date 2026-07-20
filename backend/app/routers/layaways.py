@@ -2,8 +2,9 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, selectinload
 from app.database import get_db
-from app.models import Product, Customer, Sale, SaleItem, Layaway, LayawayItem, LayawayPayment
+from app.models import Product, Customer, Sale, SaleItem, Layaway, LayawayItem, LayawayPayment, User
 from app.schemas import LayawayCreate, LayawayResponse, LayawayItemResponse, LayawayPaymentResponse, LayawayListResponse, PaymentCreate
+from app.auth import require_permission
 
 router = APIRouter()
 
@@ -23,6 +24,8 @@ def serialize_layaway(layaway):
         notes=layaway.notes,
         created_at=layaway.created_at,
         updated_at=layaway.updated_at,
+        created_by=layaway.created_by,
+        created_by_name=layaway.creator.username if layaway.creator else None,
         items=[
             LayawayItemResponse(
                 id=li.id,
@@ -46,7 +49,7 @@ def serialize_layaway(layaway):
 
 
 @router.post("", status_code=201)
-def create_layaway(data: LayawayCreate, db: Session = Depends(get_db)):
+def create_layaway(data: LayawayCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("apartado.create"))):
     if not data.items:
         raise HTTPException(400, "El apartado debe tener al menos un artículo")
 
@@ -106,6 +109,7 @@ def create_layaway(data: LayawayCreate, db: Session = Depends(get_db)):
         balance=balance,
         status="active",
         notes=data.notes,
+        created_by=current_user.id,
         items=layaway_items,
     )
     db.add(layaway)
@@ -130,6 +134,7 @@ def list_layaways(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("apartado.view")),
 ):
     query = db.query(Layaway)
     if status:
@@ -143,6 +148,7 @@ def list_layaways(
             selectinload(Layaway.items).selectinload(LayawayItem.product),
             selectinload(Layaway.payments),
             selectinload(Layaway.customer),
+            selectinload(Layaway.creator),
         )
         .order_by(Layaway.created_at.desc())
         .offset((page - 1) * per_page)
@@ -156,13 +162,14 @@ def list_layaways(
 
 
 @router.get("/{layaway_id}")
-def get_layaway(layaway_id: int, db: Session = Depends(get_db)):
+def get_layaway(layaway_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("apartado.view"))):
     layaway = (
         db.query(Layaway)
         .options(
             selectinload(Layaway.items).selectinload(LayawayItem.product),
             selectinload(Layaway.payments),
             selectinload(Layaway.customer),
+            selectinload(Layaway.creator),
         )
         .filter(Layaway.id == layaway_id)
         .first()
@@ -173,13 +180,14 @@ def get_layaway(layaway_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{layaway_id}/payments", status_code=201)
-def add_payment(layaway_id: int, data: PaymentCreate, db: Session = Depends(get_db)):
+def add_payment(layaway_id: int, data: PaymentCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("apartado.edit"))):
     layaway = (
         db.query(Layaway)
         .options(
             selectinload(Layaway.items).selectinload(LayawayItem.product),
             selectinload(Layaway.payments),
             selectinload(Layaway.customer),
+            selectinload(Layaway.creator),
         )
         .filter(Layaway.id == layaway_id)
         .first()
@@ -196,7 +204,7 @@ def add_payment(layaway_id: int, data: PaymentCreate, db: Session = Depends(get_
     layaway.balance -= data.amount
 
     if layaway.balance <= 0:
-        complete_layaway(layaway, db)
+        complete_layaway(layaway, db, current_user)
 
     db.commit()
     db.refresh(layaway, attribute_names=["items", "payments", "customer"])
@@ -207,13 +215,14 @@ def add_payment(layaway_id: int, data: PaymentCreate, db: Session = Depends(get_
 
 
 @router.patch("/{layaway_id}/cancel")
-def cancel_layaway(layaway_id: int, db: Session = Depends(get_db)):
+def cancel_layaway(layaway_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("apartado.edit"))):
     layaway = (
         db.query(Layaway)
         .options(
             selectinload(Layaway.items).selectinload(LayawayItem.product),
             selectinload(Layaway.payments),
             selectinload(Layaway.customer),
+            selectinload(Layaway.creator),
         )
         .filter(Layaway.id == layaway_id)
         .first()
@@ -238,13 +247,14 @@ def cancel_layaway(layaway_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{layaway_id}/complete")
-def complete_layaway_endpoint(layaway_id: int, db: Session = Depends(get_db)):
+def complete_layaway_endpoint(layaway_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("apartado.edit"))):
     layaway = (
         db.query(Layaway)
         .options(
             selectinload(Layaway.items).selectinload(LayawayItem.product),
             selectinload(Layaway.payments),
             selectinload(Layaway.customer),
+            selectinload(Layaway.creator),
         )
         .filter(Layaway.id == layaway_id)
         .first()
@@ -254,7 +264,7 @@ def complete_layaway_endpoint(layaway_id: int, db: Session = Depends(get_db)):
     if layaway.status != "active":
         raise HTTPException(400, "Solo se pueden completar apartados activos")
 
-    complete_layaway(layaway, db)
+    complete_layaway(layaway, db, current_user)
     db.commit()
     db.refresh(layaway, attribute_names=["items", "payments", "customer"])
     for li in layaway.items:
@@ -263,7 +273,7 @@ def complete_layaway_endpoint(layaway_id: int, db: Session = Depends(get_db)):
     return serialize_layaway(layaway)
 
 
-def complete_layaway(layaway, db):
+def complete_layaway(layaway, db, current_user=None):
     if layaway.sale_id:
         return
 
@@ -275,7 +285,8 @@ def complete_layaway(layaway, db):
             unit_price=li.unit_price,
         ))
 
-    sale = Sale(total=layaway.total, items=sale_items)
+    created_by = current_user.id if current_user else None
+    sale = Sale(total=layaway.total, items=sale_items, created_by=created_by)
     db.add(sale)
     db.flush()
 

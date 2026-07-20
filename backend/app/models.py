@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Table, func
+from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Table, func, Boolean
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -54,13 +54,40 @@ class Product(Base):
     colors = relationship("Color", secondary=product_colors, backref="products")
 
 
+class Role(Base):
+    __tablename__ = "roles"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, unique=True, nullable=False)
+
+    users = relationship("User", back_populates="role")
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String, unique=True, nullable=False)
+    email = Column(String, unique=True, nullable=True)
+    hashed_password = Column(String, nullable=False)
+    active = Column(Boolean, default=True)
+    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    image_url = Column(String, nullable=True)
+    role = relationship("Role", back_populates="users")
+
+
 class Sale(Base):
     __tablename__ = "sales"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     total = Column(Numeric(10, 2), nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
+    creator = relationship("User")
 
 
 class SaleItem(Base):
@@ -97,6 +124,7 @@ class Layaway(Base):
     balance = Column(Numeric(10, 2), nullable=False)
     status = Column(String, default="active")
     sale_id = Column(Integer, ForeignKey("sales.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     notes = Column(String, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
@@ -105,6 +133,7 @@ class Layaway(Base):
     items = relationship("LayawayItem", back_populates="layaway", cascade="all, delete-orphan")
     payments = relationship("LayawayPayment", back_populates="layaway", cascade="all, delete-orphan")
     sale = relationship("Sale")
+    creator = relationship("User")
 
 
 class LayawayItem(Base):
