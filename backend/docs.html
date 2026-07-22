@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Store Catalog API — Documentation</title>
+<style>
+  :root {
+    --bg: #0f172a; --surface: #1e293b; --border: #334155;
+    --text: #e2e8f0; --muted: #94a3b8; --accent: #38bdf8;
+    --green: #4ade80; --yellow: #fbbf24; --red: #f87171;
+    --purple: #a78bfa; --orange: #fb923c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+  h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+  h1 span { color: var(--accent); }
+  h2 { font-size: 1.3rem; color: var(--accent); margin: 2.5rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+  h3 { font-size: 1.05rem; margin: 1.5rem 0 0.5rem; color: var(--green); }
+  p, li { color: var(--muted); font-size: 0.92rem; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; font-size: 0.95rem; }
+  .links { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+  .links a { background: var(--surface); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; }
+  .links a:hover { border-color: var(--accent); text-decoration: none; }
+  table { width: 100%; border-collapse: collapse; margin: 0.75rem 0 1.5rem; font-size: 0.85rem; }
+  th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+  th { color: var(--accent); font-weight: 600; background: var(--surface); }
+  td { color: var(--text); }
+  .method { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 3px; text-transform: uppercase; min-width: 3.5rem; text-align: center; }
+  .m-get { background: #164e63; color: var(--accent); }
+  .m-post { background: #14532d; color: var(--green); }
+  .m-put { background: #713f12; color: var(--yellow); }
+  .m-patch { background: #4c1d95; color: var(--purple); }
+  .m-delete { background: #7f1d1d; color: var(--red); }
+  .perm { font-family: 'Courier New', monospace; font-size: 0.78rem; color: var(--orange); }
+  .tag { display: inline-block; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 3px; background: #1e293b; border: 1px solid var(--border); color: var(--muted); margin-right: 0.25rem; }
+  code { font-family: 'Courier New', monospace; background: var(--surface); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.82rem; color: var(--accent); }
+  ul { padding-left: 1.5rem; margin: 0.5rem 0; }
+  li { margin: 0.25rem 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; }
+  .stat .num { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+  .stat .label { font-size: 0.8rem; color: var(--muted); }
+  .note { background: #1e293b; border-left: 3px solid var(--yellow); padding: 0.75rem 1rem; margin: 1rem 0; border-radius: 0 6px 6px 0; font-size: 0.85rem; }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.8rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1><span>Store Catalog</span> API Documentation</h1>
+<p class="subtitle">FastAPI backend &mdash; authentication, product catalog, sales, layaways, and PDF generation.</p>
+
+<div class="links">
+  <a href="/swagger">Swagger UI</a>
+  <a href="/redoc">ReDoc</a>
+  <a href="/openapi.json">OpenAPI JSON</a>
+</div>
+
+<div class="grid">
+  <div class="stat"><div class="num">36</div><div class="label">Endpoints</div></div>
+  <div class="stat"><div class="num">9</div><div class="label">Modules</div></div>
+  <div class="stat"><div class="num">3</div><div class="label">Roles</div></div>
+  <div class="stat"><div class="num">15</div><div class="label">Permissions</div></div>
+</div>
+
+<h2>Authentication</h2>
+<p>All endpoints except <code>POST /api/auth/login</code> require a JWT Bearer token in the <code>Authorization</code> header.</p>
+<table>
+<tr><th>Setting</th><th>Value</th></tr>
+<tr><td>Token format</td><td>JWT (HS256)</td><tr>
+<tr><td>Expiry</td><td>24 hours (configurable via <code>JWT_EXPIRE_MINUTES</code>)</td></tr>
+<tr><td>Secret</td><td><code>JWT_SECRET</code> env var (default: <code>dev-secret-change-in-production</code>)</td></tr>
+<tr><td>Header</td><td><code>Authorization: Bearer &lt;token&gt;</code></td></tr>
+</table>
+
+<h2>Roles &amp; Permissions</h2>
+<table>
+<tr><th>Role</th><th>Access Level</th><th>Description</th></tr>
+<tr><td><strong>admin</strong></td><td><code>*</code> (wildcard)</td><td>Full access to all endpoints including user management</td></tr>
+<tr><td><strong>employee</strong></td><td>15 permissions</td><td>Products, sales, layaways, customers, categories (view), colors (view)</td></tr>
+<tr><td><strong>viewer</strong></td><td>6 permissions</td><td>Read-only access to products, sales, layaways, customers, categories, colors</td></tr>
+</table>
+
+<h3>Permission Matrix</h3>
+<table>
+<tr><th>Permission</th><th>admin</th><th>employee</th><th>viewer</th></tr>
+<tr><td><code>product.view</code></td><td>&#x2714;</td><td>&#x2714;</td><td>&#x2714;</td></tr>
+<tr><td><code>product.create</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
+<tr><td><code>product.edit</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
+<tr><td><code>product.delete</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
+<tr><td><code>sale.view</code></td><td>&#x2714;</td><td>&#x2714;</td><td>&#x2714;</td></tr>
+<tr><td><code>sale.create</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
+<tr><td><code>apartado.view</code></td><td>&#x2714;</td><td>&#x2714;</td><td>&#x2714;</td></tr>
+<tr><td><code>apartado.create</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
+<tr><td><code>apartado.edit</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
+<tr><td><code>customer.view</code></td><td>&#x2714;</td><td>&#x2714;</td><td>&#x2714;</td></tr>
+<tr><td><code>customer.create</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
+<tr><td><code>customer.edit</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
+<tr><td><code>customer.delete</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
+<tr><td><code>category.view</code></td><td>&#x2714;</td><td>&#x2714;</td><td>&#x2714;</td></tr>
+<tr><td><code>category.create/edit/delete</code></td><td>&#x2714;</td><td></td><td></td></tr>
+<tr><td><code>color.view</code></td><td>&#x2714;</td><td>&#x2714;</td><td>&#x2714;</td></tr>
+<tr><td><code>color.create/edit/delete</code></td><td>&#x2714;</td><td></td><td></td></tr>
+<tr><td><code>user.manage</code></td><td>&#x2714;</td><td></td><td></td></tr>
+</table>
+
+<h2>Endpoint Reference</h2>
+
+<h3>Auth &mdash; <code>/api/auth</code></h3>
+<table>
+<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
+<tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/login</code></td><td>public</td><td>Authenticate and receive JWT. Rate-limited to 5 attempts/min per IP.</td></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/auth/me</code></td><td>authenticated</td><td>Return current user profile (id, username, email, role, avatar).</td></tr>
+<tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/change-password</code></td><td>authenticated</td><td>Change own password. New password must be &ge; 4 characters.</td></tr>
+<tr><td><span class="method m-put">PUT</span></td><td><code>/api/auth/profile</code></td><td>authenticated</td><td>Update own email and/or avatar URL. Email uniqueness enforced.</td></tr>
+<tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/avatar</code></td><td>authenticated</td><td>Upload avatar image. Magic bytes validated (JPEG/PNG/WebP, 5MB max).</td></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/auth/users</code></td><td class="perm">user.manage</td><td>List all users ordered by username.</td></tr>
+<tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/register</code></td><td class="perm">user.manage</td><td>Create new user account. Username and email must be unique.</td></tr>
+</table>
+
+<h3>Products &mdash; <code>/api/products</code></h3>
+<table>
+<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/products</code></td><td class="perm">product.view</td><td>Paginated list with search (<code>q</code>), category filter (<code>category_ids</code>), and export mode. Search matches code, name, ubicacion, price, category name, color name.</td></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/products/{id}</code></td><td class="perm">product.view</td><td>Single product with categories and colors loaded.</td></tr>
+<tr><td><span class="method m-post">POST</span></td><td><code>/api/products</code></td><td class="perm">product.create</td><td>Create product. Requires unique code, valid price, existing categories/colors.</td></tr>
+<tr><td><span class="method m-put">PUT</span></td><td><code>/api/products/{id}</code></td><td class="perm">product.edit</td><td>Full update. Old image is deleted from disk when image_url changes.</td></tr>
+<tr><td><span class="method m-delete">DELETE</span></td><td><code>/api/products/{id}</code></td><td class="perm">product.delete</td><td>Delete product and remove image file from disk.</td></tr>
+</table>
+
+<h3>Categories &mdash; <code>/api/categories</code></h3>
+<table>
+<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/categories</code></td><td class="perm">category.view</td><td>List all categories ordered alphabetically.</td></tr>
+<tr><td><span class="method m-post">POST</span></td><td><code>/api/categories</code></td><td class="perm">category.create</td><td>Create category. Name must be unique.</td></tr>
+<tr><td><span class="method m-put">PUT</span></td><td><code>/api/categories/{id}</code></td><td class="perm">category.edit</td><td>Update category name.</td></tr>
+<tr><td><span class="method m-delete">DELETE</span></td><td><code>/api/categories/{id}</code></td><td class="perm">category.delete</td><td>Delete category. Blocked (409) if assigned to any product.</td></tr>
+</table>
+
+<h3>Colors &mdash; <code>/api/colors</code></h3>
+<table>
+<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/colors</code></td><td class="perm">color.view</td><td>List all colors ordered alphabetically.</td></tr>
+<tr><td><span class="method m-post">POST</span></td><td><code>/api/colors</code></td><td class="perm">color.create</td><td>Create color. Hex must match <code>#RRGGBB</code> format.</td></tr>
+<tr><td><span class="method m-put">PUT</span></td><td><code>/api/colors/{id}</code></td><td class="perm">color.edit</td><td>Update color name and hex code.</td></tr>
+<tr><td><span class="method m-delete">DELETE</span></td><td><code>/api/colors/{id}</code></td><td class="perm">color.delete</td><td>Delete color. Blocked (409) if assigned to any product.</td></tr>
+</table>
+
+<h3>Upload &mdash; <code>/api/upload</code></h3>
+<table>
+<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
+<tr><td><span class="method m-post">POST</span></td><td><code>/api/upload</code></td><td class="perm">product.edit</td><td>Upload product image. Magic bytes validated (JPEG/PNG/WebP). 5MB max. Returns <code>{"image_url": "/uploads/&lt;uuid&gt;.&lt;ext&gt;"}</code>.</td></tr>
+</table>
+
+<h3>Catalog &mdash; <code>/api/catalog</code></h3>
+<table>
+<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/catalog/pdf</code></td><td class="perm">product.view</td><td>Generate PDF catalog. 4-column grid, 16 products/page. Only in-stock products. Optional <code>ids</code> query param.</td></tr>
+</table>
+
+<h3>Sales &mdash; <code>/api/sales</code></h3>
+<table>
+<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/sales</code></td><td class="perm">sale.view</td><td>Paginated list, newest first. Includes line items and creator name.</td></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/sales/{id}</code></td><td class="perm">sale.view</td><td>Single sale with all line items and product details.</td></tr>
+<tr><td><span class="method m-post">POST</span></td><td><code>/api/sales</code></td><td class="perm">sale.create</td><td>Create sale. Atomic stock decrement via savepoint. Unit price captured from product at sale time.</td></tr>
+</table>
+
+<h3>Customers &mdash; <code>/api/customers</code></h3>
+<table>
+<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/customers</code></td><td class="perm">customer.view</td><td>List customers. Optional <code>q</code> search by name or phone.</td></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/customers/{id}</code></td><td class="perm">customer.view</td><td>Single customer by ID.</td></tr>
+<tr><td><span class="method m-post">POST</span></td><td><code>/api/customers</code></td><td class="perm">customer.create</td><td>Create customer record.</td></tr>
+<tr><td><span class="method m-put">PUT</span></td><td><code>/api/customers/{id}</code></td><td class="perm">customer.edit</td><td>Update customer profile.</td></tr>
+<tr><td><span class="method m-delete">DELETE</span></td><td><code>/api/customers/{id}</code></td><td class="perm">customer.delete</td><td>Delete customer record.</td></tr>
+</table>
+
+<h3>Layaways &mdash; <code>/api/layaways</code></h3>
+<table>
+<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
+<tr><td><span class="method m-post">POST</span></td><td><code>/api/layaways</code></td><td class="perm">apartado.create</td><td>Create layaway. Provide <code>customer_id</code> or inline <code>customer</code>. Deposit locks in prices and decrements stock.</td></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/layaways</code></td><td class="perm">apartado.view</td><td>Paginated list. Filter by <code>status</code> and <code>customer_id</code>.</td></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/layaways/{id}</code></td><td class="perm">apartado.view</td><td>Single layaway with items, payments, and customer info.</td></tr>
+<tr><td><span class="method m-post">POST</span></td><td><code>/api/layaways/{id}/payments</code></td><td class="perm">apartado.edit</td><td>Add payment. Auto-completes when balance reaches $0. Amount cannot exceed balance.</td></tr>
+<tr><td><span class="method m-patch">PATCH</span></td><td><code>/api/layaways/{id}/cancel</code></td><td class="perm">apartado.edit</td><td>Cancel active layaway. All product stock is restored.</td></tr>
+<tr><td><span class="method m-patch">PATCH</span></td><td><code>/api/layaways/{id}/complete</code></td><td class="perm">apartado.edit</td><td>Manually complete layaway. Creates a linked Sale record.</td></tr>
+</table>
+
+<h2>Business Rules</h2>
+
+<h3>Products</h3>
+<ul>
+  <li>Product <code>code</code> must be globally unique (enforced on create and update).</li>
+  <li><code>name</code>, <code>code</code>, and <code>price</code> are required. Price &ge; 0.</li>
+  <li>All referenced <code>category_ids</code> and <code>color_ids</code> must exist; count must match.</li>
+  <li>Image files are deleted from disk on product update (old URL) and delete.</li>
+  <li>Search uses case-insensitive ILIKE across 6 fields simultaneously.</li>
+</ul>
+
+<h3>Sales</h3>
+<ul>
+  <li>At least one item required.</li>
+  <li>Each product must exist and have sufficient stock.</li>
+  <li><code>unit_price</code> is captured from the product at sale time (not from the request).</li>
+  <li>Stock decrement and sale creation are wrapped in a SQLAlchemy <strong>savepoint</strong> (<code>db.begin_nested()</code>).</li>
+  <li><code>created_by</code> tracks which user made the sale.</li>
+</ul>
+
+<h3>Layaways (Apartados)</h3>
+<ul>
+  <li>Must provide exactly one of <code>customer_id</code> or inline <code>customer</code> object.</li>
+  <li>Deposit must be &gt; 0 and must not exceed the total.</li>
+  <li>Each item locks in the current <code>unit_price</code> and decrements stock.</li>
+  <li>The initial deposit is recorded as the first <code>LayawayPayment</code>.</li>
+  <li>When a payment brings the balance to $0, the layaway is <strong>automatically completed</strong> and a Sale is created.</li>
+  <li>Cancellation restores all product stock.</li>
+  <li>Completion is idempotent — if <code>sale_id</code> is already set, it's a no-op.</li>
+</ul>
+
+<h3>Image Uploads</h3>
+<ul>
+  <li>Two upload endpoints: <code>POST /api/upload</code> (products) and <code>POST /api/auth/avatar</code> (profiles).</li>
+  <li>Validation is by <strong>magic bytes</strong>, not Content-Type header.</li>
+  <li>Supported formats: JPEG (<code>FF D8 FF</code>), PNG (<code>89 50 4E 47</code>), WebP (<code>52 49 46 46</code>).</li>
+  <li>Max file size: 5 MB. Min: 8 bytes.</li>
+  <li>Filenames are random UUIDs to prevent collisions.</li>
+</ul>
+
+<h3>PDF Catalog</h3>
+<ul>
+  <li>Only in-stock products (<code>stock &gt; 0</code>).</li>
+  <li>4-column card grid, 16 products per page.</li>
+  <li>Each card: cropped product image, name, price (blue), code (gray).</li>
+  <li>Weekly header: "Catalogo Toperwereros" with valid date range in Spanish.</li>
+  <li>Images are center-cropped to fill 44&times;48mm at 72 DPI, converted to JPEG 85%.</li>
+</ul>
+
+<h2>Environment Variables</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+<tr><td><code>DATABASE_URL</code></td><td><code>postgresql://postgres:postgres@localhost:5432/store_catalog</code></td><td>PostgreSQL connection string</td></tr>
+<tr><td><code>JWT_SECRET</code></td><td><code>dev-secret-change-in-production</code></td><td>JWT signing secret</td></tr>
+<tr><td><code>JWT_EXPIRE_MINUTES</code></td><td><code>1440</code> (24h)</td><td>Token expiry in minutes</td></tr>
+<tr><td><code>LOG_LEVEL</code></td><td><code>INFO</code></td><td>Python log level (<code>DEBUG</code> enables SQL queries)</td></tr>
+</table>
+
+<h2>Error Responses</h2>
+<p>All errors return JSON with a <code>detail</code> field:</p>
+<table>
+<tr><th>Status</th><th>Meaning</th></tr>
+<tr><td><code>400</code></td><td>Validation error (bad input, duplicate code, insufficient stock)</td></tr>
+<tr><td><code>401</code></td><td>Not authenticated or invalid token</td></tr>
+<tr><td><code>403</code></td><td>Authenticated but lacking required permission</td></tr>
+<tr><td><code>404</code></td><td>Resource not found</td></tr>
+<tr><td><code>409</code></td><td>Conflict (duplicate name, resource in use)</td></tr>
+<tr><td><code>422</code></td><td>Request validation error (malformed body)</td></tr>
+<tr><td><code>429</code></td><td>Rate limit exceeded</td></tr>
+<tr><td><code>500</code></td><td>Internal server error</td></tr>
+</table>
+
+<footer>Store Catalog API &mdash; FastAPI + SQLAlchemy 2.0 + PostgreSQL</footer>
+</div>
+</body>
+</html>

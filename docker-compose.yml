@@ -21,6 +21,7 @@ services:
       - "3001:3001"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/store_catalog
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
       - ./backend:/app
       - /app/__pycache__

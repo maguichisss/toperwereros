@@ -1,6 +1,9 @@
+"""Category CRUD endpoints."""
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models import Category, product_categories, User
 from app.schemas import CategoryCreate, CategoryResponse
@@ -9,13 +12,47 @@ from app.auth import require_permission
 router = APIRouter()
 
 
-@router.get("", response_model=list[CategoryResponse])
-def list_categories(db: Session = Depends(get_db), current_user: User = Depends(require_permission("category.view"))):
+@router.get("", response_model=list[CategoryResponse], tags=["Categories"], summary="List categories",
+              description="Return all categories ordered alphabetically.")
+def list_categories(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("category.view")),
+) -> list[Category]:
+    """Return all categories ordered alphabetically.
+
+    Args:
+        db: Active database session.
+        current_user: Authenticated user with ``category.view`` permission.
+
+    Returns:
+        List of Category records.
+    """
+
     return db.query(Category).order_by(Category.name).all()
 
 
-@router.post("", response_model=CategoryResponse, status_code=201)
-def create_category(data: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("category.create"))):
+@router.post("", response_model=CategoryResponse, status_code=201, tags=["Categories"], summary="Create category",
+              description="Create a new category. Name must be non-empty and unique.")
+def create_category(
+    data: CategoryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("category.create")),
+) -> Category:
+    """Create a new category.
+
+    Args:
+        data: Category creation payload with name.
+        db: Active database session.
+        current_user: Authenticated user with ``category.create`` permission.
+
+    Returns:
+        The newly created Category record.
+
+    Raises:
+        HTTPException: 400 if the name is empty.
+        HTTPException: 409 if a category with the same name already exists.
+    """
+
     name = data.name.strip()
     if not name:
         raise HTTPException(400, "Name is required")
@@ -29,8 +66,31 @@ def create_category(data: CategoryCreate, db: Session = Depends(get_db), current
     return category
 
 
-@router.put("/{category_id}", response_model=CategoryResponse)
-def update_category(category_id: int, data: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("category.edit"))):
+@router.put("/{category_id}", response_model=CategoryResponse, tags=["Categories"], summary="Update category",
+              description="Update a category's name. New name must be unique.")
+def update_category(
+    category_id: int,
+    data: CategoryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("category.edit")),
+) -> Category:
+    """Update an existing category's name.
+
+    Args:
+        category_id: ID of the category to update.
+        data: Updated category data.
+        db: Active database session.
+        current_user: Authenticated user with ``category.edit`` permission.
+
+    Returns:
+        The updated Category record.
+
+    Raises:
+        HTTPException: 404 if the category is not found.
+        HTTPException: 400 if the name is empty.
+        HTTPException: 409 if another category already uses the given name.
+    """
+
     name = data.name.strip()
     if not name:
         raise HTTPException(400, "Name is required")
@@ -46,8 +106,25 @@ def update_category(category_id: int, data: CategoryCreate, db: Session = Depend
     return category
 
 
-@router.delete("/{category_id}", status_code=204)
-def delete_category(category_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("category.delete"))):
+@router.delete("/{category_id}", status_code=204, tags=["Categories"], summary="Delete category",
+              description="Delete a category. Blocked with 409 if the category is assigned to any product.")
+def delete_category(
+    category_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("category.delete")),
+) -> None:
+    """Delete a category that is not assigned to any product.
+
+    Args:
+        category_id: ID of the category to delete.
+        db: Active database session.
+        current_user: Authenticated user with ``category.delete`` permission.
+
+    Raises:
+        HTTPException: 404 if the category is not found.
+        HTTPException: 409 if the category is assigned to one or more products.
+    """
+
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
         raise HTTPException(404, "Category not found")

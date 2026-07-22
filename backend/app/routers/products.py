@@ -1,16 +1,24 @@
+"""Product CRUD with pagination, search, category/color filtering, and image cleanup."""
+
+import logging
 import os
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_, String
 from sqlalchemy.orm import Session, selectinload
+
 from app.database import get_db
 from app.models import Product, Category, Color, User
 from app.schemas import ProductCreate, ProductResponse, ProductListResponse
 from app.auth import require_permission
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
-@router.get("", response_model=ProductListResponse)
+@router.get("", response_model=ProductListResponse, tags=["Products"], summary="List products",
+              description="Paginated product list with full-text search (code, name, ubicacion, price, category, color), category filtering, and export mode.")
 def list_products(
     category_ids: str | None = None,
     q: str | None = Query(None),
@@ -19,7 +27,26 @@ def list_products(
     export: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("product.view")),
-):
+) -> ProductListResponse:
+    """Return a paginated, filterable product list.
+
+    Supports full-text search across code, name, ubicacion, price, category
+    name, and color name.  When ``export=True``, pagination is skipped and all
+    matching products are returned.
+
+    Args:
+        category_ids: Comma-separated category IDs to filter by.
+        q: Optional search string matched against multiple product fields.
+        page: 1-indexed page number (default 1).
+        per_page: Items per page, 1–200 (default 20).
+        export: If ``True``, return all results without pagination.
+        db: Active database session.
+        current_user: Authenticated user with ``product.view`` permission.
+
+    Returns:
+        ProductListResponse with ``products`` list and ``total`` count.
+    """
+
     query = db.query(Product).options(
         selectinload(Product.categories),
         selectinload(Product.colors),
@@ -52,16 +79,58 @@ def list_products(
     return ProductListResponse(products=products, total=total)
 
 
-@router.get("/{product_id}", response_model=ProductResponse)
-def get_product(product_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("product.view"))):
+@router.get("/{product_id}", response_model=ProductResponse, tags=["Products"], summary="Get product",
+              description="Return a single product by ID with categories and colors loaded.")
+def get_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("product.view")),
+) -> Product:
+    """Return a single product by ID with categories and colors loaded.
+
+    Args:
+        product_id: ID of the product to retrieve.
+        db: Active database session.
+        current_user: Authenticated user with ``product.view`` permission.
+
+    Returns:
+        Full Product record.
+
+    Raises:
+        HTTPException: 404 if the product is not found.
+    """
+
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(404, "Product not found")
     return product
 
 
-@router.post("", response_model=ProductResponse, status_code=201)
-def create_product(data: ProductCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("product.create"))):
+@router.post("", response_model=ProductResponse, status_code=201, tags=["Products"], summary="Create product",
+              description="Create a new product. Requires unique code, valid price (>= 0), and existing category/color IDs.")
+def create_product(
+    data: ProductCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("product.create")),
+) -> Product:
+    """Create a new product with optional category and color associations.
+
+    Validates name, code, price, and that all referenced categories/colors exist.
+
+    Args:
+        data: Product creation payload.
+        db: Active database session.
+        current_user: Authenticated user with ``product.create`` permission.
+
+    Returns:
+        The newly created Product record.
+
+    Raises:
+        HTTPException: 400 if required fields are missing, price is invalid,
+            or a referenced category/color does not exist.
+        HTTPException: 400 if the product code already exists.
+    """
+
     name = data.name.strip()
     if not name:
         raise HTTPException(400, "Name is required")
@@ -100,8 +169,34 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db), current_u
     return product
 
 
-@router.put("/{product_id}", response_model=ProductResponse)
-def update_product(product_id: int, data: ProductCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("product.edit"))):
+@router.put("/{product_id}", response_model=ProductResponse, tags=["Products"], summary="Update product",
+              description="Full product update. Old image file is deleted from disk when image_url changes.")
+def update_product(
+    product_id: int,
+    data: ProductCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("product.edit")),
+) -> Product:
+    """Update an existing product, replacing categories, colors, and image.
+
+    If the image URL changes, the old image file is deleted from disk.
+
+    Args:
+        product_id: ID of the product to update.
+        data: Updated product data.
+        db: Active database session.
+        current_user: Authenticated user with ``product.edit`` permission.
+
+    Returns:
+        The updated Product record.
+
+    Raises:
+        HTTPException: 404 if the product is not found.
+        HTTPException: 400 if required fields are missing, price is invalid,
+            code is taken by another product, or a referenced category/color
+            does not exist.
+    """
+
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(404, "Product not found")
@@ -143,8 +238,24 @@ def update_product(product_id: int, data: ProductCreate, db: Session = Depends(g
     return product
 
 
-@router.delete("/{product_id}", status_code=204)
-def delete_product(product_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("product.delete"))):
+@router.delete("/{product_id}", status_code=204, tags=["Products"], summary="Delete product",
+              description="Delete a product and remove its image file from disk.")
+def delete_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("product.delete")),
+) -> None:
+    """Delete a product and remove its image file from disk.
+
+    Args:
+        product_id: ID of the product to delete.
+        db: Active database session.
+        current_user: Authenticated user with ``product.delete`` permission.
+
+    Raises:
+        HTTPException: 404 if the product is not found.
+    """
+
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(404, "Product not found")
@@ -155,7 +266,7 @@ def delete_product(product_id: int, db: Session = Depends(get_db), current_user:
         if os.path.exists(filepath):
             os.remove(filepath)
         else:
-            print(f"Image file not found for product {product.id}: {filepath}")
+            logger.warning("Image file not found for product %d: %s", product.id, filepath)
 
     db.delete(product)
     db.commit()

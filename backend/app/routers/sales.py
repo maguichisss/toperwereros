@@ -1,15 +1,32 @@
+"""Sales endpoints — create, list, and retrieve sales with stock validation."""
+
+import logging
 from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, selectinload
+
 from app.database import get_db
 from app.models import Product, Sale, SaleItem, User
 from app.schemas import SaleCreate, SaleResponse, SaleItemResponse
 from app.auth import require_permission
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
-def serialize_sale(sale):
+def serialize_sale(sale: Sale) -> SaleResponse:
+    """Serialize a fully-loaded Sale ORM object to a SaleResponse.
+
+    Args:
+        sale: A Sale record with ``items``, ``items.product``, and ``creator``
+            eagerly loaded via ``selectinload``.
+
+    Returns:
+        SaleResponse containing the sale summary and line items.
+    """
+
     items = sale.items or []
     return SaleResponse(
         id=sale.id,
@@ -31,13 +48,28 @@ def serialize_sale(sale):
     )
 
 
-@router.get("")
+@router.get("", response_model=list[SaleResponse], tags=["Sales"], summary="List sales",
+              description="Paginated list of sales, newest first. Each sale includes line items and creator username.")
 def list_sales(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("sale.view")),
-):
+) -> list[SaleResponse]:
+    """Return a paginated list of sales, newest first.
+
+    Each sale is serialized with its line items and creator username.
+
+    Args:
+        page: 1-indexed page number (default 1).
+        per_page: Items per page, 1–100 (default 20).
+        db: Active database session.
+        current_user: Authenticated user with ``sale.view`` permission.
+
+    Returns:
+        List of serialized SaleResponse objects.
+    """
+
     total = db.query(Sale).count()
     sales = (
         db.query(Sale)
@@ -53,8 +85,27 @@ def list_sales(
     return [serialize_sale(s) for s in sales]
 
 
-@router.get("/{sale_id}")
-def get_sale(sale_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_permission("sale.view"))):
+@router.get("/{sale_id}", response_model=SaleResponse, tags=["Sales"], summary="Get sale",
+              description="Return a single sale by ID with all line items and product details.")
+def get_sale(
+    sale_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("sale.view")),
+) -> SaleResponse:
+    """Return a single sale by ID with all line items.
+
+    Args:
+        sale_id: ID of the sale to retrieve.
+        db: Active database session.
+        current_user: Authenticated user with ``sale.view`` permission.
+
+    Returns:
+        Serialized SaleResponse.
+
+    Raises:
+        HTTPException: 404 if the sale is not found.
+    """
+
     sale = (
         db.query(Sale)
         .options(
@@ -69,8 +120,32 @@ def get_sale(sale_id: int, db: Session = Depends(get_db), current_user: User = D
     return serialize_sale(sale)
 
 
-@router.post("", status_code=201)
-def create_sale(data: SaleCreate, db: Session = Depends(get_db), current_user: User = Depends(require_permission("sale.create"))):
+@router.post("", response_model=SaleResponse, status_code=201, tags=["Sales"], summary="Create sale",
+              description="Create a new sale. Atomic stock decrement via savepoint. Unit price is captured from the product at sale time. created_by tracks the authenticated user.")
+def create_sale(
+    data: SaleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("sale.create")),
+) -> SaleResponse:
+    """Create a new sale, decrementing product stock for each line item.
+
+    Stock decrement and sale creation are wrapped in a savepoint so that if
+    any validation fails, no stock changes are persisted.
+
+    Args:
+        data: Sale creation payload with at least one item.
+        db: Active database session.
+        current_user: Authenticated user with ``sale.create`` permission.
+
+    Returns:
+        Serialized SaleResponse for the newly created sale.
+
+    Raises:
+        HTTPException: 400 if the sale has no items or stock is insufficient.
+        HTTPException: 404 if a referenced product does not exist.
+        HTTPException: 500 on unexpected database errors.
+    """
+
     if not data.items:
         raise HTTPException(400, "La venta debe tener al menos un artículo")
 
@@ -109,4 +184,5 @@ def create_sale(data: SaleCreate, db: Session = Depends(get_db), current_user: U
         raise
     except Exception:
         db.rollback()
+        logger.exception("Failed to create sale — rolling back stock")
         raise HTTPException(500, "Error al procesar la venta. Stock no descontado.")
