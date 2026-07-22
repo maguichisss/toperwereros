@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.database import get_db
-from app.models import Category, User
+from app.models import Category, product_categories, User
 from app.schemas import CategoryCreate, CategoryResponse
 from app.auth import require_permission
 
@@ -51,5 +51,12 @@ def delete_category(category_id: int, db: Session = Depends(get_db), current_use
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
         raise HTTPException(404, "Category not found")
+    in_use = db.execute(
+        select(product_categories).where(product_categories.c.category_id == category_id)
+    ).first()
+    if in_use:
+        raise HTTPException(
+            409, "No se puede eliminar una categoría asignada a productos"
+        )
     db.delete(category)
     db.commit()

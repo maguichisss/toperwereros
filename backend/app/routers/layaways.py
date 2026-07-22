@@ -198,6 +198,8 @@ def add_payment(layaway_id: int, data: PaymentCreate, db: Session = Depends(get_
         raise HTTPException(400, "Solo se pueden agregar abonos a apartados activos")
     if data.amount <= 0:
         raise HTTPException(400, "El abono debe ser mayor a cero")
+    if data.amount > layaway.balance:
+        raise HTTPException(400, f"El abono excede el saldo pendiente: ${layaway.balance}")
 
     payment = LayawayPayment(layaway_id=layaway.id, amount=data.amount)
     db.add(payment)

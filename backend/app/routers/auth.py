@@ -1,5 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+import os
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
 from sqlalchemy.orm import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from app.database import get_db
 from app.models import User
 from app.schemas import LoginRequest, TokenResponse, ChangePasswordRequest, ProfileUpdateRequest, UserCreate, UserResponse
@@ -11,11 +14,29 @@ from app.auth import (
     require_permission,
 )
 
+MAGIC_BYTES = {
+    b'\xff\xd8\xff': ('.jpg', 'image/jpeg'),
+    b'\x89PNG\r\n\x1a\n': ('.png', 'image/png'),
+    b'RIFF': ('.webp', 'image/webp'),
+}
+
+MAX_SIZE = 5 * 1024 * 1024
+
+
+def detect_image_type(header: bytes) -> tuple[str, str] | None:
+    for magic, (ext, mime) in MAGIC_BYTES.items():
+        if header.startswith(magic):
+            return ext, mime
+    return None
+
+
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/login")
-def login(data: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == data.username).first()
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
@@ -83,19 +104,20 @@ def update_profile(
 
 @router.post("/avatar")
 def upload_avatar(image: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
-    MAX_SIZE = 5 * 1024 * 1024
-    if image.content_type not in ALLOWED_TYPES:
+    content = image.file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(400, "Archivo demasiado grande (máx 5MB)")
+    if len(content) < 8:
+        raise HTTPException(400, "Archivo de imagen inválido")
+    result = detect_image_type(content[:12])
+    if not result:
         raise HTTPException(400, "Solo se permiten imágenes JPEG, PNG y WebP")
-    import os, uuid
-    ext = os.path.splitext(image.filename or "avatar.jpg")[1]
+    ext, expected_mime = result
+    import uuid
     filename = f"avatar_{uuid.uuid4().hex}{ext}"
     uploads_dir = os.path.join(os.getcwd(), "uploads")
     os.makedirs(uploads_dir, exist_ok=True)
     path = os.path.join(uploads_dir, filename)
-    content = image.file.read()
-    if len(content) > MAX_SIZE:
-        raise HTTPException(400, "Archivo demasiado grande (máx 5MB)")
     with open(path, "wb") as f:
         f.write(content)
     return {"image_url": f"/uploads/{filename}"}

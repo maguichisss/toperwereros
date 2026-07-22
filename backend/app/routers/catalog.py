@@ -12,14 +12,16 @@ from app.auth import require_permission
 
 router = APIRouter()
 
-IMG_W = 60
-IMG_H = 70
-CARD_W = 60
-CARD_H = 85
-COL_GAP = 5
-ROW_GAP = 5
+IMG_W = 44
+IMG_H = 48
+CARD_W = 44
+CARD_H = 62
+COL_GAP = 4
+ROW_GAP = 4
 MARGIN = 10
 HEADER_Y = 17
+PER_PAGE = 16
+COLS = 4
 
 MONTHS_ES = ["", "enero", "febrero", "marzo", "abril", "mayo", "junio",
              "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
@@ -61,7 +63,7 @@ def catalog_pdf(ids: str = "", db: Session = Depends(get_db), current_user: User
     week_num = monday.isocalendar()[1]
 
     for i, product in enumerate(products):
-        if i % 9 == 0:
+        if i % PER_PAGE == 0:
             pdf.add_page()
             pdf.set_font("Helvetica", "B", 12)
             pdf.set_text_color(0, 0, 0)
@@ -72,8 +74,8 @@ def catalog_pdf(ids: str = "", db: Session = Depends(get_db), current_user: User
             pdf.set_draw_color(180, 180, 180)
             pdf.line(MARGIN, 15, 200, 15)
 
-        col = i % 3
-        row = (i % 9) // 3
+        col = i % COLS
+        row = (i % PER_PAGE) // COLS
 
         x = MARGIN + col * (CARD_W + COL_GAP)
         y = HEADER_Y + row * (CARD_H + ROW_GAP)

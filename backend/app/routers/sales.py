@@ -77,30 +77,36 @@ def create_sale(data: SaleCreate, db: Session = Depends(get_db), current_user: U
     total = Decimal("0.00")
     sale_items = []
 
-    for item in data.items:
-        product = db.query(Product).filter(Product.id == item.product_id).first()
-        if not product:
-            raise HTTPException(404, f"Producto {item.product_id} no encontrado")
-        if product.stock < item.quantity:
-            raise HTTPException(400, f"Stock insuficiente para '{product.name}': {product.stock} disponible(s), {item.quantity} solicitado(s)")
+    try:
+        with db.begin_nested():
+            for item in data.items:
+                product = db.query(Product).filter(Product.id == item.product_id).first()
+                if not product:
+                    raise HTTPException(404, f"Producto {item.product_id} no encontrado")
+                if product.stock < item.quantity:
+                    raise HTTPException(400, f"Stock insuficiente para '{product.name}': {product.stock} disponible(s), {item.quantity} solicitado(s)")
 
-        unit_price = product.price
-        total += unit_price * item.quantity
-        product.stock -= item.quantity
+                unit_price = product.price
+                total += unit_price * item.quantity
+                product.stock -= item.quantity
 
-        sale_items.append(SaleItem(
-            product_id=item.product_id,
-            quantity=item.quantity,
-            unit_price=unit_price,
-        ))
+                sale_items.append(SaleItem(
+                    product_id=item.product_id,
+                    quantity=item.quantity,
+                    unit_price=unit_price,
+                ))
 
-    sale = Sale(total=total, items=sale_items, created_by=current_user.id)
-    db.add(sale)
-    db.commit()
-    db.refresh(sale)
+            sale = Sale(total=total, items=sale_items, created_by=current_user.id)
+            db.add(sale)
 
-    db.refresh(sale, attribute_names=["items"])
-    for si in sale.items:
-        db.refresh(si, attribute_names=["product"])
+        db.flush()
+        db.refresh(sale, attribute_names=["items"])
+        for si in sale.items:
+            db.refresh(si, attribute_names=["product"])
 
-    return serialize_sale(sale)
+        return serialize_sale(sale)
+    except HTTPException:
+        raise
+    except Exception:
+        db.rollback()
+        raise HTTPException(500, "Error al procesar la venta. Stock no descontado.")
