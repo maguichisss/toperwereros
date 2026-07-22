@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import LoginPage from './components/LoginPage.jsx'
 import ProductList from './components/ProductList.jsx'
@@ -15,10 +15,21 @@ const TABS = [
   { key: 'perfil', label: 'Perfil' },
 ]
 
+const TAB_TITLES = {
+  productos: 'Productos',
+  ventas: 'Ventas',
+  apartados: 'Apartados',
+  management: 'Administración',
+  perfil: 'Perfil',
+}
+
 function AppContent() {
   const { user, logout, can } = useAuth()
   const [tab, setTab] = useState('productos')
   const [menuOpen, setMenuOpen] = useState(false)
+  useEffect(() => {
+    document.title = `${TAB_TITLES[tab]} — Toperwereros`
+  }, [tab])
 
   if (!user) {
     return <LoginPage />
@@ -38,7 +49,7 @@ function AppContent() {
     <>
       <header>
         <div className="container">
-          <h1 onClick={() => handleTabClick('productos')} style={{ cursor: 'pointer' }}>Catálogo de Productos</h1>
+          <h1 onClick={() => handleTabClick('productos')} style={{ cursor: 'pointer' }}>Toperwereros</h1>
           <button
             className={`hamburger ${menuOpen ? 'open' : ''}`}
             onClick={() => setMenuOpen(!menuOpen)}
@@ -67,7 +78,7 @@ function AppContent() {
                 ) : t.label}
               </button>
             ))}
-            <button onClick={logout} title="Cerrar sesión" style={{ background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem 0.6rem' }}>
+              <button onClick={logout} title="Cerrar sesión" style={{ background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem 0.6rem' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                 <polyline points="16 17 21 12 16 7" />

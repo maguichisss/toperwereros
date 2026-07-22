@@ -27,15 +27,15 @@ export default function LoginPage() {
       alignItems: 'center',
       justifyContent: 'center',
       minHeight: '100vh',
-      background: '#f5f5f5',
+      background: 'var(--bg)',
     }}>
       <form onSubmit={handleSubmit} style={{
-        background: '#fff',
+        background: 'var(--bg-card)',
         borderRadius: 8,
         padding: '2rem',
         width: '100%',
         maxWidth: 360,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+        boxShadow: '0 2px 12px var(--shadow)',
       }}>
         <h1 style={{ fontSize: '1.4rem', textAlign: 'center', marginBottom: '1.5rem' }}>
           Iniciar Sesión

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { salesApi, productsApi } from '../api/client.js';
+import { formatPrice } from '../utils.js';
 
 export default function SaleCart() {
   const [mode, setMode] = useState('cart');
@@ -20,7 +21,7 @@ export default function SaleCart() {
     if (!q.trim()) { setResults([]); return; }
     try {
       const res = await productsApi.list({ q, perPage: 10 });
-      setResults(res.products);
+      setResults(res.products.filter(p => p.stock > 0));
       setShowResults(true);
     } catch {}
   }, []);
@@ -45,6 +46,7 @@ export default function SaleCart() {
     setCart(prev => {
       const existing = prev.find(c => c.product_id === product.id);
       if (existing) {
+        if (existing.quantity >= existing.stock) return prev;
         return prev.map(c => c.product_id === product.id ? { ...c, quantity: c.quantity + 1 } : c);
       }
       return [...prev, { product_id: product.id, name: product.name, code: product.code, price: parseFloat(product.price), quantity: 1, stock: product.stock }];
@@ -57,7 +59,7 @@ export default function SaleCart() {
   function updateQty(productId, delta) {
     setCart(prev => prev.map(c => {
       if (c.product_id !== productId) return c;
-      const newQty = c.quantity + delta;
+      const newQty = delta > 0 && c.quantity >= c.stock ? c.quantity : c.quantity + delta;
       if (newQty <= 0) return null;
       return { ...c, quantity: newQty };
     }).filter(Boolean));
@@ -113,13 +115,14 @@ export default function SaleCart() {
                 <tr key={item.id}>
                   <td>{item.product_name}</td>
                   <td>{item.quantity}</td>
-                  <td>${parseFloat(item.unit_price).toFixed(2)}</td>
-                  <td>${(parseFloat(item.unit_price) * item.quantity).toFixed(2)}</td>
+                  <td>${formatPrice(item.unit_price)}</td>
+                  <td>${formatPrice(parseFloat(item.unit_price) * item.quantity)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <div className="receipt-total">Total: ${parseFloat(saleResult.total).toFixed(2)}</div>
+          <div className="receipt-total">Total: ${formatPrice(saleResult.total)}</div>
+            {saleResult.created_by_name && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>Atendido por: {saleResult.created_by_name}</p>}
           <button className="btn btn-primary" onClick={resetSale}>Nueva Venta</button>
         </div>
       </div>
@@ -152,7 +155,7 @@ export default function SaleCart() {
                   <div key={p.id} className="search-result-item" onClick={() => addToCart(p)}>
                     <span className="result-name">{p.name}</span>
                     <span className="result-code">{p.code}</span>
-                    <span className="result-price">${parseFloat(p.price).toFixed(2)}</span>
+                    <span className="result-price">${formatPrice(p.price)}</span>
                     <span className="result-stock">Stock: {p.stock}</span>
                   </div>
                 ))}
@@ -166,27 +169,32 @@ export default function SaleCart() {
 
           {cart.length > 0 && (
             <div className="cart-items">
-              {cart.map(c => (
-                <div key={c.product_id} className="cart-item">
-                  <div className="cart-item-info">
-                    <span className="cart-item-name">{c.name}</span>
-                    <span className="cart-item-code">{c.code}</span>
+              <div className="cart-items-scroll">
+                {cart.map(c => (
+                  <div key={c.product_id} className="cart-item">
+                    <div className="cart-item-info">
+                      <span className="cart-item-name">{c.name}</span>
+                      <span className="cart-item-code">{c.code}</span>
+                      {c.stock !== undefined && <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Stock: {c.stock}</span>}
+{c.stock !== undefined && c.quantity >= c.stock && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 600 }}>Stock máximo</span>}
+                    {c.stock !== undefined && c.quantity < c.stock && c.quantity >= c.stock * 0.8 && <span style={{ color: 'var(--warning)', fontSize: '0.75rem', fontWeight: 600 }}>Poco stock</span>}
+                    </div>
+                    <div className="cart-item-controls">
+                      <button className="btn-qty" onClick={() => updateQty(c.product_id, -1)} disabled={c.quantity <= 1}>−</button>
+                      <span className="cart-qty">{c.quantity}</span>
+                      <button className="btn-qty" onClick={() => updateQty(c.product_id, 1)} disabled={c.quantity >= c.stock}>+</button>
+                      <span className="cart-item-price">${formatPrice(c.price * c.quantity)}</span>
+                      <button className="btn-remove" onClick={() => removeFromCart(c.product_id)}>✕</button>
+                    </div>
                   </div>
-                  <div className="cart-item-controls">
-                    <button className="btn-qty" onClick={() => updateQty(c.product_id, -1)} disabled={c.quantity <= 1}>−</button>
-                    <span className="cart-qty">{c.quantity}</span>
-                    <button className="btn-qty" onClick={() => updateQty(c.product_id, 1)}>+</button>
-                    <span className="cart-item-price">${(c.price * c.quantity).toFixed(2)}</span>
-                    <button className="btn-remove" onClick={() => removeFromCart(c.product_id)}>✕</button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
               <div className="cart-total-row">
                 <span className="cart-total-label">Total</span>
-                <span className="cart-total-amount">${cartTotal.toFixed(2)}</span>
+                <span className="cart-total-amount">${formatPrice(cartTotal)}</span>
               </div>
               <button className="btn btn-primary btn-checkout" onClick={handleCheckout}>
-                Cobrar ${cartTotal.toFixed(2)}
+                Cobrar ${formatPrice(cartTotal)}
               </button>
             </div>
           )}
@@ -212,13 +220,14 @@ export default function SaleCart() {
                       <tr key={item.id}>
                         <td>{item.product_name}</td>
                         <td>{item.quantity}</td>
-                        <td>${parseFloat(item.unit_price).toFixed(2)}</td>
-                        <td>${(parseFloat(item.unit_price) * item.quantity).toFixed(2)}</td>
+                        <td>${formatPrice(item.unit_price)}</td>
+                        <td>${formatPrice(parseFloat(item.unit_price) * item.quantity)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                <div className="receipt-total">Total: ${parseFloat(selectedSale.total).toFixed(2)}</div>
+                <div className="receipt-total">Total: ${formatPrice(selectedSale.total)}</div>
+                {selectedSale.created_by_name && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Atendido por: {selectedSale.created_by_name}</p>}
               </div>
             </div>
           ) : (
@@ -232,7 +241,7 @@ export default function SaleCart() {
                       <span className="sale-list-id">#{s.id}</span>
                       <span className="sale-list-date">{new Date(s.created_at + 'Z').toLocaleString('es-MX')}</span>
                       <span className="sale-list-count">{s.items?.length || 0} artículos</span>
-                      <span className="sale-list-total">${parseFloat(s.total).toFixed(2)}</span>
+                      <span className="sale-list-total">${formatPrice(s.total)}</span>
                     </div>
                   ))}
                 </div>

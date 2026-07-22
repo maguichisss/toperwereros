@@ -52,7 +52,7 @@ export default function UserManager() {
 
   return (
     <div style={{ maxWidth: 600 }}>
-      <form onSubmit={handleSubmit} style={{ background: '#fff', borderRadius: 8, padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.1)', marginBottom: '1.5rem' }}>
+      <form onSubmit={handleSubmit} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '1.5rem', boxShadow: '0 1px 4px var(--shadow)', marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Nuevo Usuario</h2>
         <div className="form-row">
           <div className="form-group">
@@ -80,7 +80,7 @@ export default function UserManager() {
           </div>
         </div>
         {error && <p className="error-text">{error}</p>}
-        {success && <p style={{ color: '#43a047', fontWeight: 600, marginTop: '0.5rem' }}>{success}</p>}
+        {success && <p style={{ color: 'var(--success)', fontWeight: 600, marginTop: '0.5rem' }}>{success}</p>}
         <div className="form-actions">
           <button type="submit" className="btn btn-primary" disabled={busy}>
             {busy ? 'Creando...' : 'Crear Usuario'}
@@ -89,15 +89,15 @@ export default function UserManager() {
       </form>
 
       <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>Usuarios existentes</h2>
-      <div style={{ background: '#fff', borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px var(--shadow)' }}>
         {users.map((u) => (
           <div key={u.id} style={{ display: 'flex', alignItems: 'center', padding: '0.75rem', borderBottom: '1px solid #eee', gap: '0.5rem' }}>
             <span style={{ fontWeight: 600, flex: 1 }}>{u.username}</span>
-            <span style={{ color: '#888', fontSize: '0.85rem' }}>{u.email || '—'}</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{u.email || '—'}</span>
             <span className={`chip ${u.role_name === 'admin' ? 'chip-active' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}>
               {u.role_name}
             </span>
-            {u.id === currentUser?.id && <span style={{ color: '#1a73e8', fontSize: '0.8rem' }}>(tú)</span>}
+            {u.id === currentUser?.id && <span style={{ color: 'var(--primary)', fontSize: '0.8rem' }}>(tú)</span>}
           </div>
         ))}
         {users.length === 0 && <p className="empty-state">Sin usuarios</p>}

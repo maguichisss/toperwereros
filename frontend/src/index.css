@@ -1,3 +1,38 @@
+:root {
+  --bg: #f5f5f5;
+  --bg-card: #fff;
+  --bg-input: #fff;
+  --bg-hover: #f0f7ff;
+  --bg-selected: #e8f5e9;
+  --bg-muted: #fafafa;
+  --bg-overlay: rgba(0,0,0,0.4);
+  --text-primary: #222;
+  --text-secondary: #555;
+  --text-muted: #888;
+  --text-light: #aaa;
+  --text-white: #fff;
+  --border: #ccc;
+  --border-light: #eee;
+  --border-dark: #ddd;
+  --primary: #1a73e8;
+  --primary-hover: #1557b0;
+  --primary-dark: #1976d2;
+  --danger: #e53935;
+  --danger-hover: #c62828;
+  --success: #43a047;
+  --success-hover: #388e3c;
+  --success-light: #28a745;
+  --warning: #ff9800;
+  --header-bg: #1a73e8;
+  --header-text: #fff;
+  --shadow: rgba(0,0,0,0.1);
+  --pagination-bg: #fff;
+  --pagination-text: #333;
+  --pagination-border: #ccc;
+  --overdue-bg: #fff0f0;
+  --overdue-border: #dc3545;
+}
+
 *,
 *::before,
 *::after {
@@ -9,8 +44,8 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
-  background: #f5f5f5;
-  color: #222;
+  background: var(--bg);
+  color: var(--text-primary);
   line-height: 1.5;
 }
 
@@ -32,8 +67,8 @@ textarea {
 }
 
 header {
-  background: #1a73e8;
-  color: #fff;
+  background: var(--header-bg);
+  color: var(--header-text);
   padding: 1rem 0;
   margin-bottom: 2rem;
   position: relative;
@@ -47,6 +82,8 @@ header .container {
 
 header h1 {
   font-size: 1.4rem;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 header nav {
@@ -56,7 +93,7 @@ header nav {
 
 header nav button {
   background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  color: var(--header-text);
   border: none;
   padding: 0.4rem 1rem;
   border-radius: 4px;
@@ -101,14 +138,14 @@ header nav button:hover {
 
 .product-code {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--text-muted);
   margin-bottom: 0.15rem;
   font-family: monospace;
 }
 
 .product-stock {
   font-size: 0.8rem;
-  color: #555;
+  color: var(--text-secondary);
   margin-top: 0.15rem;
 }
 
@@ -116,7 +153,7 @@ header nav button:hover {
   width: 100%;
   height: 180px;
   object-fit: cover;
-  background: #eee;
+  background: var(--border-light);
   cursor: pointer;
 }
 
@@ -132,12 +169,12 @@ header nav button:hover {
 .card-body .price {
   font-weight: 700;
   font-size: 1.1rem;
-  color: #1a73e8;
+  color: var(--primary);
 }
 
 .card-actions {
   padding: 0.5rem 0.75rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-light);
   display: flex;
   gap: 0.5rem;
 }
@@ -149,10 +186,10 @@ header nav button:hover {
 }
 
 .product-card {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px var(--shadow);
 }
 
 .btn {
@@ -164,41 +201,41 @@ header nav button:hover {
 }
 
 .btn-primary {
-  background: #1a73e8;
-  color: #fff;
+  background: var(--primary);
+  color: var(--text-white);
 }
 
 .btn-primary:hover {
-  background: #1557b0;
+  background: var(--primary-hover);
 }
 
 .btn-danger {
-  background: #e53935;
-  color: #fff;
+  background: var(--danger);
+  color: var(--text-white);
 }
 
 .btn-danger:hover {
-  background: #c62828;
+  background: var(--danger-hover);
 }
 
 .btn-secondary {
-  background: #757575;
-  color: #fff;
+  background: var(--text-secondary);
+  color: var(--text-white);
 }
 
 .btn-secondary:hover {
-  background: #616161;
+  background: var(--text-primary);
 }
 
 .btn-add {
-  background: #43a047;
-  color: #fff;
+  background: var(--success);
+  color: var(--text-white);
   font-size: 1rem;
   padding: 0.6rem 1.2rem;
 }
 
 .btn-add:hover {
-  background: #388e3c;
+  background: var(--success-hover);
 }
 
 .pagination {
@@ -212,21 +249,21 @@ header nav button:hover {
 .btn-pagination {
   min-width: 2.2rem;
   padding: 0.4rem 0.6rem;
-  border: 1px solid #ccc;
-  background: #fff;
-  color: #333;
+  border: 1px solid var(--pagination-border);
+  background: var(--pagination-bg);
+  color: var(--pagination-text);
   border-radius: 4px;
   font-size: 0.9rem;
 }
 
 .btn-pagination:hover:not(:disabled) {
-  background: #e0e0e0;
+  background: var(--bg-hover);
 }
 
 .btn-pagination.active {
-  background: #1976d2;
-  color: #fff;
-  border-color: #1976d2;
+  background: var(--primary-dark);
+  color: var(--text-white);
+  border-color: var(--primary-dark);
 }
 
 .btn-pagination:disabled {
@@ -237,7 +274,7 @@ header nav button:hover {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--bg-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -245,7 +282,7 @@ header nav button:hover {
 }
 
 .modal {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 8px;
   padding: 1.5rem;
   width: 90%;
@@ -274,7 +311,7 @@ header nav button:hover {
 .form-group textarea {
   width: 100%;
   padding: 0.45rem 0.6rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 0.9rem;
 }
@@ -303,7 +340,7 @@ header nav button:hover {
 .empty-state {
   text-align: center;
   padding: 3rem 1rem;
-  color: #757575;
+  color: var(--text-muted);
 }
 
 .camera-container {
@@ -345,7 +382,7 @@ header nav button:hover {
   position: absolute;
   inset: 5px;
   border-radius: 50%;
-  background: #e53935;
+  background: var(--danger);
 }
 
 .shutter-btn:active {
@@ -362,9 +399,11 @@ header nav button:hover {
 }
 
 .image-preview img {
-  max-width: 200px;
-  max-height: 200px;
+  width: 100%;
+  max-height: 400px;
+  object-fit: contain;
   border-radius: 4px;
+  background: var(--bg-muted);
 }
 
 .category-manager {
@@ -386,7 +425,7 @@ header nav button:hover {
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .category-item:last-child {
@@ -402,7 +441,7 @@ header nav button:hover {
 .category-form input {
   flex: 1;
   padding: 0.45rem 0.6rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 4px;
 }
 
@@ -416,7 +455,7 @@ header nav button:hover {
 
 .filter-bar select {
   padding: 0.4rem 0.6rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 4px;
 }
 
@@ -425,7 +464,7 @@ header nav button:hover {
   min-width: 200px;
   padding: 0.5rem 0.75rem;
   font-size: 0.9rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 4px;
   outline: none;
 }
@@ -444,11 +483,11 @@ header nav button:hover {
 }
 
 .filter-bar .search-input:focus {
-  border-color: #1a73e8;
+  border-color: var(--primary);
 }
 
 .error-text {
-  color: #e53935;
+  color: var(--danger);
   font-size: 1rem;
   font-weight: 600;
   margin-top: 0.5rem;
@@ -459,8 +498,8 @@ header nav button:hover {
   align-items: center;
   justify-content: center;
   height: 180px;
-  background: #eee;
-  color: #aaa;
+  background: var(--border-light);
+  color: var(--text-light);
   font-size: 0.9rem;
 }
 
@@ -472,23 +511,23 @@ header nav button:hover {
 
 .chip {
   padding: 0.3rem 0.7rem;
-  border: 1.5px solid #ccc;
+  border: 1.5px solid var(--border);
   border-radius: 20px;
-  background: #fff;
+  background: var(--bg-card);
   font-size: 0.85rem;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .chip:hover {
-  border-color: #1a73e8;
-  color: #1a73e8;
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .chip.chip-active {
-  background: #1a73e8;
-  color: #fff;
-  border-color: #1a73e8;
+  background: var(--primary);
+  color: var(--text-white);
+  border-color: var(--primary);
 }
 
 .color-swatches {
@@ -502,7 +541,7 @@ header nav button:hover {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 1.5px solid rgba(0,0,0,0.12);
+  border: 1.5px solid var(--border);
   cursor: pointer;
   transition: transform 0.15s, border-color 0.15s;
   flex-shrink: 0;
@@ -515,8 +554,8 @@ header nav button:hover {
 .swatch.selected {
   width: 40px;
   height: 40px;
-  border-color: #333;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 3px #333;
+  border-  color: var(--text-primary);
+  box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px var(--text-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -543,7 +582,7 @@ header nav button:hover {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid rgba(0, 0, 0, 0.15);
+  border: 2px solid var(--border);
   display: inline-block;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
@@ -565,16 +604,16 @@ header nav button:hover {
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 4px;
-  background: #fff;
-  color: #555;
+  background: var(--bg-card);
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 
 .btn-scan:hover {
-  border-color: #1a73e8;
-  color: #1a73e8;
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .barcode-modal {
@@ -603,10 +642,10 @@ header nav button:hover {
   z-index: 9999;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
-  color: #fff;
+  color: var(--text-white);
   font-weight: 600;
   font-size: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 12px var(--shadow);
   cursor: pointer;
   animation: toast-in 0.3s ease-out;
   display: flex;
@@ -616,15 +655,15 @@ header nav button:hover {
 }
 
 .toast-error {
-  background: #e53935;
+  background: var(--danger);
 }
 
 .toast-success {
-  background: #43a047;
+  background: var(--success);
 }
 
 .toast-info {
-  background: #1a73e8;
+  background: var(--primary);
 }
 
 .toast-close {
@@ -669,10 +708,10 @@ header nav button:hover {
     top: 100%;
     left: 0;
     right: 0;
-    background: #1a73e8;
+    background: var(--header-bg);
     flex-direction: column;
     z-index: 50;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 8px var(--shadow);
   }
 
   header nav.nav-open {
@@ -721,7 +760,7 @@ header nav button:hover {
 }
 
 .catalog-count {
-  color: #757575;
+  color: var(--text-muted);
   margin-bottom: 1rem;
 }
 
@@ -732,17 +771,17 @@ header nav button:hover {
 }
 
 .catalog-card {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px var(--shadow);
 }
 
 .catalog-card-image {
   width: 100%;
   height: 250px;
   object-fit: cover;
-  background: #eee;
+  background: var(--border-light);
 }
 
 .catalog-no-image {
@@ -750,8 +789,8 @@ header nav button:hover {
   align-items: center;
   justify-content: center;
   height: 250px;
-  background: #eee;
-  color: #aaa;
+  background: var(--border-light);
+  color: var(--text-light);
   font-size: 1rem;
 }
 
@@ -766,7 +805,7 @@ header nav button:hover {
 
 .catalog-sku {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--text-muted);
   margin-bottom: 0.15rem;
   font-family: monospace;
 }
@@ -774,7 +813,7 @@ header nav button:hover {
 .catalog-price {
   font-weight: 700;
   font-size: 1.1rem;
-  color: #1a73e8;
+  color: var(--primary);
 }
 
 .catalog-card-body .color-indicators {
@@ -797,7 +836,7 @@ header nav button:hover {
 
   .catalog-card {
     box-shadow: none;
-    border: 1px solid #ccc;
+  border: 1px solid var(--border);
     break-inside: avoid;
     page-break-inside: avoid;
   }
@@ -820,7 +859,7 @@ header nav button:hover {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--border-dark);
   padding-bottom: 0;
 }
 
@@ -828,7 +867,7 @@ header nav button:hover {
   padding: 0.5rem 1rem;
   border: none;
   background: none;
-  color: #555;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
@@ -836,12 +875,12 @@ header nav button:hover {
 }
 
 .sub-tabs button:hover {
-  color: #1a73e8;
+  color: var(--primary);
 }
 
 .sub-tabs button.active {
-  color: #1a73e8;
-  border-bottom-color: #1a73e8;
+  color: var(--primary);
+  border-bottom-color: var(--primary);
   font-weight: 600;
 }
 
@@ -859,16 +898,16 @@ header nav button:hover {
 .sales-tabs button {
   flex: 1;
   padding: 0.6rem;
-  border: 1px solid #ccc;
-  background: #fff;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
   border-radius: 4px;
   font-size: 0.95rem;
 }
 
 .sales-tabs button.active {
-  background: #1a73e8;
-  color: #fff;
-  border-color: #1a73e8;
+  background: var(--primary);
+  color: var(--text-white);
+  border-color: var(--primary);
 }
 
 .cart-search {
@@ -880,13 +919,13 @@ header nav button:hover {
   width: 100%;
   padding: 0.6rem 0.75rem;
   font-size: 1rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 4px;
   outline: none;
 }
 
-.cart-search .search-input:focus {
-  border-color: #1a73e8;
+  .cart-search .search-input:focus {
+  border-color: var(--primary);
 }
 
 .search-results {
@@ -894,13 +933,13 @@ header nav button:hover {
   top: 100%;
   left: 0;
   right: 0;
-  background: #fff;
-  border: 1px solid #ccc;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-top: none;
   z-index: 10;
   max-height: 300px;
   overflow-y: auto;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px var(--shadow);
 }
 
 .search-result-item {
@@ -909,11 +948,11 @@ header nav button:hover {
   gap: 0.5rem;
   padding: 0.6rem 0.75rem;
   cursor: pointer;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .search-result-item:hover {
-  background: #f0f7ff;
+  background: var(--bg-hover);
 }
 
 .search-result-item:last-child {
@@ -926,26 +965,31 @@ header nav button:hover {
 }
 
 .result-code {
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.85rem;
 }
 
 .result-price {
-  color: #1a73e8;
+  color: var(--primary);
   font-weight: 600;
   white-space: nowrap;
 }
 
 .result-stock {
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.85rem;
   white-space: nowrap;
 }
 
 .cart-items {
-  border: 1px solid #eee;
+  border: 1px solid var(--border-light);
   border-radius: 6px;
   overflow: hidden;
+}
+
+.cart-items-scroll {
+  max-height: calc(100vh - 320px);
+  overflow-y: auto;
 }
 
 .cart-item {
@@ -953,7 +997,7 @@ header nav button:hover {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
   gap: 0.5rem;
 }
 
@@ -977,7 +1021,7 @@ header nav button:hover {
 
 .cart-item-code {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .cart-item-controls {
@@ -990,8 +1034,8 @@ header nav button:hover {
 .btn-qty {
   width: 30px;
   height: 30px;
-  border: 1px solid #ccc;
-  background: #fff;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
   border-radius: 4px;
   font-size: 1.1rem;
   display: flex;
@@ -1013,13 +1057,13 @@ header nav button:hover {
   min-width: 70px;
   text-align: right;
   font-weight: 600;
-  color: #1a73e8;
+  color: var(--primary);
 }
 
 .btn-remove {
   background: none;
   border: none;
-  color: #e53935;
+  color: var(--danger);
   font-size: 1.1rem;
   padding: 0.2rem;
 }
@@ -1028,8 +1072,8 @@ header nav button:hover {
   display: flex;
   justify-content: space-between;
   padding: 0.75rem;
-  background: #fafafa;
-  border-top: 2px solid #eee;
+  background: var(--bg-muted);
+  border-top: 2px solid var(--border-light);
 }
 
 .cart-total-label {
@@ -1040,7 +1084,7 @@ header nav button:hover {
 .cart-total-amount {
   font-weight: 700;
   font-size: 1.2rem;
-  color: #1a73e8;
+  color: var(--primary);
 }
 
 .btn-checkout {
@@ -1056,8 +1100,8 @@ header nav button:hover {
 }
 
 .receipt-card {
-  background: #fff;
-  border: 1px solid #eee;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
   border-radius: 8px;
   padding: 1.5rem;
   text-align: center;
@@ -1068,7 +1112,7 @@ header nav button:hover {
 }
 
 .receipt-date {
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.9rem;
   margin-bottom: 1rem;
 }
@@ -1083,12 +1127,12 @@ header nav button:hover {
 .receipt-items th,
 .receipt-items td {
   padding: 0.4rem 0.5rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .receipt-items th {
   font-size: 0.85rem;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .receipt-items td:last-child,
@@ -1114,7 +1158,7 @@ header nav button:hover {
 }
 
 .sale-list {
-  border: 1px solid #eee;
+  border: 1px solid var(--border-light);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -1123,13 +1167,13 @@ header nav button:hover {
   display: flex;
   align-items: center;
   padding: 0.7rem 0.75rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
   cursor: pointer;
   gap: 0.5rem;
 }
 
 .sale-list-item:hover {
-  background: #f0f7ff;
+  background: var(--bg-hover);
 }
 
 .sale-list-item:last-child {
@@ -1138,19 +1182,19 @@ header nav button:hover {
 
 .sale-list-id {
   font-weight: 600;
-  color: #1a73e8;
+  color: var(--primary);
   min-width: 40px;
 }
 
 .sale-list-date {
   flex: 1;
   font-size: 0.9rem;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .sale-list-count {
   font-size: 0.85rem;
-  color: #888;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -1165,7 +1209,7 @@ header nav button:hover {
 }
 
 .error-text {
-  color: #e53935;
+  color: var(--danger);
   font-size: 0.95rem;
   margin-top: 0.75rem;
   text-align: center;
@@ -1183,10 +1227,10 @@ header nav button:hover {
 }
 
 .layaway-card {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-dark);
   border-radius: 8px;
   padding: 0.75rem;
-  background: #fff;
+  background: var(--bg-card);
   cursor: pointer;
   display: flex;
   flex-wrap: wrap;
@@ -1196,7 +1240,7 @@ header nav button:hover {
 }
 
 .layaway-card:hover {
-  background: #f0f7ff;
+  background: var(--bg-hover);
 }
 
 .layaway-card-main {
@@ -1213,7 +1257,7 @@ header nav button:hover {
 
 .layaway-items-count {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .layaway-card-details {
@@ -1225,12 +1269,12 @@ header nav button:hover {
 
 .layaway-days {
   font-size: 0.85rem;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .layaway-balance {
   font-weight: 700;
-  color: #28a745;
+  color: var(--success-light);
   font-size: 1.05rem;
 }
 
@@ -1240,17 +1284,17 @@ header nav button:hover {
 }
 
 .layaway-overdue {
-  background: #fff0f0;
-  border-color: #dc3545;
+  background: var(--overdue-bg);
+  border-color: var(--overdue-border);
 }
 
 .layaway-overdue .layaway-days {
-  color: #dc3545;
+  color: var(--danger);
   font-weight: bold;
 }
 
 .overdue-warning {
-  color: #dc3545;
+  color: var(--danger);
   font-weight: bold;
   margin-left: 0.5rem;
 }
@@ -1279,13 +1323,13 @@ header nav button:hover {
   top: 100%;
   left: 0;
   right: 0;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--bg-card);
+  border: 1px solid var(--border-dark);
   border-radius: 4px;
   z-index: 10;
   max-height: 200px;
   overflow-y: auto;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px var(--shadow);
 }
 
 .customer-result-item {
@@ -1293,11 +1337,11 @@ header nav button:hover {
   cursor: pointer;
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .customer-result-item:hover {
-  background: #f0f7ff;
+  background: var(--bg-hover);
 }
 
 .customer-result-item:last-child {
@@ -1306,8 +1350,8 @@ header nav button:hover {
 
 .customer-selected {
   padding: 0.6rem 0.75rem;
-  background: #e8f5e9;
-  border: 1px solid #28a745;
+  background: var(--bg-selected);
+  border: 1px solid var(--success-light);
   border-radius: 8px;
   display: flex;
   justify-content: space-between;
@@ -1315,11 +1359,11 @@ header nav button:hover {
 }
 
 .customer-new-form {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-dark);
   border-radius: 8px;
   padding: 0.75rem;
   margin-top: 0.5rem;
-  background: #f9f9f9;
+  background: var(--bg-muted);
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -1327,7 +1371,7 @@ header nav button:hover {
 
 .customer-new-form input {
   padding: 0.45rem 0.6rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 0.9rem;
 }
@@ -1341,7 +1385,7 @@ header nav button:hover {
 }
 
 .layaway-balance-preview {
-  color: #555;
+  color: var(--text-secondary);
   font-size: 0.95rem;
   margin: 0.5rem 0;
 }
@@ -1355,11 +1399,11 @@ header nav button:hover {
 }
 
 .detail-section {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-dark);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
-  background: #fff;
+  background: var(--bg-card);
 }
 
 .detail-section h3 {
@@ -1372,7 +1416,7 @@ header nav button:hover {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 0 0;
-  border-top: 2px solid #eee;
+  border-top: 2px solid var(--border-light);
   margin-top: 0.5rem;
 }
 
@@ -1387,11 +1431,19 @@ header nav button:hover {
 }
 
 .text-success {
-  color: #28a745;
+  color: var(--success-light);
 }
 
 .text-danger {
-  color: #dc3545;
+  color: var(--danger);
+}
+
+.profile-card {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 4px var(--shadow);
+  margin-bottom: 1rem;
 }
 
 .payment-form {
@@ -1404,7 +1456,7 @@ header nav button:hover {
   flex: 1;
   max-width: 200px;
   padding: 0.45rem 0.6rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 0.9rem;
 }

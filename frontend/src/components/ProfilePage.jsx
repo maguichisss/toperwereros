@@ -88,17 +88,17 @@ export default function ProfilePage() {
             height: 120,
             borderRadius: '50%',
             overflow: 'hidden',
-            background: '#eee',
+            background: 'var(--border-light)',
             cursor: 'pointer',
             flexShrink: 0,
             position: 'relative',
-            border: '3px solid #ddd',
+            border: '3px solid var(--border-dark)',
           }}
         >
           {imageUrl ? (
             <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: '0.8rem', textAlign: 'center', padding: '0.5rem' }}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-light)', fontSize: '0.8rem', textAlign: 'center', padding: '0.5rem' }}>
               {uploading ? 'Subiendo...' : 'Click para foto'}
             </div>
           )}
@@ -110,7 +110,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div style={{ background: '#fff', borderRadius: 8, padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.1)', marginBottom: '1rem' }}>
+      <div className="profile-card">
         <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>Información</h3>
         <div className="form-group">
           <label>Email</label>
@@ -118,7 +118,7 @@ export default function ProfilePage() {
             autoComplete="off" autoCorrect="off" spellCheck="false" />
         </div>
         {profileError && <p className="error-text">{profileError}</p>}
-        {profileSuccess && <p style={{ color: '#43a047', fontWeight: 600, marginTop: '0.5rem' }}>{profileSuccess}</p>}
+        {profileSuccess && <p style={{ color: 'var(--success)', fontWeight: 600, marginTop: '0.5rem' }}>{profileSuccess}</p>}
         <div className="form-actions">
           <button className="btn btn-primary" onClick={handleSaveProfile} disabled={profileBusy}>
             {profileBusy ? 'Guardando...' : 'Guardar Cambios'}
@@ -126,7 +126,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div style={{ background: '#fff', borderRadius: 8, padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
+      <div className="profile-card">
         <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>Cambiar Contraseña</h3>
         <form onSubmit={handleChangePassword}>
           <div className="form-group">
@@ -147,7 +147,7 @@ export default function ProfilePage() {
             </div>
           </div>
           {passwordError && <p className="error-text">{passwordError}</p>}
-          {passwordSuccess && <p style={{ color: '#43a047', fontWeight: 600, marginTop: '0.5rem' }}>{passwordSuccess}</p>}
+          {passwordSuccess && <p style={{ color: 'var(--success)', fontWeight: 600, marginTop: '0.5rem' }}>{passwordSuccess}</p>}
           <div className="form-actions">
             <button type="submit" className="btn btn-primary" disabled={passwordBusy}>
               {passwordBusy ? 'Cambiando...' : 'Cambiar Contraseña'}

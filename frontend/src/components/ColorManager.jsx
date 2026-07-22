@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { colorsApi } from '../api/client.js';
 import Toast from './Toast.jsx';
+import ConfirmDialog from './ConfirmDialog.jsx';
 
 export default function ColorManager() {
   const [colors, setColors] = useState([]);
@@ -10,6 +11,7 @@ export default function ColorManager() {
   const [editName, setEditName] = useState('');
   const [editHex, setEditHex] = useState('#000000');
   const [toast, setToast] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null); // { id, name }
 
   useEffect(() => {
     load();
@@ -51,14 +53,16 @@ export default function ColorManager() {
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm('¿Eliminar este color?')) return;
+  async function confirmDeleteColor() {
+    if (!confirmDelete) return;
     try {
-      await colorsApi.remove(id);
+      await colorsApi.remove(confirmDelete.id);
+      setConfirmDelete(null);
       showToast('Color eliminado', 'success');
       load();
     } catch (err) {
-      showToast(err.message);
+      showToast(err.message, 'error');
+      setConfirmDelete(null);
     }
   }
 
@@ -71,6 +75,15 @@ export default function ColorManager() {
         type={toast?.type}
         onClose={() => setToast(null)}
       />
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Eliminar Color"
+          message={`¿Estás seguro de eliminar "${confirmDelete.name}"? Esta acción no se puede deshacer.`}
+          onConfirm={confirmDeleteColor}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
 
       <form className="category-form" onSubmit={handleCreate}>
         <input
@@ -95,7 +108,9 @@ export default function ColorManager() {
       </form>
 
       {colors.length === 0 && (
-        <p className="empty-state">No hay colores aún.</p>
+        <div className="empty-state">
+          <p>No hay colores aún. Crea uno usando el formulario de arriba.</p>
+        </div>
       )}
 
       {colors.map((c) => (
@@ -162,7 +177,7 @@ export default function ColorManager() {
                 </button>
                 <button
                   className="btn btn-danger"
-                  onClick={() => handleDelete(c.id)}
+                  onClick={() => setConfirmDelete({ id: c.id, name: c.name })}
                 >
                   Eliminar
                 </button>

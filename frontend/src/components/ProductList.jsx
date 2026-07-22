@@ -3,6 +3,9 @@ import { productsApi, categoriesApi } from '../api/client.js';
 import ProductForm from './ProductForm.jsx';
 import ProductCard from './ProductCard.jsx';
 import Toast from './Toast.jsx';
+import ConfirmDialog from './ConfirmDialog.jsx';
+import Lightbox from './Lightbox.jsx';
+import { formatPrice } from '../utils.js';
 
 export default function ProductList() {
   const [products, setProducts] = useState([]);
@@ -13,9 +16,11 @@ export default function ProductList() {
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState(null);
   const [page, setPage] = useState(1);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [pendingSearch, setPendingSearch] = useState('');
+  const [previewImage, setPreviewImage] = useState(null);
   const searchTimer = useRef(null);
-  const perPage = 20;
+  const [perPage, setPerPage] = useState(20);
 
   const load = useCallback(async () => {
     try {
@@ -56,12 +61,23 @@ export default function ProductList() {
     return () => clearTimeout(searchTimer.current);
   }, []);
 
-  async function handleDelete(id) {
-    if (!confirm('¿Eliminar este producto?')) return;
+  function requestDelete(id, name) {
+    setConfirmDelete({ id, name });
+  }
+
+  function showToast(message, type) { setToast({ message, type }) }
+
+  async function confirmDeleteProduct() {
+    if (!confirmDelete) return;
     try {
-      await productsApi.remove(id);
+      await productsApi.remove(confirmDelete.id);
+      setConfirmDelete(null);
+      showToast('Producto eliminado', 'success');
       load();
-    } catch {}
+    } catch (e) {
+      showToast(e.message, 'error');
+      setConfirmDelete(null);
+    }
   }
 
   function handleEdit(product) {
@@ -100,7 +116,7 @@ export default function ProductList() {
       const headers = ['codigo', 'nombre', 'precio', 'stock', 'ubicacion', 'total']
       const rows = all.map(p => [
         p.code, p.name, p.price, p.stock ?? 1, p.ubicacion || '',
-        ((p.stock ?? 1) * p.price).toFixed(2),
+        formatPrice((p.stock ?? 1) * p.price),
       ])
       const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n')
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -114,8 +130,6 @@ export default function ProductList() {
       URL.revokeObjectURL(url)
     } catch {}
   }
-
-  function showToast(message, type) { setToast({ message, type }) }
 
   async function openPDF() {
     try {
@@ -153,17 +167,32 @@ export default function ProductList() {
   return (
     <div>
       <div className="filter-bar">
-        <input
-          className="search-input"
-          placeholder="Buscar por código, nombre, categoría, ubicación, precio o color"
-          value={search}
-          onChange={e => handleSearchChange(e.target.value)}
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck="false"
-        />
+        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+          <input
+            className="search-input"
+            placeholder="Buscar por código, nombre, categoría, ubicación, precio o color"
+            value={search}
+            onChange={e => handleSearchChange(e.target.value)}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck="false"
+            style={{ paddingRight: search ? '2rem' : undefined }}
+          />
+          {search && (
+            <button
+              onClick={() => { setSearch(''); setPendingSearch(''); setPage(1); }}
+              style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '1.1rem', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', lineHeight: 1 }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
         <div className="filter-actions">
-          <span className="total-count">{total} producto{total !== 1 ? 's' : ''}</span>
+          <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }} style={{ padding: '0.35rem 0.4rem', border: '1px solid #ccc', borderRadius: 4, fontSize: '0.85rem' }}>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
           <button className="btn btn-secondary" onClick={downloadCSV}>CSV</button>
           <button className="btn btn-secondary" onClick={openPDF}>PDF</button>
         </div>
@@ -172,15 +201,22 @@ export default function ProductList() {
         </button>
       </div>
 
+      {total > 0 && (
+        <p style={{ marginBottom: '0.75rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+          Mostrando {products.length} de {total} resultado{total !== 1 ? 's' : ''}
+          {totalPages > 1 && ` — Página ${page} de ${totalPages}`}
+        </p>
+      )}
+
       {products.length === 0 && (
         <div className="empty-state">
-          <p>No hay productos aún. Haz clic en "Añadir Producto" para empezar.</p>
+          <p>{total === 0 ? 'No hay productos aún. Haz clic en "Añadir Producto" para empezar.' : 'No se encontraron productos con los filtros actuales.'}</p>
         </div>
       )}
 
       <div className="product-grid">
         {products.map((p) => (
-          <ProductCard key={p.id} product={p} onEdit={handleEdit} onDelete={handleDelete} />
+          <ProductCard key={p.id} product={p} onEdit={handleEdit} onDelete={(id) => requestDelete(id, p.name)} onShowImage={setPreviewImage} />
         ))}
       </div>
 
@@ -210,6 +246,19 @@ export default function ProductList() {
             ›
           </button>
         </div>
+      )}
+
+      {previewImage && (
+        <Lightbox imageUrl={previewImage} name="Producto" onClose={() => setPreviewImage(null)} />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Eliminar Producto"
+          message={`¿Estás seguro de eliminar "${confirmDelete.name}"? Esta acción no se puede deshacer.`}
+          onConfirm={confirmDeleteProduct}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
 
       <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />

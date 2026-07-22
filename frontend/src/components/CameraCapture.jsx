@@ -57,7 +57,7 @@ export default function CameraCapture({ onCapture }) {
       {noCamera ? (
         <div style={{ padding: '0.5rem 0' }}>
           <p className="error-text">{error}</p>
-          <p style={{ marginBottom: '0.5rem', color: '#555', fontSize: '0.9rem' }}>
+          <p style={{ marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
             Selecciona una imagen desde tu dispositivo:
           </p>
           <input

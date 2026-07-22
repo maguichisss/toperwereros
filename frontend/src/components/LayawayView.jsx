@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { layawaysApi, customersApi, productsApi } from '../api/client.js';
+import ConfirmDialog from './ConfirmDialog.jsx';
+import { formatPrice } from '../utils.js';
 
 const DAYS_OVERDUE = 21;
 
@@ -15,6 +17,8 @@ export default function LayawayView() {
   const [selectedLayaway, setSelectedLayaway] = useState(null);
 
   const [error, setError] = useState('');
+  const [confirmCancel, setConfirmCancel] = useState(null);
+  const [confirmComplete, setConfirmComplete] = useState(null);
 
   const loadActive = useCallback(async () => {
     try {
@@ -47,21 +51,23 @@ export default function LayawayView() {
     if (mode === 'detail') setMode('active');
   }
 
-  async function handleCancel(id) {
-    if (!window.confirm('¿Cancelar este apartado? Se restaurará el stock.')) return;
+  async function executeCancel() {
+    if (!confirmCancel) return;
     try {
-      await layawaysApi.cancel(id);
+      await layawaysApi.cancel(confirmCancel);
+      setConfirmCancel(null);
       loadActive();
-      if (selectedId === id) handleBack();
+      if (selectedId === confirmCancel) handleBack();
     } catch (e) {
       setError(e.message);
     }
   }
 
-  async function handleComplete(id) {
-    if (!window.confirm('¿Completar este apartado? Se creará una venta.')) return;
+  async function executeComplete() {
+    if (!confirmComplete) return;
     try {
-      await layawaysApi.complete(id);
+      await layawaysApi.complete(confirmComplete);
+      setConfirmComplete(null);
       setSelectedId(null);
       setSelectedLayaway(null);
       setMode('active');
@@ -98,11 +104,29 @@ export default function LayawayView() {
 
       {error && <p className="error-text">{error}</p>}
 
+      {confirmCancel && (
+        <ConfirmDialog
+          title="Cancelar Apartado"
+          message="¿Cancelar este apartado? Se restaurará el stock de los productos."
+          onConfirm={executeCancel}
+          onCancel={() => setConfirmCancel(null)}
+        />
+      )}
+
+      {confirmComplete && (
+        <ConfirmDialog
+          title="Completar Apartado"
+          message="¿Completar este apartado? Se creará una venta y se descontará del stock."
+          onConfirm={executeComplete}
+          onCancel={() => setConfirmComplete(null)}
+        />
+      )}
+
       {mode === 'active' && (
         <ActiveList
           layaways={activeLayaways}
           onSelect={handleSelect}
-          onCancel={handleCancel}
+          onCancel={setConfirmCancel}
           onRefresh={loadActive}
         />
       )}
@@ -111,13 +135,13 @@ export default function LayawayView() {
         <AllList
           layaways={allLayaways}
           onSelect={handleSelect}
-          onCancel={handleCancel}
+          onCancel={setConfirmCancel}
           onRefresh={loadAll}
         />
       )}
 
       {mode === 'create' && (
-        <CreateView onCreated={() => { setMode('active'); loadActive(); }} />
+        <CreateView onBack={() => { setMode('active'); loadActive(); }} onCreated={() => { setMode('active'); loadActive(); }} />
       )}
 
       {mode === 'detail' && selectedLayaway && (
@@ -125,8 +149,8 @@ export default function LayawayView() {
           layaway={selectedLayaway}
           onBack={handleBack}
           onPayment={handleAddPayment}
-          onCancel={handleCancel}
-          onComplete={handleComplete}
+          onCancel={setConfirmCancel}
+          onComplete={setConfirmComplete}
           onUpdated={setSelectedLayaway}
         />
       )}
@@ -157,7 +181,7 @@ function ActiveList({ layaways, onSelect, onCancel, onRefresh }) {
               </div>
               <div className="layaway-card-details">
                 <span className="layaway-days">{days} día(s)</span>
-                <span className="layaway-balance">${parseFloat(l.balance).toFixed(2)}</span>
+                <span className="layaway-balance">${formatPrice(l.balance)}</span>
               </div>
               <button
                 className="btn btn-danger layaway-cancel-btn"
@@ -177,7 +201,7 @@ function AllList({ layaways, onSelect, onCancel, onRefresh }) {
   useEffect(() => { onRefresh(); }, [onRefresh]);
 
   const statusLabel = { active: 'Activo', completed: 'Completado', cancelled: 'Cancelado' };
-  const statusColor = { active: '#1a73e8', completed: '#43a047', cancelled: '#888' };
+  const statusColor = { active: 'var(--primary)', completed: 'var(--success)', cancelled: 'var(--text-muted)' };
 
   return (
     <div className="layaway-list">
@@ -200,7 +224,7 @@ function AllList({ layaways, onSelect, onCancel, onRefresh }) {
               <div className="layaway-card-details">
                 <span style={{ color: statusColor[l.status], fontWeight: 600, fontSize: '0.8rem' }}>{statusLabel[l.status]}</span>
                 <span className="layaway-days">{days} día(s)</span>
-                <span className="layaway-balance">${parseFloat(l.balance).toFixed(2)}</span>
+                <span className="layaway-balance">${formatPrice(l.balance)}</span>
               </div>
               {l.status === 'active' && (
                 <button
@@ -218,7 +242,7 @@ function AllList({ layaways, onSelect, onCancel, onRefresh }) {
   );
 }
 
-function CreateView({ onCreated }) {
+function CreateView({ onBack, onCreated }) {
   const [step, setStep] = useState('customer');
   const [error, setError] = useState('');
 
@@ -259,7 +283,7 @@ function CreateView({ onCreated }) {
     if (!q.trim()) { setProductResults([]); return; }
     try {
       const res = await productsApi.list({ q, perPage: 10 });
-      setProductResults(res.products);
+      setProductResults(res.products.filter(p => p.stock > 0));
       setShowProductResults(true);
     } catch {}
   }, []);
@@ -300,6 +324,7 @@ function CreateView({ onCreated }) {
     setCart(prev => {
       const existing = prev.find(c => c.product_id === product.id);
       if (existing) {
+        if (existing.quantity >= existing.stock) return prev;
         return prev.map(c => c.product_id === product.id ? { ...c, quantity: c.quantity + 1 } : c);
       }
       return [{ product_id: product.id, name: product.name, code: product.code, price: parseFloat(product.price), quantity: 1, stock: product.stock }, ...prev];
@@ -312,7 +337,7 @@ function CreateView({ onCreated }) {
   function updateQty(productId, delta) {
     setCart(prev => prev.map(c => {
       if (c.product_id !== productId) return c;
-      const newQty = c.quantity + delta;
+      const newQty = delta > 0 && c.quantity >= c.stock ? c.quantity : c.quantity + delta;
       if (newQty <= 0) return null;
       return { ...c, quantity: newQty };
     }).filter(Boolean));
@@ -370,6 +395,7 @@ function CreateView({ onCreated }) {
 
   return (
     <div className="layaway-create">
+      <button className="btn btn-secondary" onClick={onBack} style={{ marginBottom: '0.75rem' }}>← Volver</button>
       {error && <p className="error-text">{error}</p>}
 
       <div className="customer-section">
@@ -455,7 +481,7 @@ function CreateView({ onCreated }) {
                 <div key={p.id} className="search-result-item" onClick={() => addToCart(p)}>
                   <span className="result-name">{p.name}</span>
                   <span className="result-code">{p.code}</span>
-                  <span className="result-price">${parseFloat(p.price).toFixed(2)}</span>
+                  <span className="result-price">${formatPrice(p.price)}</span>
                   <span className="result-stock">Stock: {p.stock}</span>
                 </div>
               ))}
@@ -470,19 +496,22 @@ function CreateView({ onCreated }) {
                 <div className="cart-item-info">
                   <span className="cart-item-name">{c.name}</span>
                   <span className="cart-item-code">{c.code}</span>
+                  {c.stock !== undefined && <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Stock: {c.stock}</span>}
+                  {c.stock !== undefined && c.quantity >= c.stock && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 600 }}>Stock máximo</span>}
+                  {c.stock !== undefined && c.quantity < c.stock && c.quantity >= c.stock * 0.8 && <span style={{ color: 'var(--warning)', fontSize: '0.75rem', fontWeight: 600 }}>Poco stock</span>}
                 </div>
                 <div className="cart-item-controls">
                   <button className="btn-qty" onClick={() => updateQty(c.product_id, -1)} disabled={c.quantity <= 1}>−</button>
                   <span className="cart-qty">{c.quantity}</span>
-                  <button className="btn-qty" onClick={() => updateQty(c.product_id, 1)}>+</button>
-                  <span className="cart-item-price">${(c.price * c.quantity).toFixed(2)}</span>
+                  <button className="btn-qty" onClick={() => updateQty(c.product_id, 1)} disabled={c.quantity >= c.stock}>+</button>
+                    <span className="cart-item-price">${formatPrice(c.price * c.quantity)}</span>
                   <button className="btn-remove" onClick={() => removeFromCart(c.product_id)}>✕</button>
                 </div>
               </div>
             ))}
             <div className="cart-total-row">
               <span className="cart-total-label">Total</span>
-              <span className="cart-total-amount">${cartTotal.toFixed(2)}</span>
+              <span className="cart-total-amount">${formatPrice(cartTotal)}</span>
             </div>
           </div>
         )}
@@ -505,10 +534,10 @@ function CreateView({ onCreated }) {
               />
             </div>
             <p className="layaway-balance-preview">
-              Balance restante: <strong>${(cartTotal - parseFloat(deposit || 0)).toFixed(2)}</strong>
+              Balance restante: <strong>${formatPrice(cartTotal - parseFloat(deposit || 0))}</strong>
             </p>
             <button className="btn btn-primary btn-checkout" onClick={handleCreate}>
-              Crear Apartado — Depósito ${parseFloat(deposit || 0).toFixed(2)}
+              Crear Apartado — Depósito ${formatPrice(deposit || 0)}
             </button>
           </div>
         )}
@@ -540,26 +569,14 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
     }
   }
 
-  async function handleCancel() {
-    if (!window.confirm('¿Cancelar este apartado? Se restaurará el stock.')) return;
+  function handleCancel() {
     setDetailError('');
-    try {
-      await layawaysApi.cancel(layaway.id);
-      onBack();
-    } catch (e) {
-      setDetailError(e.message);
-    }
+    onCancel(layaway.id);
   }
 
-  async function handleComplete() {
-    if (!window.confirm('¿Completar este apartado? Se creará una venta.')) return;
+  function handleComplete() {
     setDetailError('');
-    try {
-      const updated = await layawaysApi.complete(layaway.id);
-      onUpdated(updated);
-    } catch (e) {
-      setDetailError(e.message);
-    }
+    onComplete(layaway.id);
   }
 
   const isActive = layaway.status === 'active';
@@ -577,6 +594,7 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
           {days} día(s) desde creación
           {overdue && isActive && <span className="overdue-warning"> — VENCIDO</span>}
         </p>
+        {layaway.created_by_name && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>Registrado por: {layaway.created_by_name}</p>}
       </div>
 
       <div className="detail-section">
@@ -591,13 +609,13 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
                 <td>{item.product_name}</td>
                 <td style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{item.product_code}</td>
                 <td style={{ textAlign: 'center' }}>{item.quantity}</td>
-                <td style={{ textAlign: 'center' }}>${parseFloat(item.unit_price).toFixed(2)}</td>
-                <td style={{ textAlign: 'right' }}>${(parseFloat(item.unit_price) * item.quantity).toFixed(2)}</td>
+                <td style={{ textAlign: 'center' }}>${formatPrice(item.unit_price)}</td>
+                <td style={{ textAlign: 'right' }}>${formatPrice(parseFloat(item.unit_price) * item.quantity)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div className="receipt-total" style={{ textAlign: 'right' }}>Total: ${parseFloat(layaway.total).toFixed(2)}</div>
+        <div className="receipt-total" style={{ textAlign: 'right' }}>Total: ${formatPrice(layaway.total)}</div>
       </div>
 
       <div className="detail-section">
@@ -613,7 +631,7 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
               {layaway.payments.map(p => (
                 <tr key={p.id}>
                   <td>{new Date(p.created_at + 'Z').toLocaleString('es-MX')}</td>
-                  <td style={{ textAlign: 'right' }}>${parseFloat(p.amount).toFixed(2)}</td>
+                  <td style={{ textAlign: 'right' }}>${formatPrice(p.amount)}</td>
                 </tr>
               ))}
             </tbody>
@@ -622,7 +640,7 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
         <div className="layaway-balance-section">
           <span className="layaway-balance-label">Saldo pendiente:</span>
           <span className={`layaway-balance-amount ${isActive && parseFloat(layaway.balance) > 0 ? 'text-danger' : 'text-success'}`}>
-            ${parseFloat(layaway.balance).toFixed(2)}
+            ${formatPrice(layaway.balance)}
           </span>
         </div>
       </div>

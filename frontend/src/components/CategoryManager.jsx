@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import { categoriesApi } from '../api/client.js';
+import ConfirmDialog from './ConfirmDialog.jsx';
+import Toast from './Toast.jsx';
 
 export default function CategoryManager() {
   const [categories, setCategories] = useState([]);
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(null); // { id, name }
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     load();
@@ -23,26 +27,33 @@ export default function CategoryManager() {
     try {
       await categoriesApi.create(newName.trim());
       setNewName('');
+      showToast('Categoría creada', 'success');
       load();
     } catch {}
   }
+
+  function showToast(message, type) { setToast({ message, type }) }
 
   async function handleUpdate(id) {
     if (!editName.trim()) return;
     try {
       await categoriesApi.update(id, editName.trim());
       setEditingId(null);
+      showToast('Categoría actualizada', 'success');
       load();
     } catch {}
   }
 
-  async function handleDelete(id) {
-    if (!confirm('¿Eliminar esta categoría?')) return;
+  async function confirmDeleteCategory() {
+    if (!confirmDelete) return;
     try {
-      await categoriesApi.remove(id);
+      await categoriesApi.remove(confirmDelete.id);
+      setConfirmDelete(null);
+      showToast('Categoría eliminada', 'success');
       load();
-    } catch (err) {
-      alert(err.message);
+    } catch (e) {
+      showToast(e.message, 'error');
+      setConfirmDelete(null);
     }
   }
 
@@ -64,8 +75,21 @@ export default function CategoryManager() {
         </button>
       </form>
 
+      <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Eliminar Categoría"
+          message={`¿Estás seguro de eliminar "${confirmDelete.name}"? Esta acción no se puede deshacer.`}
+          onConfirm={confirmDeleteCategory}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+
       {categories.length === 0 && (
-        <p className="empty-state">No hay categorías aún.</p>
+        <div className="empty-state">
+          <p>No hay categorías aún. Crea una usando el formulario de arriba.</p>
+        </div>
       )}
 
       {categories.map((c) => (
@@ -112,7 +136,7 @@ export default function CategoryManager() {
                 </button>
                 <button
                   className="btn btn-danger"
-                  onClick={() => handleDelete(c.id)}
+                  onClick={() => setConfirmDelete({ id: c.id, name: c.name })}
                 >
                   Eliminar
                 </button>

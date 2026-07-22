@@ -133,7 +133,7 @@ export default function BarcodeScanner({ onDetected, onCancel }) {
 
         {noCamera ? (
           <div style={{ padding: '1rem 0', textAlign: 'center' }}>
-            <p style={{ marginBottom: '1rem', color: '#555' }}>
+            <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
               Cámara no disponible. Selecciona una imagen que contenga un código de barras:
             </p>
             <input
@@ -144,7 +144,7 @@ export default function BarcodeScanner({ onDetected, onCancel }) {
               disabled={loading}
             />
             {loading && (
-              <p style={{ marginTop: '0.5rem', color: '#555' }}>
+              <p style={{ marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
                 Leyendo código de barras...
               </p>
             )}
@@ -165,7 +165,7 @@ export default function BarcodeScanner({ onDetected, onCancel }) {
               <canvas ref={canvasRef} style={{ display: 'none' }} />
             </div>
             {loading && (
-              <p style={{ textAlign: 'center', color: '#555', marginTop: '0.5rem' }}>
+              <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
                 Leyendo código de barras...
               </p>
             )}
