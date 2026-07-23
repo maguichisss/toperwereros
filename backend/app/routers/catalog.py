@@ -12,6 +12,7 @@ from PIL import Image as PILImage
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.config import safe_upload_path
 from app.models import Product, User
 from app.auth import require_permission
 
@@ -132,9 +133,8 @@ def catalog_pdf(
             cy = y
 
             if product.image_url:
-                filename = product.image_url.replace("/uploads/", "")
-                path = os.path.join(os.getcwd(), "uploads", filename)
-                if os.path.exists(path):
+                path = safe_upload_path(product.image_url)
+                if path and os.path.exists(path):
                     pdf.image(cover_image(path), x=cx, y=cy, w=IMG_W, h=IMG_H)
 
             by = y + IMG_H + 2

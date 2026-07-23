@@ -70,18 +70,22 @@ def list_sales(
         List of serialized SaleResponse objects.
     """
 
-    total = db.query(Sale).count()
-    sales = (
-        db.query(Sale)
-        .options(
-            selectinload(Sale.items).selectinload(SaleItem.product),
-            selectinload(Sale.creator),
+    try:
+        total = db.query(Sale).count()
+        sales = (
+            db.query(Sale)
+            .options(
+                selectinload(Sale.items).selectinload(SaleItem.product),
+                selectinload(Sale.creator),
+            )
+            .order_by(Sale.created_at.desc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
         )
-        .order_by(Sale.created_at.desc())
-        .offset((page - 1) * per_page)
-        .limit(per_page)
-        .all()
-    )
+    except Exception:
+        logger.exception("Failed to list sales")
+        raise HTTPException(500, "Error al obtener las ventas")
     return [serialize_sale(s) for s in sales]
 
 
@@ -106,15 +110,19 @@ def get_sale(
         HTTPException: 404 if the sale is not found.
     """
 
-    sale = (
-        db.query(Sale)
-        .options(
-            selectinload(Sale.items).selectinload(SaleItem.product),
-            selectinload(Sale.creator),
+    try:
+        sale = (
+            db.query(Sale)
+            .options(
+                selectinload(Sale.items).selectinload(SaleItem.product),
+                selectinload(Sale.creator),
+            )
+            .filter(Sale.id == sale_id)
+            .first()
         )
-        .filter(Sale.id == sale_id)
-        .first()
-    )
+    except Exception:
+        logger.exception("Failed to get sale %d", sale_id)
+        raise HTTPException(500, "Error al obtener la venta")
     if not sale:
         raise HTTPException(404, "Venta no encontrada")
     return serialize_sale(sale)

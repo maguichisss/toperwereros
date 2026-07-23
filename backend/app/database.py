@@ -9,7 +9,7 @@ import os
 from collections.abc import Generator
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -26,7 +26,7 @@ class Base(DeclarativeBase):
     pass
 
 
-def get_db() -> Generator[SessionLocal, None, None]:
+def get_db() -> Generator[Session, None, None]:
     """Yield a database session and ensure it closes after use.
 
     This is a FastAPI dependency that manages the lifecycle of each request's

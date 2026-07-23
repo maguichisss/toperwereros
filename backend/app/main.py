@@ -17,6 +17,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from app.logging_config import setup_logging
+from app.config import UPLOAD_DIR
 from app.routers.docs import REDOC_HTML
 from app.routers import categories, products, upload, colors, catalog, sales, customers, layaways, auth
 
@@ -76,9 +77,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-uploads_dir = os.path.join(os.getcwd(), "uploads")
-os.makedirs(uploads_dir, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 app.include_router(categories.router, prefix="/api/categories")
 app.include_router(products.router, prefix="/api/products")

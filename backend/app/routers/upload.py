@@ -1,51 +1,29 @@
 """Image upload endpoints — validates magic bytes and saves to disk."""
 
+import logging
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Request
 from fastapi.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
+from app.config import UPLOAD_DIR, MAX_SIZE, detect_image_type
 from app.models import User
 from app.auth import require_permission
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
-
-UPLOAD_DIR: str = os.path.join(os.getcwd(), "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-MAGIC_BYTES: dict[bytes, tuple[str, str]] = {
-    b'\xff\xd8\xff': ('.jpg', 'image/jpeg'),
-    b'\x89PNG\r\n\x1a\n': ('.png', 'image/png'),
-    b'RIFF': ('.webp', 'image/webp'),
-}
-
-MAX_SIZE: int = 5 * 1024 * 1024
-
-
-def detect_image_type(header: bytes) -> tuple[str, str] | None:
-    """Detect image format from the first 12 bytes of file content.
-
-    Checks the header against known magic bytes for JPEG, PNG, and WebP.
-
-    Args:
-        header: The first 12 bytes of the uploaded file.
-
-    Returns:
-        A tuple of ``(extension, mime_type)`` if detected, or ``None``.
-    """
-
-    for magic, (ext, mime) in MAGIC_BYTES.items():
-        if header.startswith(magic):
-            return ext, mime
-    if header[:4] == b'RIFF':
-        return '.webp', 'image/webp'
-    return None
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("", tags=["Upload"], summary="Upload image",
-              description="Upload a product image. Validates magic bytes (JPEG/PNG/WebP) and enforces a 5 MB size limit. Returns the URL path; link to a product via PUT /api/products/{id}.")
+              description="Upload a product image. Validates magic bytes (JPEG/PNG/WebP) and enforces a 5 MB size limit. Returns the URL path; link to a product via PUT /api/products/{id}. Rate-limited to 5 attempts per minute per IP.")
+@limiter.limit("5/minute")
 def upload_image(
+    request: Request,
     image: UploadFile = File(...),
     current_user: User = Depends(require_permission("product.edit")),
 ) -> dict[str, str]:
@@ -53,8 +31,10 @@ def upload_image(
 
     Validates that the file is ≤ 5 MB, has a recognized image header (JPEG,
     PNG, or WebP), and stores it with a random UUID filename.
+    Rate-limited to 5 attempts per minute per IP.
 
     Args:
+        request: The raw HTTP request (used by slowapi for rate limiting).
         image: The multipart file upload containing image bytes.
         current_user: Authenticated user with ``product.edit`` permission.
 
@@ -66,9 +46,17 @@ def upload_image(
             supported image format.
     """
 
-    content = image.file.read()
-    if len(content) > MAX_SIZE:
-        raise HTTPException(400, "File too large (max 5MB)")
+    chunks = []
+    total = 0
+    while True:
+        chunk = image.file.read(8192)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_SIZE:
+            raise HTTPException(400, "Archivo demasiado grande (máx 5MB)")
+        chunks.append(chunk)
+    content = b"".join(chunks)
     if len(content) < 8:
         raise HTTPException(400, "Archivo de imagen inválido")
     result = detect_image_type(content[:12])
@@ -77,6 +65,10 @@ def upload_image(
     ext, expected_mime = result
     filename = f"{uuid.uuid4().hex}{ext}"
     path = os.path.join(UPLOAD_DIR, filename)
-    with open(path, "wb") as f:
-        f.write(content)
+    try:
+        with open(path, "wb") as f:
+            f.write(content)
+    except OSError:
+        logger.exception("Failed to write upload file")
+        raise HTTPException(500, "Error al subir la imagen")
     return {"image_url": f"/uploads/{filename}"}

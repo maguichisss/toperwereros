@@ -24,6 +24,8 @@ from app.schemas import (
     LayawayPaymentResponse,
     LayawayListResponse,
     PaymentCreate,
+    LayawayItemAdd,
+    LayawayItemUpdate,
 )
 from app.auth import require_permission
 
@@ -227,19 +229,23 @@ def list_layaways(
     if customer_id:
         query = query.filter(Layaway.customer_id == customer_id)
 
-    total = query.count()
-    layaways = (
-        query.options(
-            selectinload(Layaway.items).selectinload(LayawayItem.product),
-            selectinload(Layaway.payments),
-            selectinload(Layaway.customer),
-            selectinload(Layaway.creator),
+    try:
+        total = query.count()
+        layaways = (
+            query.options(
+                selectinload(Layaway.items).selectinload(LayawayItem.product),
+                selectinload(Layaway.payments),
+                selectinload(Layaway.customer),
+                selectinload(Layaway.creator),
+            )
+            .order_by(Layaway.created_at.desc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
         )
-        .order_by(Layaway.created_at.desc())
-        .offset((page - 1) * per_page)
-        .limit(per_page)
-        .all()
-    )
+    except Exception:
+        logger.exception("Failed to list layaways")
+        raise HTTPException(500, "Error al obtener los apartados")
     return LayawayListResponse(
         layaways=[serialize_layaway(l) for l in layaways],
         total=total,
@@ -267,17 +273,21 @@ def get_layaway(
         HTTPException: 404 if the layaway is not found.
     """
 
-    layaway = (
-        db.query(Layaway)
-        .options(
-            selectinload(Layaway.items).selectinload(LayawayItem.product),
-            selectinload(Layaway.payments),
-            selectinload(Layaway.customer),
-            selectinload(Layaway.creator),
+    try:
+        layaway = (
+            db.query(Layaway)
+            .options(
+                selectinload(Layaway.items).selectinload(LayawayItem.product),
+                selectinload(Layaway.payments),
+                selectinload(Layaway.customer),
+                selectinload(Layaway.creator),
+            )
+            .filter(Layaway.id == layaway_id)
+            .first()
         )
-        .filter(Layaway.id == layaway_id)
-        .first()
-    )
+    except Exception:
+        logger.exception("Failed to get layaway %d", layaway_id)
+        raise HTTPException(500, "Error al obtener el apartado")
     if not layaway:
         raise HTTPException(404, "Apartado no encontrado")
     return serialize_layaway(layaway)
@@ -338,11 +348,287 @@ def add_payment(
     if layaway.balance <= 0:
         complete_layaway(layaway, db, current_user)
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to add payment to layaway %d", layaway_id)
+        raise HTTPException(500, "Error al registrar el abono")
     db.refresh(layaway, attribute_names=["items", "payments", "customer"])
     for li in layaway.items:
         db.refresh(li, attribute_names=["product"])
 
+    return serialize_layaway(layaway)
+
+
+def _load_layaway(db: Session, layaway_id: int) -> Layaway:
+    """Load a layaway with all relationships eagerly loaded.
+
+    Args:
+        db: Active database session.
+        layaway_id: ID of the layaway to load.
+
+    Returns:
+        The Layaway ORM object with items, payments, customer, and creator loaded.
+
+    Raises:
+        HTTPException: 404 if the layaway is not found.
+    """
+
+    layaway = (
+        db.query(Layaway)
+        .options(
+            selectinload(Layaway.items).selectinload(LayawayItem.product),
+            selectinload(Layaway.payments),
+            selectinload(Layaway.customer),
+            selectinload(Layaway.creator),
+        )
+        .filter(Layaway.id == layaway_id)
+        .first()
+    )
+    if not layaway:
+        raise HTTPException(404, "Apartado no encontrado")
+    return layaway
+
+
+def _recalculate_layaway(layaway: Layaway) -> None:
+    """Recalculate layaway total and balance from its items and payments.
+
+    Args:
+        layaway: The Layaway ORM object (must have ``items`` and ``payments`` loaded).
+    """
+
+    layaway.total = sum(li.unit_price * li.quantity for li in layaway.items) or Decimal("0.00")
+    total_payments = sum(p.amount for p in layaway.payments) or Decimal("0.00")
+    layaway.balance = layaway.total - total_payments
+
+
+@router.post("/{layaway_id}/items", response_model=LayawayResponse, status_code=201, tags=["Layaways"],
+              summary="Add item to layaway",
+              description="Add a new product to an active layaway. Stock is decremented and total/balance recalculated. Price is locked from current product price.")
+def add_layaway_item(
+    layaway_id: int,
+    data: LayawayItemAdd,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("apartado.edit")),
+) -> LayawayResponse:
+    """Add a new item to an active layaway.
+
+    Decrements the product's stock, locks the current price, and
+    recalculates the layaway total and balance.
+
+    Args:
+        layaway_id: ID of the layaway to add an item to.
+        data: Item payload with ``product_id`` and ``quantity``.
+        db: Active database session.
+        current_user: Authenticated user with ``apartado.edit`` permission.
+
+    Returns:
+        Updated LayawayResponse with the new item included.
+
+    Raises:
+        HTTPException: 404 if the layaway or product is not found.
+        HTTPException: 400 if the layaway is not active or stock is insufficient.
+    """
+
+    layaway = _load_layaway(db, layaway_id)
+    if layaway.status != "active":
+        raise HTTPException(400, "Solo se pueden modificar apartados activos")
+
+    product = db.query(Product).filter(Product.id == data.product_id).first()
+    if not product:
+        raise HTTPException(404, f"Producto {data.product_id} no encontrado")
+    if product.stock < data.quantity:
+        raise HTTPException(
+            400,
+            f"Stock insuficiente para '{product.name}': {product.stock} disponible(s), {data.quantity} solicitado(s)",
+        )
+
+    unit_price = product.price
+    product.stock -= data.quantity
+
+    item = LayawayItem(
+        layaway_id=layaway.id,
+        product_id=product.id,
+        quantity=data.quantity,
+        unit_price=unit_price,
+    )
+    db.add(item)
+    layaway.items.append(item)
+    _recalculate_layaway(layaway)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to add item to layaway %d", layaway_id)
+        raise HTTPException(500, "Error al agregar el artículo al apartado")
+
+    db.refresh(layaway, attribute_names=["items", "payments", "customer"])
+    for li in layaway.items:
+        db.refresh(li, attribute_names=["product"])
+    return serialize_layaway(layaway)
+
+
+@router.delete("/{layaway_id}/items/{item_id}", response_model=LayawayResponse,
+                tags=["Layaways"], summary="Remove item from layaway",
+                description="Remove an item from an active layaway. Stock is restored and total/balance recalculated. Must keep at least 1 item.")
+def remove_layaway_item(
+    layaway_id: int,
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("apartado.edit")),
+) -> LayawayResponse:
+    """Remove an item from an active layaway.
+
+    Restores the product's stock and recalculates the layaway total and
+    balance. The layaway must retain at least one item.
+
+    Args:
+        layaway_id: ID of the layaway.
+        item_id: ID of the ``LayawayItem`` to remove.
+        db: Active database session.
+        current_user: Authenticated user with ``apartado.edit`` permission.
+
+    Returns:
+        Updated LayawayResponse with the item removed.
+
+    Raises:
+        HTTPException: 404 if the layaway or item is not found.
+        HTTPException: 400 if the layaway is not active, item doesn't belong
+            to this layaway, removing would leave 0 items, or total would
+            drop below the sum of payments.
+    """
+
+    layaway = _load_layaway(db, layaway_id)
+    if layaway.status != "active":
+        raise HTTPException(400, "Solo se pueden modificar apartados activos")
+
+    target = None
+    for li in layaway.items:
+        if li.id == item_id:
+            target = li
+            break
+    if not target:
+        raise HTTPException(404, "Artículo no encontrado en este apartado")
+
+    if len(layaway.items) <= 1:
+        raise HTTPException(400, "El apartado debe tener al menos un artículo. Use cancelar para eliminar todos.")
+
+    product = db.query(Product).filter(Product.id == target.product_id).first()
+    if product:
+        product.stock += target.quantity
+
+    new_total = layaway.total - (target.unit_price * target.quantity)
+    total_payments = sum(p.amount for p in layaway.payments) or Decimal("0.00")
+    if new_total < total_payments:
+        raise HTTPException(
+            400,
+            f"No se puede eliminar: el nuevo total (${new_total}) sería menor que los abonos realizados (${total_payments})",
+        )
+
+    db.delete(target)
+    layaway.items.remove(target)
+    _recalculate_layaway(layaway)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to remove item %d from layaway %d", item_id, layaway_id)
+        raise HTTPException(500, "Error al eliminar el artículo del apartado")
+
+    db.refresh(layaway, attribute_names=["items", "payments", "customer"])
+    for li in layaway.items:
+        db.refresh(li, attribute_names=["product"])
+    return serialize_layaway(layaway)
+
+
+@router.put("/{layaway_id}/items/{item_id}", response_model=LayawayResponse,
+             tags=["Layaways"], summary="Update item quantity",
+             description="Change the quantity of an item in an active layaway. Stock is delta-adjusted and total/balance recalculated.")
+def update_layaway_item(
+    layaway_id: int,
+    item_id: int,
+    data: LayawayItemUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("apartado.edit")),
+) -> LayawayResponse:
+    """Update the quantity of an item in an active layaway.
+
+    Applies a delta-based stock adjustment: if the quantity increases, the
+    additional stock is decremented; if it decreases, the excess is restored.
+    The layaway total and balance are recalculated accordingly.
+
+    Args:
+        layaway_id: ID of the layaway.
+        item_id: ID of the ``LayawayItem`` to update.
+        data: Update payload with the new ``quantity`` (must be ≥ 1).
+        db: Active database session.
+        current_user: Authenticated user with ``apartado.edit`` permission.
+
+    Returns:
+        Updated LayawayResponse with the modified item.
+
+    Raises:
+        HTTPException: 404 if the layaway or item is not found.
+        HTTPException: 400 if the layaway is not active, item doesn't belong
+            to this layaway, stock is insufficient for an increase, or total
+            would drop below the sum of payments.
+    """
+
+    layaway = _load_layaway(db, layaway_id)
+    if layaway.status != "active":
+        raise HTTPException(400, "Solo se pueden modificar apartados activos")
+
+    target = None
+    for li in layaway.items:
+        if li.id == item_id:
+            target = li
+            break
+    if not target:
+        raise HTTPException(404, "Artículo no encontrado en este apartado")
+
+    delta = data.quantity - target.quantity
+    if delta == 0:
+        return serialize_layaway(layaway)
+
+    if delta > 0:
+        product = db.query(Product).filter(Product.id == target.product_id).first()
+        if not product:
+            raise HTTPException(404, f"Producto {target.product_id} no encontrado")
+        if product.stock < delta:
+            raise HTTPException(
+                400,
+                f"Stock insuficiente para '{product.name}': {product.stock} disponible(s), {delta} adicional(es) solicitado(s)",
+            )
+        product.stock -= delta
+    else:
+        product = db.query(Product).filter(Product.id == target.product_id).first()
+        if product:
+            product.stock += abs(delta)
+
+    new_total = layaway.total + (target.unit_price * delta)
+    total_payments = sum(p.amount for p in layaway.payments) or Decimal("0.00")
+    if new_total < total_payments:
+        raise HTTPException(
+            400,
+            f"No se puede reducir: el nuevo total (${new_total}) sería menor que los abonos realizados (${total_payments})",
+        )
+
+    target.quantity = data.quantity
+    _recalculate_layaway(layaway)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to update item %d in layaway %d", item_id, layaway_id)
+        raise HTTPException(500, "Error al actualizar el artículo del apartado")
+
+    db.refresh(layaway, attribute_names=["items", "payments", "customer"])
+    for li in layaway.items:
+        db.refresh(li, attribute_names=["product"])
     return serialize_layaway(layaway)
 
 
@@ -390,7 +676,12 @@ def cancel_layaway(
             product.stock += li.quantity
 
     layaway.status = "cancelled"
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to cancel layaway %d", layaway_id)
+        raise HTTPException(500, "Error al cancelar el apartado")
     db.refresh(layaway, attribute_names=["items", "payments", "customer"])
     for li in layaway.items:
         db.refresh(li, attribute_names=["product"])
@@ -440,7 +731,12 @@ def complete_layaway_endpoint(
         raise HTTPException(400, "Solo se pueden completar apartados activos")
 
     complete_layaway(layaway, db, current_user)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to complete layaway %d", layaway_id)
+        raise HTTPException(500, "Error al completar el apartado")
     db.refresh(layaway, attribute_names=["items", "payments", "customer"])
     for li in layaway.items:
         db.refresh(li, attribute_names=["product"])

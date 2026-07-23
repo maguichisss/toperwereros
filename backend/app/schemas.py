@@ -7,7 +7,7 @@ accepting snake_case field names in Python code (via ``populate_by_name=True``).
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 def to_camel(s: str) -> str:
@@ -33,7 +33,7 @@ class CategoryBase(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
     )
-    name: str
+    name: str = Field(min_length=1, max_length=100)
 
 
 class CategoryCreate(CategoryBase):
@@ -61,7 +61,7 @@ class ColorCreate(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
     )
-    name: str
+    name: str = Field(min_length=1, max_length=50)
     hex: str
 
 
@@ -83,13 +83,13 @@ class ProductBase(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
     )
-    name: str
-    code: str
-    stock: int = 1
-    description: str | None = None
-    ubicacion: str | None = None
-    price: Decimal
-    image_url: str | None = None
+    name: str = Field(min_length=1, max_length=200)
+    code: str = Field(min_length=1, max_length=50)
+    stock: int = Field(default=1, ge=0)
+    description: str | None = Field(default=None, max_length=2000)
+    ubicacion: str | None = Field(default=None, max_length=200)
+    price: Decimal = Field(ge=0)
+    image_url: str | None = Field(default=None, max_length=500)
     category_ids: list[int] = []
     color_ids: list[int] = []
 
@@ -163,8 +163,8 @@ class ProductListResponse(BaseModel):
 class LoginRequest(BaseModel):
     """Schema for login credentials."""
 
-    username: str
-    password: str
+    username: str = Field(min_length=1)
+    password: str = Field(min_length=1)
 
 
 class TokenResponse(BaseModel):
@@ -178,7 +178,7 @@ class ChangePasswordRequest(BaseModel):
     """Schema for password change request."""
 
     current_password: str
-    new_password: str
+    new_password: str = Field(min_length=4)
 
 
 class ProfileUpdateRequest(BaseModel):
@@ -191,8 +191,8 @@ class ProfileUpdateRequest(BaseModel):
 class UserCreate(BaseModel):
     """Schema for creating a new user account."""
 
-    username: str
-    password: str
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=4)
     email: str | None = None
     role_id: int
 
@@ -217,13 +217,13 @@ class SaleItemCreate(BaseModel):
     """Schema for a single sale line item."""
 
     product_id: int
-    quantity: int = 1
+    quantity: int = Field(default=1, ge=1)
 
 
 class SaleCreate(BaseModel):
     """Schema for creating a new sale with one or more items."""
 
-    items: list[SaleItemCreate]
+    items: list[SaleItemCreate] = Field(min_length=1)
 
 
 class SaleItemResponse(BaseModel):
@@ -255,10 +255,10 @@ class SaleResponse(BaseModel):
 class CustomerCreate(BaseModel):
     """Schema for creating or updating a customer."""
 
-    name: str
-    phone: str | None = None
-    email: str | None = None
-    notes: str | None = None
+    name: str = Field(min_length=1, max_length=200)
+    phone: str | None = Field(default=None, max_length=20)
+    email: str | None = Field(default=None, max_length=200)
+    notes: str | None = Field(default=None, max_length=2000)
 
 
 class CustomerResponse(BaseModel):
@@ -279,7 +279,7 @@ class LayawayItemCreate(BaseModel):
     """Schema for a single layaway line item."""
 
     product_id: int
-    quantity: int = 1
+    quantity: int = Field(default=1, ge=1)
 
 
 class LayawayCreate(BaseModel):
@@ -287,8 +287,8 @@ class LayawayCreate(BaseModel):
 
     customer_id: int | None = None
     customer: CustomerCreate | None = None
-    deposit: Decimal
-    items: list[LayawayItemCreate]
+    deposit: Decimal = Field(gt=0)
+    items: list[LayawayItemCreate] = Field(min_length=1)
     notes: str | None = None
 
 
@@ -344,4 +344,25 @@ class LayawayListResponse(BaseModel):
 class PaymentCreate(BaseModel):
     """Schema for adding a payment to a layaway."""
 
-    amount: Decimal
+    amount: Decimal = Field(gt=0)
+
+
+class LayawayItemAdd(BaseModel):
+    """Schema for adding a new item to an active layaway."""
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+    product_id: int
+    quantity: int = Field(default=1, ge=1)
+
+
+class LayawayItemUpdate(BaseModel):
+    """Schema for updating an existing layaway item's quantity."""
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+    quantity: int = Field(ge=1)

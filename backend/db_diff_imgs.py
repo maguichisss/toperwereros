@@ -1,9 +1,8 @@
 import os
 import argparse
 from app.database import SessionLocal
+from app.config import UPLOAD_DIR
 from app.models import Product
-
-UPLOAD_DIR = os.path.join(os.getcwd(), "uploads")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--delete", action="store_true", help="Delete orphan images on disk not found in DB")

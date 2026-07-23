@@ -118,10 +118,11 @@ def get_current_user(
     token = credentials.credentials
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
-        user_id: int = int(payload.get("sub"))
-        if user_id is None:
+        sub = payload.get("sub")
+        if sub is None:
             raise HTTPException(status_code=401, detail="Token inválido")
-    except JWTError:
+        user_id: int = int(sub)
+    except (JWTError, TypeError, ValueError):
         raise HTTPException(status_code=401, detail="Token inválido")
 
     user = db.query(User).filter(User.id == user_id).first()

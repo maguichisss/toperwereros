@@ -1,35 +1,19 @@
 """Customer CRUD endpoints with name/phone search."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.config import escape_like
 from app.models import Customer, User
 from app.schemas import CustomerCreate, CustomerResponse
 from app.auth import require_permission
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
-
-
-def serialize_customer(c: Customer) -> dict:
-    """Serialize a Customer ORM object into a JSON-safe dict.
-
-    Args:
-        c: The Customer record to serialize.
-
-    Returns:
-        Dict with ``id``, ``name``, ``phone``, ``email``, ``notes``, and
-        ``created_at`` fields.
-    """
-
-    return {
-        "id": c.id,
-        "name": c.name,
-        "phone": c.phone,
-        "email": c.email,
-        "notes": c.notes,
-        "created_at": c.created_at,
-    }
 
 
 @router.get("", response_model=list[CustomerResponse], tags=["Customers"], summary="List customers",
@@ -38,7 +22,7 @@ def list_customers(
     q: str | None = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("customer.view")),
-) -> list[dict]:
+) -> list[Customer]:
     """Return all customers, optionally filtered by name or phone.
 
     Args:
@@ -47,16 +31,16 @@ def list_customers(
         current_user: Authenticated user with ``customer.view`` permission.
 
     Returns:
-        List of serialized Customer dicts.
+        List of Customer records.
     """
 
     query = db.query(Customer)
     if q:
+        pattern = f"%{escape_like(q)}%"
         query = query.filter(
-            Customer.name.ilike(f"%{q}%") | Customer.phone.ilike(f"%{q}%")
+            Customer.name.ilike(pattern, escape="\\") | Customer.phone.ilike(pattern, escape="\\")
         )
-    customers = query.order_by(Customer.name.asc()).all()
-    return [serialize_customer(c) for c in customers]
+    return query.order_by(Customer.name.asc()).all()
 
 
 @router.get("/{customer_id}", response_model=CustomerResponse, tags=["Customers"], summary="Get customer",
@@ -65,7 +49,7 @@ def get_customer(
     customer_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("customer.view")),
-) -> dict:
+) -> Customer:
     """Return a single customer by ID.
 
     Args:
@@ -74,7 +58,7 @@ def get_customer(
         current_user: Authenticated user with ``customer.view`` permission.
 
     Returns:
-        Serialized Customer dict.
+        Customer record.
 
     Raises:
         HTTPException: 404 if the customer is not found.
@@ -83,7 +67,7 @@ def get_customer(
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(404, "Cliente no encontrado")
-    return serialize_customer(customer)
+    return customer
 
 
 @router.post("", response_model=CustomerResponse, status_code=201, tags=["Customers"], summary="Create customer",
@@ -92,7 +76,7 @@ def create_customer(
     data: CustomerCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("customer.create")),
-) -> dict:
+) -> Customer:
     """Create a new customer record.
 
     Args:
@@ -101,7 +85,7 @@ def create_customer(
         current_user: Authenticated user with ``customer.create`` permission.
 
     Returns:
-        Serialized Customer dict for the newly created customer.
+        The newly created Customer record.
     """
 
     customer = Customer(
@@ -111,9 +95,14 @@ def create_customer(
         notes=data.notes,
     )
     db.add(customer)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to create customer")
+        raise HTTPException(500, "Error al crear el cliente")
     db.refresh(customer)
-    return serialize_customer(customer)
+    return customer
 
 
 @router.put("/{customer_id}", response_model=CustomerResponse, tags=["Customers"], summary="Update customer",
@@ -123,7 +112,7 @@ def update_customer(
     data: CustomerCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("customer.edit")),
-) -> dict:
+) -> Customer:
     """Update an existing customer's profile fields.
 
     Args:
@@ -133,7 +122,7 @@ def update_customer(
         current_user: Authenticated user with ``customer.edit`` permission.
 
     Returns:
-        Serialized Customer dict for the updated customer.
+        The updated Customer record.
 
     Raises:
         HTTPException: 404 if the customer is not found.
@@ -146,27 +135,29 @@ def update_customer(
     customer.phone = data.phone
     customer.email = data.email
     customer.notes = data.notes
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to update customer %d", customer_id)
+        raise HTTPException(500, "Error al actualizar el cliente")
     db.refresh(customer)
-    return serialize_customer(customer)
+    return customer
 
 
-@router.delete("/{customer_id}", tags=["Customers"], summary="Delete customer",
+@router.delete("/{customer_id}", status_code=204, tags=["Customers"], summary="Delete customer",
               description="Delete a customer record.")
 def delete_customer(
     customer_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("customer.delete")),
-) -> dict[str, bool]:
+) -> None:
     """Delete a customer record.
 
     Args:
         customer_id: ID of the customer to delete.
         db: Active database session.
         current_user: Authenticated user with ``customer.delete`` permission.
-
-    Returns:
-        ``{"ok": True}`` on success.
 
     Raises:
         HTTPException: 404 if the customer is not found.
@@ -176,5 +167,9 @@ def delete_customer(
     if not customer:
         raise HTTPException(404, "Cliente no encontrado")
     db.delete(customer)
-    db.commit()
-    return {"ok": True}
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to delete customer %d", customer_id)
+        raise HTTPException(500, "Error al eliminar el cliente")

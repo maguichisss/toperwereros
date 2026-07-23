@@ -160,4 +160,9 @@ def delete_color(
             409, "No se puede eliminar un color asignado a productos"
         )
     db.delete(color)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to delete color %d", color_id)
+        raise HTTPException(500, "Error al eliminar el color")

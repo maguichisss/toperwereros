@@ -1,5 +1,6 @@
 """Authentication, user management, avatar upload, and profile endpoints."""
 
+import logging
 import os
 import uuid
 
@@ -9,6 +10,7 @@ from sqlalchemy.orm import Session
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from app.config import UPLOAD_DIR, MAX_SIZE, detect_image_type, safe_upload_path
 from app.database import get_db
 from app.models import User
 from app.schemas import (
@@ -27,30 +29,7 @@ from app.auth import (
     require_permission,
 )
 
-MAGIC_BYTES: dict[bytes, tuple[str, str]] = {
-    b'\xff\xd8\xff': ('.jpg', 'image/jpeg'),
-    b'\x89PNG\r\n\x1a\n': ('.png', 'image/png'),
-    b'RIFF': ('.webp', 'image/webp'),
-}
-
-MAX_SIZE: int = 5 * 1024 * 1024
-
-
-def detect_image_type(header: bytes) -> tuple[str, str] | None:
-    """Detect image format from the first 12 bytes of file content.
-
-    Args:
-        header: The first 12 bytes of the uploaded file.
-
-    Returns:
-        A tuple of ``(extension, mime_type)`` if detected, or ``None``.
-    """
-
-    for magic, (ext, mime) in MAGIC_BYTES.items():
-        if header.startswith(magic):
-            return ext, mime
-    return None
-
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -114,15 +93,20 @@ def me(current_user: User = Depends(get_current_user)) -> UserResponse:
 
 
 @router.post("/change-password", tags=["Auth"], summary="Change password",
-              description="Change the authenticated user's password. New password must be at least 4 characters.")
+              description="Change the authenticated user's password. New password must be at least 4 characters. Rate-limited to 1 attempt per minute per IP.")
+@limiter.limit("1/minute")
 def change_password(
+    request: Request,
     data: ChangePasswordRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> dict[str, str]:
+) -> dict[str, str | bool]:
     """Change the authenticated user's password.
 
+    Rate-limited to 1 attempt per minute per IP.
+
     Args:
+        request: The raw HTTP request (used by slowapi for rate limiting).
         data: Current and new password.
         db: Active database session.
         current_user: Authenticated user injected by dependency.
@@ -140,7 +124,12 @@ def change_password(
     if len(data.new_password) < 4:
         raise HTTPException(400, "La nueva contraseña debe tener al menos 4 caracteres")
     current_user.hashed_password = hash_password(data.new_password)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to change password for user %d", current_user.id)
+        raise HTTPException(500, "Error al cambiar la contraseña")
     return {"ok": True, "detail": "Contraseña actualizada correctamente"}
 
 
@@ -173,7 +162,12 @@ def update_profile(
         current_user.email = data.email or None
     if data.image_url is not None:
         current_user.image_url = data.image_url
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to update profile for user %d", current_user.id)
+        raise HTTPException(500, "Error al actualizar el perfil")
     return UserResponse(
         id=current_user.id,
         username=current_user.username,
@@ -187,16 +181,20 @@ def update_profile(
 
 
 @router.post("/avatar", tags=["Auth"], summary="Upload avatar",
-              description="Upload a profile avatar image. Validates magic bytes (JPEG/PNG/WebP) and enforces a 5 MB size limit.")
+              description="Upload a profile avatar image. Validates magic bytes (JPEG/PNG/WebP) and enforces a 5 MB size limit. Rate-limited to 3 attempts per minute per IP.")
+@limiter.limit("3/minute")
 def upload_avatar(
+    request: Request,
     image: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, str]:
     """Upload a profile avatar image for the authenticated user.
 
     Validates magic bytes (JPEG, PNG, WebP) and enforces a 5 MB size limit.
+    Rate-limited to 3 attempts per minute per IP.
 
     Args:
+        request: The raw HTTP request (used by slowapi for rate limiting).
         image: Multipart file upload containing the avatar image.
         current_user: Authenticated user injected by dependency.
 
@@ -208,21 +206,35 @@ def upload_avatar(
             supported image format.
     """
 
-    content = image.file.read()
-    if len(content) > MAX_SIZE:
-        raise HTTPException(400, "Archivo demasiado grande (máx 5MB)")
+    chunks = []
+    total = 0
+    while True:
+        chunk = image.file.read(8192)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_SIZE:
+            raise HTTPException(400, "Archivo demasiado grande (máx 5MB)")
+        chunks.append(chunk)
+    content = b"".join(chunks)
     if len(content) < 8:
         raise HTTPException(400, "Archivo de imagen inválido")
     result = detect_image_type(content[:12])
     if not result:
         raise HTTPException(400, "Solo se permiten imágenes JPEG, PNG y WebP")
     ext, expected_mime = result
+    if current_user.image_url:
+        old_path = safe_upload_path(current_user.image_url)
+        if old_path and os.path.exists(old_path):
+            os.remove(old_path)
     filename = f"avatar_{uuid.uuid4().hex}{ext}"
-    uploads_dir = os.path.join(os.getcwd(), "uploads")
-    os.makedirs(uploads_dir, exist_ok=True)
-    path = os.path.join(uploads_dir, filename)
-    with open(path, "wb") as f:
-        f.write(content)
+    path = os.path.join(UPLOAD_DIR, filename)
+    try:
+        with open(path, "wb") as f:
+            f.write(content)
+    except OSError:
+        logger.exception("Failed to write avatar file")
+        raise HTTPException(500, "Error al subir el avatar")
     return {"image_url": f"/uploads/{filename}"}
 
 
@@ -259,15 +271,20 @@ def list_users(
 
 
 @router.post("/register", response_model=UserResponse, status_code=201, tags=["Auth"], summary="Register user",
-              description="Create a new user account. Username and email must be unique. Requires admin (user.manage) permission.")
+              description="Create a new user account. Username and email must be unique. Requires admin (user.manage) permission. Rate-limited to 5 attempts per minute per IP.")
+@limiter.limit("5/minute")
 def register(
+    request: Request,
     data: UserCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("user.manage")),
 ) -> UserResponse:
     """Register a new user account. Requires ``user.manage`` permission.
 
+    Rate-limited to 5 attempts per minute per IP.
+
     Args:
+        request: The raw HTTP request (used by slowapi for rate limiting).
         data: User creation payload (username, password, email, role_id).
         db: Active database session.
         current_user: Authenticated user with ``user.manage`` permission.
@@ -294,7 +311,12 @@ def register(
         active=True,
     )
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to register user")
+        raise HTTPException(500, "Error al registrar el usuario")
     db.refresh(user)
     return UserResponse(
         id=user.id,

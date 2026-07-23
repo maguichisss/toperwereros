@@ -8,6 +8,7 @@ from sqlalchemy import or_, String
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
+from app.config import safe_upload_path, escape_like
 from app.models import Product, Category, Color, User
 from app.schemas import ProductCreate, ProductResponse, ProductListResponse
 from app.auth import require_permission
@@ -55,15 +56,15 @@ def list_products(
         ids = [int(x) for x in category_ids.split(",")]
         query = query.filter(Product.categories.any(Category.id.in_(ids)))
     if q:
-        pattern = f"%{q}%"
+        pattern = f"%{escape_like(q)}%"
         query = query.filter(
             or_(
-                Product.code.ilike(pattern),
-                Product.name.ilike(pattern),
-                Product.ubicacion.ilike(pattern),
-                Product.price.cast(String).ilike(pattern),
-                Product.categories.any(Category.name.ilike(pattern)),
-                Product.colors.any(Color.name.ilike(pattern)),
+                Product.code.ilike(pattern, escape="\\"),
+                Product.name.ilike(pattern, escape="\\"),
+                Product.ubicacion.ilike(pattern, escape="\\"),
+                Product.price.cast(String).ilike(pattern, escape="\\"),
+                Product.categories.any(Category.name.ilike(pattern, escape="\\")),
+                Product.colors.any(Color.name.ilike(pattern, escape="\\")),
             )
         )
     total = query.count()
@@ -102,7 +103,7 @@ def get_product(
 
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
-        raise HTTPException(404, "Product not found")
+        raise HTTPException(404, "Producto no encontrado")
     return product
 
 
@@ -133,25 +134,25 @@ def create_product(
 
     name = data.name.strip()
     if not name:
-        raise HTTPException(400, "Name is required")
+        raise HTTPException(400, "El nombre es obligatorio")
     code = data.code.strip()
     if not code:
-        raise HTTPException(400, "Code is required")
+        raise HTTPException(400, "El código es obligatorio")
     existing = db.query(Product).filter(Product.code == code).first()
     if existing:
         raise HTTPException(400, f"Ya existe un producto con ese código: '{existing.name}'")
     if data.price is None or data.price < 0:
-        raise HTTPException(400, "Valid price is required")
+        raise HTTPException(400, "El precio debe ser válido")
     categories = []
     if data.category_ids:
         categories = db.query(Category).filter(Category.id.in_(data.category_ids)).all()
         if len(categories) != len(data.category_ids):
-            raise HTTPException(400, "One or more categories not found")
+            raise HTTPException(400, "Una o más categorías no fueron encontradas")
     colors = []
     if data.color_ids:
         colors = db.query(Color).filter(Color.id.in_(data.color_ids)).all()
         if len(colors) != len(data.color_ids):
-            raise HTTPException(400, "One or more colors not found")
+            raise HTTPException(400, "Uno o más colores no fueron encontrados")
     product = Product(
         name=name,
         code=code,
@@ -164,7 +165,12 @@ def create_product(
         colors=colors,
     )
     db.add(product)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to create product")
+        raise HTTPException(500, "Error al crear el producto")
     db.refresh(product)
     return product
 
@@ -199,15 +205,15 @@ def update_product(
 
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
-        raise HTTPException(404, "Product not found")
+        raise HTTPException(404, "Producto no encontrado")
     name = data.name.strip()
     if not name:
-        raise HTTPException(400, "Name is required")
+        raise HTTPException(400, "El nombre es obligatorio")
     if data.price is None or data.price < 0:
-        raise HTTPException(400, "Valid price is required")
+        raise HTTPException(400, "El precio debe ser válido")
     code = data.code.strip()
     if not code:
-        raise HTTPException(400, "Code is required")
+        raise HTTPException(400, "El código es obligatorio")
     existing = db.query(Product).filter(Product.code == code, Product.id != product_id).first()
     if existing:
         raise HTTPException(400, f"Ya existe un producto con ese código: '{existing.name}'")
@@ -215,7 +221,7 @@ def update_product(
     if data.color_ids is not None:
         colors = db.query(Color).filter(Color.id.in_(data.color_ids)).all()
         if len(colors) != len(data.color_ids):
-            raise HTTPException(400, "One or more colors not found")
+            raise HTTPException(400, "Uno o más colores no fueron encontrados")
     product.name = name
     product.code = code
     product.stock = data.stock
@@ -223,17 +229,22 @@ def update_product(
     product.ubicacion = data.ubicacion
     product.price = data.price
     if data.image_url != product.image_url and product.image_url:
-        old_path = os.path.join(os.getcwd(), "uploads", product.image_url.replace("/uploads/", ""))
-        if os.path.exists(old_path):
+        old_path = safe_upload_path(product.image_url)
+        if old_path and os.path.exists(old_path):
             os.remove(old_path)
     product.image_url = data.image_url
     if data.category_ids is not None:
         categories = db.query(Category).filter(Category.id.in_(data.category_ids)).all()
         if len(categories) != len(data.category_ids):
-            raise HTTPException(400, "One or more categories not found")
+            raise HTTPException(400, "Una o más categorías no fueron encontradas")
         product.categories = categories
     product.colors = colors
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to update product %d", product_id)
+        raise HTTPException(500, "Error al actualizar el producto")
     db.refresh(product)
     return product
 
@@ -258,15 +269,19 @@ def delete_product(
 
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
-        raise HTTPException(404, "Product not found")
+        raise HTTPException(404, "Producto no encontrado")
 
     if product.image_url:
-        filename = product.image_url.replace("/uploads/", "")
-        filepath = os.path.join(os.getcwd(), "uploads", filename)
-        if os.path.exists(filepath):
+        filepath = safe_upload_path(product.image_url)
+        if filepath and os.path.exists(filepath):
             os.remove(filepath)
         else:
-            logger.warning("Image file not found for product %d: %s", product.id, filepath)
+            logger.warning("Image file not found for product %d: %s", product.id, product.image_url)
 
     db.delete(product)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to delete product %d", product_id)
+        raise HTTPException(500, "Error al eliminar el producto")

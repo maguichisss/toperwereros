@@ -1,5 +1,7 @@
 """Category CRUD endpoints."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -8,6 +10,8 @@ from app.database import get_db
 from app.models import Category, product_categories, User
 from app.schemas import CategoryCreate, CategoryResponse
 from app.auth import require_permission
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -55,13 +59,18 @@ def create_category(
 
     name = data.name.strip()
     if not name:
-        raise HTTPException(400, "Name is required")
+        raise HTTPException(400, "El nombre es obligatorio")
     existing = db.query(Category).filter(Category.name == name).first()
     if existing:
-        raise HTTPException(409, "Category already exists")
+        raise HTTPException(409, "La categoría ya fue creada")
     category = Category(name=name)
     db.add(category)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to create category")
+        raise HTTPException(500, "Error al crear la categoría")
     db.refresh(category)
     return category
 
@@ -93,15 +102,20 @@ def update_category(
 
     name = data.name.strip()
     if not name:
-        raise HTTPException(400, "Name is required")
+        raise HTTPException(400, "El nombre es obligatorio")
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
-        raise HTTPException(404, "Category not found")
+        raise HTTPException(404, "Categoría no encontrada")
     conflict = db.query(Category).filter(Category.name == name, Category.id != category_id).first()
     if conflict:
-        raise HTTPException(409, "Category name already taken")
+        raise HTTPException(409, "La categoría ya fue creada")
     category.name = name
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to update category %d", category_id)
+        raise HTTPException(500, "Error al actualizar la categoría")
     db.refresh(category)
     return category
 
@@ -127,7 +141,7 @@ def delete_category(
 
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
-        raise HTTPException(404, "Category not found")
+        raise HTTPException(404, "Categoría no encontrada")
     in_use = db.execute(
         select(product_categories).where(product_categories.c.category_id == category_id)
     ).first()
@@ -136,4 +150,9 @@ def delete_category(
             409, "No se puede eliminar una categoría asignada a productos"
         )
     db.delete(category)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to delete category %d", category_id)
+        raise HTTPException(500, "Error al eliminar la categoría")
