@@ -18,6 +18,7 @@ export async function request(url, options = {}) {
   if (res.status === 401) {
     localStorage.removeItem('store_token')
     window.location.reload()
+    return
   }
   const data = await res.json()
   if (!res.ok) {
@@ -58,13 +59,20 @@ export const productsApi = {
 }
 
 export const uploadApi = {
-  upload: (file) => {
+  upload: async (file) => {
     const form = new FormData()
     form.append('image', file)
     const headers = {}
     const token = getToken()
     if (token) headers['Authorization'] = `Bearer ${token}`
-    return fetch(`${API_BASE}/upload`, { method: 'POST', headers, body: form }).then((r) => r.json())
+    const res = await fetch(`${API_BASE}/upload`, { method: 'POST', headers, body: form })
+    if (res.status === 204) return null
+    const data = await res.json()
+    if (!res.ok) {
+      const msg = Array.isArray(data.detail) ? data.detail.map(e => e.msg).join('; ') : (data.detail || 'Upload failed')
+      throw new Error(msg)
+    }
+    return data
   },
 }
 
@@ -101,14 +109,21 @@ export const usersApi = {
 
 export const authApi = {
   changePassword: (data) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
-  updateProfile: (data) => request('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }),
-  uploadAvatar: (file) => {
+  updateProfile: (data) => request('/auth/profile', { method: 'PATCH', body: JSON.stringify(data) }),
+  uploadAvatar: async (file) => {
     const form = new FormData()
     form.append('image', file)
     const headers = {}
     const token = getToken()
     if (token) headers['Authorization'] = `Bearer ${token}`
-    return fetch(`${API_BASE}/auth/avatar`, { method: 'POST', headers, body: form }).then(r => r.json())
+    const res = await fetch(`${API_BASE}/auth/avatar`, { method: 'POST', headers, body: form })
+    if (res.status === 204) return null
+    const data = await res.json()
+    if (!res.ok) {
+      const msg = Array.isArray(data.detail) ? data.detail.map(e => e.msg).join('; ') : (data.detail || 'Upload failed')
+      throw new Error(msg)
+    }
+    return data
   },
 }
 
@@ -126,4 +141,7 @@ export const layawaysApi = {
   addPayment: (id, amount) => request(`/layaways/${id}/payments`, { method: 'POST', body: JSON.stringify({ amount }) }),
   cancel: (id) => request(`/layaways/${id}/cancel`, { method: 'PATCH' }),
   complete: (id) => request(`/layaways/${id}/complete`, { method: 'PATCH' }),
+  addItem: (id, productId, quantity = 1) => request(`/layaways/${id}/items`, { method: 'POST', body: JSON.stringify({ productId, quantity }) }),
+  removeItem: (id, itemId) => request(`/layaways/${id}/items/${itemId}`, { method: 'DELETE' }),
+  updateItem: (id, itemId, quantity) => request(`/layaways/${id}/items/${itemId}`, { method: 'PUT', body: JSON.stringify({ quantity }) }),
 }

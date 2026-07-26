@@ -90,6 +90,7 @@ export default function ColorManager() {
           placeholder="Nombre de nuevo color"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
+          aria-label="Nombre del color"
           style={{ flex: 1 }}
           autoComplete="off"
           autoCorrect="off"
@@ -100,6 +101,7 @@ export default function ColorManager() {
           value={newHex}
           onChange={(e) => setNewHex(e.target.value)}
           title="Color hexadecimal"
+          aria-label="Color hexadecimal"
           style={{ width: 40, height: 36, padding: 0, border: 'none', cursor: 'pointer' }}
         />
         <button type="submit" className="btn btn-primary">
@@ -122,6 +124,7 @@ export default function ColorManager() {
                 onChange={(e) => setEditName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleUpdate(c.id)}
                 autoFocus
+                aria-label="Editar nombre de color"
                 style={{ flex: 1, padding: '0.3rem 0.5rem' }}
                 autoComplete="off"
                 autoCorrect="off"
@@ -132,6 +135,7 @@ export default function ColorManager() {
                 value={editHex}
                 onChange={(e) => setEditHex(e.target.value)}
                 title="Color hexadecimal"
+                aria-label="Editar color hexadecimal"
                 style={{ width: 40, height: 36, padding: 0, border: 'none', cursor: 'pointer' }}
               />
               <div style={{ display: 'flex', gap: '0.25rem' }}>

@@ -30,6 +30,9 @@ def list_categories(
 
     Returns:
         List of Category records.
+
+    Raises:
+        HTTPException: 403 if the user lacks ``category.view`` permission.
     """
 
     return db.query(Category).order_by(Category.name).all()
@@ -134,9 +137,13 @@ def delete_category(
         db: Active database session.
         current_user: Authenticated user with ``category.delete`` permission.
 
+    Returns:
+        ``None`` (204 No Content on success).
+
     Raises:
         HTTPException: 404 if the category is not found.
         HTTPException: 409 if the category is assigned to one or more products.
+        HTTPException: 500 on unexpected database errors.
     """
 
     category = db.query(Category).filter(Category.id == category_id).first()

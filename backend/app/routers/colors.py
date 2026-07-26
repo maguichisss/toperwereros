@@ -33,6 +33,9 @@ def list_colors(
 
     Returns:
         List of Color records.
+
+    Raises:
+        HTTPException: 403 if the user lacks ``color.view`` permission.
     """
 
     return db.query(Color).order_by(Color.name).all()
@@ -144,9 +147,13 @@ def delete_color(
         db: Active database session.
         current_user: Authenticated user with ``color.delete`` permission.
 
+    Returns:
+        ``None`` (204 No Content on success).
+
     Raises:
         HTTPException: 404 if the color is not found.
         HTTPException: 409 if the color is assigned to one or more products.
+        HTTPException: 500 on unexpected database errors.
     """
 
     color = db.query(Color).filter(Color.id == color_id).first()

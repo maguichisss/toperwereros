@@ -48,6 +48,10 @@ def cover_image(path: str) -> io.BytesIO:
 
     Returns:
         A ``BytesIO`` buffer containing the resized JPEG image data.
+
+    Raises:
+        PIL.UnidentifiedImageError: If the file is not a valid image.
+        OSError: If the file cannot be opened or read.
     """
 
     dpi = 72
@@ -70,7 +74,7 @@ def cover_image(path: str) -> io.BytesIO:
 def catalog_pdf(
     ids: str = "",
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("product.view")),
+    current_user: User = Depends(require_permission("product.create")),
 ) -> Response:
     """Generate a PDF product catalog for in-stock products.
 
@@ -87,6 +91,9 @@ def catalog_pdf(
     Returns:
         A ``Response`` with ``application/pdf`` media type and a
         ``Content-Disposition`` header for download.
+
+    Raises:
+        HTTPException: 500 if PDF generation fails or image processing errors.
     """
 
     products = db.query(Product).filter(Product.stock > 0)

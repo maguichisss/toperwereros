@@ -24,12 +24,20 @@ const TAB_TITLES = {
 }
 
 function AppContent() {
-  const { user, logout, can } = useAuth()
+  const { user, logout, can, loading } = useAuth()
   const [tab, setTab] = useState('productos')
   const [menuOpen, setMenuOpen] = useState(false)
   useEffect(() => {
     document.title = `${TAB_TITLES[tab]} — Toperwereros`
   }, [tab])
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--text-muted)' }}>
+        <p>Cargando...</p>
+      </div>
+    )
+  }
 
   if (!user) {
     return <LoginPage />
@@ -41,7 +49,7 @@ function AppContent() {
   }
 
   const visibleTabs = TABS.filter(t => {
-    if (t.key === 'management') return can('user.manage')
+    if (t.key === 'management') return can('user.manage') || can('customer.create')
     return true
   })
 

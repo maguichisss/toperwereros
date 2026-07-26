@@ -51,3 +51,14 @@ class TestUploadImage:
             files={"image": ("test.png", io.BytesIO(content), "image/png")},
         )
         assert resp.status_code == 401
+
+    def test_upload_webp(self, client, admin_headers):
+        from tests.conftest import _make_image_bytes
+        content = _make_image_bytes("webp")
+        resp = client.post(
+            "/api/upload",
+            files={"image": ("test.webp", io.BytesIO(content), "image/webp")},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["image_url"].startswith("/uploads/")

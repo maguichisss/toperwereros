@@ -32,6 +32,9 @@ def list_customers(
 
     Returns:
         List of Customer records.
+
+    Raises:
+        HTTPException: 403 if the user lacks ``customer.view`` permission.
     """
 
     query = db.query(Customer)
@@ -86,6 +89,9 @@ def create_customer(
 
     Returns:
         The newly created Customer record.
+
+    Raises:
+        HTTPException: 500 on unexpected database errors.
     """
 
     customer = Customer(
@@ -159,8 +165,12 @@ def delete_customer(
         db: Active database session.
         current_user: Authenticated user with ``customer.delete`` permission.
 
+    Returns:
+        ``None`` (204 No Content on success).
+
     Raises:
         HTTPException: 404 if the customer is not found.
+        HTTPException: 500 on unexpected database errors.
     """
 
     customer = db.query(Customer).filter(Customer.id == customer_id).first()

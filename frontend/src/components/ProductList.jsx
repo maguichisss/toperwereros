@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { productsApi, categoriesApi } from '../api/client.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import ProductForm from './ProductForm.jsx';
 import ProductCard from './ProductCard.jsx';
 import Toast from './Toast.jsx';
@@ -8,6 +9,7 @@ import Lightbox from './Lightbox.jsx';
 import { formatPrice } from '../utils.js';
 
 export default function ProductList() {
+  const { can } = useAuth();
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState([]);
@@ -167,7 +169,7 @@ export default function ProductList() {
   return (
     <div>
       <div className="filter-bar">
-        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 200, width: '100%' }}>
           <input
             className="search-input"
             placeholder="Buscar por código, nombre, categoría, ubicación, precio o color"
@@ -193,12 +195,18 @@ export default function ProductList() {
             <option value={50}>50</option>
             <option value={100}>100</option>
           </select>
-          <button className="btn btn-secondary" onClick={downloadCSV}>CSV</button>
-          <button className="btn btn-secondary" onClick={openPDF}>PDF</button>
+          {can('product.create') && (
+            <>
+              <button className="btn btn-secondary" onClick={downloadCSV}>CSV</button>
+              <button className="btn btn-secondary" onClick={openPDF}>PDF</button>
+            </>
+          )}
         </div>
+        {can('product.create') && (
         <button className="btn btn-add" onClick={() => setShowForm(true)}>
           + Añadir Producto
         </button>
+        )}
       </div>
 
       {total > 0 && (
@@ -216,7 +224,7 @@ export default function ProductList() {
 
       <div className="product-grid">
         {products.map((p) => (
-          <ProductCard key={p.id} product={p} onEdit={handleEdit} onDelete={(id) => requestDelete(id, p.name)} onShowImage={setPreviewImage} />
+          <ProductCard key={p.id} product={p} onEdit={handleEdit} onDelete={(id) => requestDelete(id, p.name)} onShowImage={setPreviewImage} canEdit={can('product.edit')} />
         ))}
       </div>
 

@@ -79,3 +79,37 @@ class TestDeleteCategory:
     def test_delete_not_found(self, client, admin_headers):
         resp = client.delete("/api/categories/9999", headers=admin_headers)
         assert resp.status_code == 404
+
+
+class TestEmployeeCategoryAccess:
+    def test_employee_can_list_categories(self, client, employee_headers, db):
+        _create_category(db)
+        resp = client.get("/api/categories", headers=employee_headers)
+        assert resp.status_code == 200
+        assert len(resp.json()) == 1
+
+    def test_employee_cannot_create_category(self, client, employee_headers):
+        resp = client.post("/api/categories", json={"name": "New"}, headers=employee_headers)
+        assert resp.status_code == 403
+
+    def test_employee_cannot_update_category(self, client, employee_headers, db):
+        cat = _create_category(db)
+        resp = client.put(f"/api/categories/{cat.id}", json={"name": "X"}, headers=employee_headers)
+        assert resp.status_code == 403
+
+    def test_employee_cannot_delete_category(self, client, employee_headers, db):
+        cat = _create_category(db)
+        resp = client.delete(f"/api/categories/{cat.id}", headers=employee_headers)
+        assert resp.status_code == 403
+
+
+class TestViewerCategoryAccess:
+    def test_viewer_can_list_categories(self, client, viewer_headers, db):
+        _create_category(db)
+        resp = client.get("/api/categories", headers=viewer_headers)
+        assert resp.status_code == 200
+        assert len(resp.json()) == 1
+
+    def test_viewer_cannot_create_category(self, client, viewer_headers):
+        resp = client.post("/api/categories", json={"name": "New"}, headers=viewer_headers)
+        assert resp.status_code == 403

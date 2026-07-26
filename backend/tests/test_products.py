@@ -160,3 +160,81 @@ class TestDeleteProduct:
     def test_delete_not_found(self, client, admin_headers):
         resp = client.delete("/api/products/9999", headers=admin_headers)
         assert resp.status_code == 404
+
+
+class TestEmployeeProductAccess:
+    def test_employee_can_list_products(self, client, employee_headers, db):
+        _create_product(db)
+        resp = client.get("/api/products", headers=employee_headers)
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 1
+
+    def test_employee_can_create_product(self, client, employee_headers):
+        resp = client.post(
+            "/api/products",
+            json={"name": "Emp Product", "code": "EP01", "price": "10.00"},
+            headers=employee_headers,
+        )
+        assert resp.status_code == 201
+        assert resp.json()["name"] == "Emp Product"
+
+
+class TestViewerProductAccess:
+    def test_viewer_can_list_products(self, client, viewer_headers, db):
+        _create_product(db)
+        resp = client.get("/api/products", headers=viewer_headers)
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 1
+
+    def test_viewer_cannot_create_product(self, client, viewer_headers):
+        resp = client.post(
+            "/api/products",
+            json={"name": "X", "code": "X01", "price": "1.00"},
+            headers=viewer_headers,
+        )
+        assert resp.status_code == 403
+
+    def test_viewer_cannot_update_product(self, client, viewer_headers, db):
+        p = _create_product(db)
+        resp = client.put(
+            f"/api/products/{p.id}",
+            json={"name": "X", "code": "W001", "price": "1.00"},
+            headers=viewer_headers,
+        )
+        assert resp.status_code == 403
+
+    def test_viewer_cannot_delete_product(self, client, viewer_headers, db):
+        p = _create_product(db)
+        resp = client.delete(f"/api/products/{p.id}", headers=viewer_headers)
+        assert resp.status_code == 403
+
+
+class TestSearchByUbicacion:
+    def test_search_by_ubicacion(self, client, admin_headers, db):
+        _create_product(db, name="Widget", code="W001")
+        resp = client.get("/api/products?q=W001", headers=admin_headers)
+        assert resp.json()["total"] == 1
+
+
+class TestCreateProductWithColors:
+    def test_create_with_colors(self, client, admin_headers, db):
+        color = _create_color(db)
+        resp = client.post(
+            "/api/products",
+            json={"name": "Colored", "code": "C01", "price": "15.00", "colorIds": [color.id]},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 201
+        assert len(resp.json()["colors"]) == 1
+
+
+class TestUpdateProductDuplicateCode:
+    def test_update_duplicate_code(self, client, admin_headers, db):
+        _create_product(db, name="First", code="DUP01")
+        p2 = _create_product(db, name="Second", code="DUP02")
+        resp = client.put(
+            f"/api/products/{p2.id}",
+            json={"name": "Second", "code": "DUP01", "price": "10.00"},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 400

@@ -9,6 +9,8 @@ FastAPI backend for the Toperwereros store catalog — products, sales, layaways
 - **Database:** PostgreSQL 16
 - **Auth:** JWT (python-jose) + bcrypt (passlib)
 - **PDF:** fpdf2 + Pillow
+- **Rate Limiting:** slowapi
+- **File Uploads:** python-multipart
 
 ## Quick Start (Docker)
 
@@ -51,8 +53,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 3001 --reload
 
 | URL | Description |
 |-----|-------------|
-| [`/api/docs`](http://localhost:3001/api/docs) | Custom HTML docs with endpoint reference, permission matrix, and business rules |
-| [`/docs`](http://localhost:3001/docs) | Swagger UI (interactive) |
+| [`/docs`](http://localhost:3001/docs) | Custom HTML docs with endpoint reference, permission matrix, and business rules |
+| [`/swagger`](http://localhost:3001/swagger) | Swagger UI (interactive) |
 | [`/redoc`](http://localhost:3001/redoc) | ReDoc (read-only) |
 | [`/openapi.json`](http://localhost:3001/openapi.json) | OpenAPI 3.1 schema |
 
@@ -60,7 +62,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 3001 --reload
 
 | Username | Password | Role |
 |----------|----------|------|
-| `admin` | `admin` | admin |
+| `admin` | `admin123` | admin |
 
 ## Roles
 
@@ -80,6 +82,7 @@ backend/
 │   ├── models.py             # SQLAlchemy ORM models (11 models)
 │   ├── schemas.py            # Pydantic request/response schemas
 │   ├── database.py           # Engine, session factory, get_db dependency
+│   ├── config.py             # Shared constants, upload helpers, LIKE escaping
 │   ├── logging_config.py     # Centralized logging setup
 │   └── routers/
 │       ├── auth.py           # Login, profile, user management (7 endpoints)
@@ -90,7 +93,7 @@ backend/
 │       ├── catalog.py        # PDF catalog generation (1 endpoint)
 │       ├── sales.py          # Sale creation + listing (3 endpoints)
 │       ├── customers.py      # Customer CRUD (5 endpoints)
-│       ├── layaways.py       # Layaway lifecycle (6 endpoints)
+│       ├── layaways.py       # Layaway lifecycle + item management (9 endpoints)
 │       └── docs.py           # Custom HTML documentation page
 ├── docs.html                 # HTML documentation (served at /api/docs)
 ├── requirements.txt

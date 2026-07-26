@@ -7,7 +7,7 @@ accepting snake_case field names in Python code (via ``populate_by_name=True``).
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 def to_camel(s: str) -> str:
@@ -195,6 +195,11 @@ class UserCreate(BaseModel):
     password: str = Field(min_length=4)
     email: str | None = None
     role_id: int
+
+    @field_validator("username")
+    @classmethod
+    def normalize_username(cls, v: str) -> str:
+        return v.strip().lower()
 
 
 class UserResponse(BaseModel):

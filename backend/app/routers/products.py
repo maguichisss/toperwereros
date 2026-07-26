@@ -46,12 +46,15 @@ def list_products(
 
     Returns:
         ProductListResponse with ``products`` list and ``total`` count.
+
+    Raises:
+        HTTPException: 403 if the user lacks ``product.view`` permission.
     """
 
     query = db.query(Product).options(
         selectinload(Product.categories),
         selectinload(Product.colors),
-    )
+    ).filter(Product.stock > 0)
     if category_ids:
         ids = [int(x) for x in category_ids.split(",")]
         query = query.filter(Product.categories.any(Category.id.in_(ids)))
@@ -263,8 +266,12 @@ def delete_product(
         db: Active database session.
         current_user: Authenticated user with ``product.delete`` permission.
 
+    Returns:
+        ``None`` (204 No Content on success).
+
     Raises:
         HTTPException: 404 if the product is not found.
+        HTTPException: 500 on unexpected database errors.
     """
 
     product = db.query(Product).filter(Product.id == product_id).first()

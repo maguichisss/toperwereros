@@ -61,7 +61,7 @@
 </div>
 
 <div class="grid">
-  <div class="stat"><div class="num">36</div><div class="label">Endpoints</div></div>
+  <div class="stat"><div class="num">39</div><div class="label">Endpoints</div></div>
   <div class="stat"><div class="num">9</div><div class="label">Modules</div></div>
   <div class="stat"><div class="num">3</div><div class="label">Roles</div></div>
   <div class="stat"><div class="num">15</div><div class="label">Permissions</div></div>
@@ -116,7 +116,7 @@
 <tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/login</code></td><td>public</td><td>Authenticate and receive JWT. Rate-limited to 5 attempts/min per IP.</td></tr>
 <tr><td><span class="method m-get">GET</span></td><td><code>/api/auth/me</code></td><td>authenticated</td><td>Return current user profile (id, username, email, role, avatar).</td></tr>
 <tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/change-password</code></td><td>authenticated</td><td>Change own password. New password must be &ge; 4 characters.</td></tr>
-<tr><td><span class="method m-put">PUT</span></td><td><code>/api/auth/profile</code></td><td>authenticated</td><td>Update own email and/or avatar URL. Email uniqueness enforced.</td></tr>
+<tr><td><span class="method m-patch">PATCH</span></td><td><code>/api/auth/profile</code></td><td>authenticated</td><td>Update own email and/or avatar URL. Email uniqueness enforced.</td></tr>
 <tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/avatar</code></td><td>authenticated</td><td>Upload avatar image. Magic bytes validated (JPEG/PNG/WebP, 5MB max).</td></tr>
 <tr><td><span class="method m-get">GET</span></td><td><code>/api/auth/users</code></td><td class="perm">user.manage</td><td>List all users ordered by username.</td></tr>
 <tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/register</code></td><td class="perm">user.manage</td><td>Create new user account. Username and email must be unique.</td></tr>
@@ -187,6 +187,9 @@
 <tr><td><span class="method m-get">GET</span></td><td><code>/api/layaways</code></td><td class="perm">apartado.view</td><td>Paginated list. Filter by <code>status</code> and <code>customer_id</code>.</td></tr>
 <tr><td><span class="method m-get">GET</span></td><td><code>/api/layaways/{id}</code></td><td class="perm">apartado.view</td><td>Single layaway with items, payments, and customer info.</td></tr>
 <tr><td><span class="method m-post">POST</span></td><td><code>/api/layaways/{id}/payments</code></td><td class="perm">apartado.edit</td><td>Add payment. Auto-completes when balance reaches $0. Amount cannot exceed balance.</td></tr>
+<tr><td><span class="method m-post">POST</span></td><td><code>/api/layaways/{id}/items</code></td><td class="perm">apartado.edit</td><td>Add a product to an active layaway. Locks current price, decrements stock, recalculates total/balance.</td></tr>
+<tr><td><span class="method m-delete">DELETE</span></td><td><code>/api/layaways/{id}/items/{item_id}</code></td><td class="perm">apartado.edit</td><td>Remove an item from an active layaway. Restores stock. Must keep at least 1 item.</td></tr>
+<tr><td><span class="method m-put">PUT</span></td><td><code>/api/layaways/{id}/items/{item_id}</code></td><td class="perm">apartado.edit</td><td>Change item quantity in an active layaway. Delta-adjusts stock and recalculates total/balance.</td></tr>
 <tr><td><span class="method m-patch">PATCH</span></td><td><code>/api/layaways/{id}/cancel</code></td><td class="perm">apartado.edit</td><td>Cancel active layaway. All product stock is restored.</td></tr>
 <tr><td><span class="method m-patch">PATCH</span></td><td><code>/api/layaways/{id}/complete</code></td><td class="perm">apartado.edit</td><td>Manually complete layaway. Creates a linked Sale record.</td></tr>
 </table>
@@ -220,6 +223,11 @@
   <li>When a payment brings the balance to $0, the layaway is <strong>automatically completed</strong> and a Sale is created.</li>
   <li>Cancellation restores all product stock.</li>
   <li>Completion is idempotent — if <code>sale_id</code> is already set, it's a no-op.</li>
+  <li>Items can be added, removed, or have their quantity changed while the layaway is active.</li>
+  <li>Adding an item locks the current product price and decrements stock.</li>
+  <li>Removing an item restores stock. At least one item must remain.</li>
+  <li>Changing quantity delta-adjusts stock (increase decrements, decrease restores).</li>
+  <li>Removal or quantity decrease is blocked if the new total would fall below payments made.</li>
 </ul>
 
 <h3>Image Uploads</h3>
@@ -248,6 +256,18 @@
 <tr><td><code>JWT_EXPIRE_MINUTES</code></td><td><code>1440</code> (24h)</td><td>Token expiry in minutes</td></tr>
 <tr><td><code>LOG_LEVEL</code></td><td><code>INFO</code></td><td>Python log level (<code>DEBUG</code> enables SQL queries)</td></tr>
 </table>
+
+<h2>Rate Limits</h2>
+<p>The following endpoints are rate-limited via slowapi:</p>
+<table>
+<tr><th>Endpoint</th><th>Limit</th></tr>
+<tr><td><code>POST /api/auth/login</code></td><td>5 requests/minute</td></tr>
+<tr><td><code>POST /api/auth/change-password</code></td><td>1 request/minute</td></tr>
+<tr><td><code>POST /api/auth/avatar</code></td><td>3 requests/minute</td></tr>
+<tr><td><code>POST /api/auth/register</code></td><td>5 requests/minute</td></tr>
+<tr><td><code>POST /api/upload</code></td><td>5 requests/minute</td></tr>
+</table>
+<p>When a rate limit is exceeded, the API returns <code>429 Too Many Requests</code>.</p>
 
 <h2>Error Responses</h2>
 <p>All errors return JSON with a <code>detail</code> field:</p>

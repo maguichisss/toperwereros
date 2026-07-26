@@ -13,7 +13,7 @@ export default function LoginPage() {
     setError('')
     setBusy(true)
     try {
-      await login(username.trim(), password.trim())
+      await login(username.trim().toLowerCase(), password.trim())
     } catch (err) {
       setError(err.message)
     } finally {

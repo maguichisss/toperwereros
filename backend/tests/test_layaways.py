@@ -198,6 +198,74 @@ class TestListLayaways:
         resp = client.get("/api/layaways/9999", headers=admin_headers)
         assert resp.status_code == 404
 
+    def test_list_filter_by_status(self, client, admin_headers, db):
+        _create_layaway(client, admin_headers, db)
+        resp = client.get("/api/layaways?status=active", headers=admin_headers)
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 1
+
+    def test_list_filter_by_customer_id(self, client, admin_headers, db):
+        _, _, c = _create_layaway(client, admin_headers, db)
+        resp = client.get(f"/api/layaways?customer_id={c.id}", headers=admin_headers)
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 1
+
+    def test_list_filter_no_match(self, client, admin_headers, db):
+        _create_layaway(client, admin_headers, db)
+        resp = client.get("/api/layaways?status=cancelled", headers=admin_headers)
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 0
+
+
+class TestEmployeeLayawayAccess:
+    def test_employee_can_create_layaway(self, client, employee_headers, db):
+        p = _create_product(db)
+        c = _create_customer(db)
+        resp = client.post(
+            "/api/layaways",
+            json={
+                "customer_id": c.id,
+                "deposit": "30.00",
+                "items": [{"product_id": p.id, "quantity": 1}],
+            },
+            headers=employee_headers,
+        )
+        assert resp.status_code == 201
+
+    def test_employee_can_list_layaways(self, client, employee_headers, db):
+        _create_layaway(client, employee_headers, db)
+        resp = client.get("/api/layaways", headers=employee_headers)
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 1
+
+    def test_employee_can_get_layaway(self, client, employee_headers, db):
+        layaway_resp, _, _ = _create_layaway(client, employee_headers, db)
+        layaway_id = layaway_resp.json()["id"]
+        resp = client.get(f"/api/layaways/{layaway_id}", headers=employee_headers)
+        assert resp.status_code == 200
+
+
+class TestViewerLayawayAccess:
+    def test_viewer_can_list_layaways(self, client, admin_headers, viewer_headers, db):
+        _create_layaway(client, admin_headers, db)
+        resp = client.get("/api/layaways", headers=viewer_headers)
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 1
+
+    def test_viewer_cannot_create_layaway(self, client, viewer_headers, db):
+        p = _create_product(db)
+        c = _create_customer(db)
+        resp = client.post(
+            "/api/layaways",
+            json={
+                "customer_id": c.id,
+                "deposit": "30.00",
+                "items": [{"product_id": p.id, "quantity": 1}],
+            },
+            headers=viewer_headers,
+        )
+        assert resp.status_code == 403
+
 
 class TestAddLayawayItem:
     def test_add_item_success(self, client, admin_headers, db):

@@ -61,9 +61,9 @@ textarea {
 }
 
 .container {
-  max-width: 1100px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1rem 1.5rem;
 }
 
 header {
@@ -181,7 +181,7 @@ header nav button:hover {
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1rem;
 }
 
@@ -324,10 +324,12 @@ header nav button:hover {
 .form-row {
   display: flex;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .form-row .form-group {
   flex: 1;
+  min-width: 200px;
 }
 
 .form-actions {
@@ -411,7 +413,7 @@ header nav button:hover {
 }
 
 .customer-manager {
-  max-width: 800px;
+  max-width: 900px;
 }
 
 @media (max-width: 640px) {
@@ -460,7 +462,7 @@ header nav button:hover {
 }
 
 .filter-bar .search-input {
-  flex: 1;
+  width: 100%;
   min-width: 200px;
   padding: 0.5rem 0.75rem;
   font-size: 0.9rem;
@@ -488,9 +490,10 @@ header nav button:hover {
 
 .error-text {
   color: var(--danger);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
+  text-align: center;
 }
 
 .no-image {
@@ -554,7 +557,7 @@ header nav button:hover {
 .swatch.selected {
   width: 40px;
   height: 40px;
-  border-  color: var(--text-primary);
+  border-color: var(--text-primary);
   box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px var(--text-primary);
   display: inline-flex;
   align-items: center;
@@ -732,14 +735,15 @@ header nav button:hover {
 }
 
 @media (max-width: 768px) {
-  .product-grid {
+  .product-grid,
+  .catalog-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
   }
 }
 
 .catalog-container {
-  max-width: 1100px;
+  max-width: 1280px;
   margin: 0 auto;
 }
 
@@ -766,7 +770,7 @@ header nav button:hover {
 
 .catalog-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 1rem;
 }
 
@@ -830,7 +834,7 @@ header nav button:hover {
   }
 
   .catalog-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 0.5rem;
   }
 
@@ -886,7 +890,8 @@ header nav button:hover {
 
 /* Sales */
 .sales-view {
-  max-width: 700px;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .sales-tabs {
@@ -942,6 +947,11 @@ header nav button:hover {
   box-shadow: 0 4px 8px var(--shadow);
 }
 
+.detail-section .search-results {
+  left: -1rem;
+  right: -1rem;
+}
+
 .search-result-item {
   display: flex;
   align-items: center;
@@ -967,6 +977,23 @@ header nav button:hover {
 .result-code {
   color: var(--text-muted);
   font-size: 0.85rem;
+}
+
+.result-ubicacion {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.result-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.result-thumb-empty {
+  background: var(--border-light);
 }
 
 .result-price {
@@ -1003,6 +1030,18 @@ header nav button:hover {
 
 .cart-item:last-child {
   border-bottom: none;
+}
+
+.cart-item-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.cart-item-thumb-empty {
+  background: var(--border-light);
 }
 
 .cart-item-info {
@@ -1095,7 +1134,7 @@ header nav button:hover {
 }
 
 .sale-receipt {
-  max-width: 500px;
+  max-width: 600px;
   margin: 0 auto;
 }
 
@@ -1208,16 +1247,10 @@ header nav button:hover {
   margin-bottom: 1rem;
 }
 
-.error-text {
-  color: var(--danger);
-  font-size: 0.95rem;
-  margin-top: 0.75rem;
-  text-align: center;
-}
-
 /* Layaway */
 .layaway-view {
-  max-width: 700px;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .layaway-list {
@@ -1300,7 +1333,7 @@ header nav button:hover {
 }
 
 .layaway-create {
-  max-width: 600px;
+  max-width: 700px;
 }
 
 .customer-section,
@@ -1391,7 +1424,7 @@ header nav button:hover {
 }
 
 .layaway-detail {
-  max-width: 700px;
+  max-width: 900px;
 }
 
 .layaway-detail .btn-secondary {
@@ -1467,9 +1500,107 @@ header nav button:hover {
   margin-top: 1rem;
 }
 
-@media print {
+.qty-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.qty-btn {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-card);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  transition: background 0.15s;
+}
+
+.qty-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.qty-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.qty-value {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.layaway-editable {
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.layaway-editable:hover {
+  background: var(--bg-hover);
+  text-decoration: underline;
+}
+
+.layaway-remove-item {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.layaway-remove-item:hover {
+  background: #ffeaea;
+}
+
+.layaway-add-product {
+  margin-top: 0.75rem;
+}
+
+.layaway-add-product .search-input {
+  width: 100%;
+}
+
+.detail-section {
+  position: relative;
+}
+
+@media (min-width: 1280px) {
+  .container {
+    padding: 1rem 2rem;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+
   .catalog-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .customer-manager table {
+    white-space: nowrap;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-row .form-group {
+    min-width: 0;
   }
 }

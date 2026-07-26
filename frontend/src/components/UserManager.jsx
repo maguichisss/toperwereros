@@ -36,7 +36,7 @@ export default function UserManager() {
     setSuccess('')
     setBusy(true)
     try {
-      await usersApi.register({ username, password, email: email || null, role_id: roleId })
+      await usersApi.register({ username: username.trim().toLowerCase(), password, email: email || null, role_id: roleId })
       setSuccess(`Usuario "${username}" creado`)
       setUsername('')
       setPassword('')

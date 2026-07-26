@@ -146,7 +146,17 @@ def require_permission(*perms: str) -> Callable[..., Awaitable[User]]:
     """
 
     async def dependency(current_user: User = Depends(get_current_user)) -> User:
-        """Check that the current user's role holds the required permissions."""
+        """Check that the current user's role holds the required permissions.
+
+        Args:
+            current_user: Authenticated user injected by ``get_current_user``.
+
+        Returns:
+            The authorized User if permission check passes.
+
+        Raises:
+            HTTPException: 403 if the user lacks all required permissions.
+        """
         role_perms = ROLE_PERMISSIONS.get(current_user.role.name, [])
         if "*" in role_perms:
             return current_user

@@ -89,3 +89,36 @@ class TestDeleteCustomer:
     def test_delete_not_found(self, client, admin_headers):
         resp = client.delete("/api/customers/9999", headers=admin_headers)
         assert resp.status_code == 404
+
+
+class TestEmployeeCustomerAccess:
+    def test_employee_can_list_customers(self, client, employee_headers, db):
+        _create_customer(db)
+        resp = client.get("/api/customers", headers=employee_headers)
+        assert resp.status_code == 200
+        assert len(resp.json()) == 1
+
+    def test_employee_can_create_customer(self, client, employee_headers):
+        resp = client.post(
+            "/api/customers",
+            json={"name": "Emp Customer", "phone": "555-0000"},
+            headers=employee_headers,
+        )
+        assert resp.status_code == 201
+        assert resp.json()["name"] == "Emp Customer"
+
+
+class TestViewerCustomerAccess:
+    def test_viewer_can_list_customers(self, client, viewer_headers, db):
+        _create_customer(db)
+        resp = client.get("/api/customers", headers=viewer_headers)
+        assert resp.status_code == 200
+        assert len(resp.json()) == 1
+
+    def test_viewer_cannot_create_customer(self, client, viewer_headers):
+        resp = client.post(
+            "/api/customers",
+            json={"name": "X", "phone": "0"},
+            headers=viewer_headers,
+        )
+        assert resp.status_code == 403

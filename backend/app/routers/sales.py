@@ -68,6 +68,9 @@ def list_sales(
 
     Returns:
         List of serialized SaleResponse objects.
+
+    Raises:
+        HTTPException: 500 on unexpected database errors.
     """
 
     try:
@@ -187,6 +190,7 @@ def create_sale(
         for si in sale.items:
             db.refresh(si, attribute_names=["product"])
 
+        db.commit()
         return serialize_sale(sale)
     except HTTPException:
         raise

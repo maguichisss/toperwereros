@@ -1,6 +1,7 @@
 """Tests for sales creation, stock validation, and listing."""
 
 from decimal import Decimal
+from unittest.mock import patch
 
 from app.models import Product
 
@@ -57,6 +58,21 @@ class TestCreateSale:
         resp = client.post("/api/sales", json={"items": []}, headers=admin_headers)
         assert resp.status_code == 422
 
+    def test_sale_fails_when_commit_fails(self, client, admin_headers, db):
+        """Verify the endpoint calls db.commit() by mocking it to raise."""
+        p = _create_product(db, stock=5)
+
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.post(
+                "/api/sales",
+                json={"items": [{"product_id": p.id, "quantity": 2}]},
+                headers=admin_headers,
+            )
+            assert resp.status_code == 500
+
 
 class TestListSales:
     def test_list_sales(self, client, admin_headers, db):
@@ -85,3 +101,54 @@ class TestListSales:
     def test_get_sale_not_found(self, client, admin_headers):
         resp = client.get("/api/sales/9999", headers=admin_headers)
         assert resp.status_code == 404
+
+
+class TestSaleCreatedBy:
+    def test_created_by_tracks_user(self, client, admin_headers, db):
+        p = _create_product(db)
+        resp = client.post(
+            "/api/sales",
+            json={"items": [{"product_id": p.id, "quantity": 1}]},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 201
+        assert resp.json()["created_by_name"] == "admin"
+
+
+class TestMultiItemSale:
+    def test_multi_item_sale(self, client, admin_headers, db):
+        p1 = _create_product(db, name="W1", code="W01", price="10.00", stock=5)
+        p2 = _create_product(db, name="W2", code="W02", price="20.00", stock=5)
+        resp = client.post(
+            "/api/sales",
+            json={"items": [
+                {"product_id": p1.id, "quantity": 2},
+                {"product_id": p2.id, "quantity": 1},
+            ]},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 201
+        assert Decimal(resp.json()["total"]) == Decimal("40.00")
+        assert len(resp.json()["items"]) == 2
+
+
+class TestEmployeeSaleAccess:
+    def test_employee_can_create_sale(self, client, employee_headers, db):
+        p = _create_product(db)
+        resp = client.post(
+            "/api/sales",
+            json={"items": [{"product_id": p.id, "quantity": 1}]},
+            headers=employee_headers,
+        )
+        assert resp.status_code == 201
+
+    def test_employee_can_list_sales(self, client, employee_headers, db):
+        p = _create_product(db)
+        client.post(
+            "/api/sales",
+            json={"items": [{"product_id": p.id, "quantity": 1}]},
+            headers=employee_headers,
+        )
+        resp = client.get("/api/sales", headers=employee_headers)
+        assert resp.status_code == 200
+        assert len(resp.json()) == 1

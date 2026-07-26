@@ -21,6 +21,7 @@ export default function ProfilePage() {
 
   const [profileBusy, setProfileBusy] = useState(false)
   const [passwordBusy, setPasswordBusy] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   async function handleFileSelect(e) {
     const file = e.target.files?.[0]
@@ -127,22 +128,32 @@ export default function ProfilePage() {
       </div>
 
       <div className="profile-card">
-        <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>Cambiar Contraseña</h3>
+        <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          Cambiar Contraseña
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', color: 'var(--text-muted)' }}
+            aria-label={showPassword ? 'Ocultar contraseñas' : 'Mostrar contraseñas'}
+          >
+            {showPassword ? '🙈' : '👁'}
+          </button>
+        </h3>
         <form onSubmit={handleChangePassword}>
           <div className="form-group">
             <label>Contraseña actual</label>
-            <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
+            <input type={showPassword ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
               autoComplete="off" autoCorrect="off" spellCheck="false" required />
           </div>
           <div className="form-row">
             <div className="form-group">
               <label>Nueva contraseña</label>
-              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+              <input type={showPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
                 autoComplete="off" autoCorrect="off" spellCheck="false" required />
             </div>
             <div className="form-group">
               <label>Confirmar</label>
-              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+              <input type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="off" autoCorrect="off" spellCheck="false" required />
             </div>
           </div>

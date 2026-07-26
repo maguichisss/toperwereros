@@ -1,7 +1,7 @@
 import { memo, useRef } from 'react';
 import { formatPrice } from '../utils.js';
 
-const ProductCard = memo(({ product, onEdit, onDelete, onShowImage }) => {
+const ProductCard = memo(({ product, onEdit, onDelete, onShowImage, canEdit }) => {
   const clickTimer = useRef(null)
 
   function handleClick() {
@@ -31,7 +31,7 @@ const ProductCard = memo(({ product, onEdit, onDelete, onShowImage }) => {
         <div className="no-image" onClick={() => onEdit(product)}>—</div>
       )}
       <div className="card-body">
-        <h3 onClick={() => onEdit(product)}>{product.name}</h3>
+        <h3>{product.name}</h3>
         <div className="product-code">{product.code}</div>
         <div className="price">${formatPrice(product.price)}</div>
         <div className="product-stock">Stock: {product.stock ?? 1}{product.ubicacion ? ` | ${product.ubicacion}` : ''}</div>
@@ -49,8 +49,12 @@ const ProductCard = memo(({ product, onEdit, onDelete, onShowImage }) => {
         )}
       </div>
       <div className="card-actions">
-        <button className="btn btn-primary" onClick={() => onEdit(product)}>Editar</button>
-        <button className="btn btn-danger" onClick={() => onDelete(product.id)}>Eliminar</button>
+        {canEdit && (
+          <>
+            <button className="btn btn-primary" onClick={() => onEdit(product)}>Editar</button>
+            <button className="btn btn-danger" onClick={() => onDelete(product.id)}>Eliminar</button>
+          </>
+        )}
       </div>
     </div>
   )

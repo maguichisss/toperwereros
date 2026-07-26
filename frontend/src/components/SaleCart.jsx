@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { salesApi, productsApi } from '../api/client.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import { formatPrice } from '../utils.js';
+import ConfirmDialog from './ConfirmDialog.jsx';
 
 export default function SaleCart() {
+  const { can } = useAuth();
   const [mode, setMode] = useState('cart');
   const [cart, setCart] = useState([]);
   const [search, setSearch] = useState('');
@@ -14,6 +17,7 @@ export default function SaleCart() {
   const [salesTotal, setSalesTotal] = useState(0);
   const [salesPage, setSalesPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState(null);
+  const [confirmCheckout, setConfirmCheckout] = useState(false);
   const searchTimer = useRef(null);
   const resultsRef = useRef(null);
 
@@ -49,7 +53,7 @@ export default function SaleCart() {
         if (existing.quantity >= existing.stock) return prev;
         return prev.map(c => c.product_id === product.id ? { ...c, quantity: c.quantity + 1 } : c);
       }
-      return [...prev, { product_id: product.id, name: product.name, code: product.code, price: parseFloat(product.price), quantity: 1, stock: product.stock }];
+      return [...prev, { product_id: product.id, name: product.name, code: product.code, image_url: product.image_url, price: parseFloat(product.price), quantity: 1, stock: product.stock }];
     });
     setSearch('');
     setResults([]);
@@ -138,6 +142,8 @@ export default function SaleCart() {
 
       {mode === 'cart' && (
         <div className="cart-mode">
+          {can('sale.create') && (
+          <>
           <div className="cart-search" ref={resultsRef}>
             <input
               className="search-input"
@@ -153,8 +159,14 @@ export default function SaleCart() {
               <div className="search-results">
                 {results.map(p => (
                   <div key={p.id} className="search-result-item" onClick={() => addToCart(p)}>
+                    {p.image_url ? (
+                      <img className="result-thumb" src={p.image_url} alt="" />
+                    ) : (
+                      <div className="result-thumb result-thumb-empty" />
+                    )}
                     <span className="result-name">{p.name}</span>
                     <span className="result-code">{p.code}</span>
+                    {p.ubicacion && <span className="result-ubicacion">{p.ubicacion}</span>}
                     <span className="result-price">${formatPrice(p.price)}</span>
                     <span className="result-stock">Stock: {p.stock}</span>
                   </div>
@@ -162,6 +174,8 @@ export default function SaleCart() {
               </div>
             )}
           </div>
+          </>
+          )}
 
           {cart.length === 0 && !error && (
             <p className="empty-state">Busca y agrega productos al carrito para iniciar una venta.</p>
@@ -172,6 +186,11 @@ export default function SaleCart() {
               <div className="cart-items-scroll">
                 {cart.map(c => (
                   <div key={c.product_id} className="cart-item">
+                    {c.image_url ? (
+                      <img className="cart-item-thumb" src={c.image_url} alt="" />
+                    ) : (
+                      <div className="cart-item-thumb cart-item-thumb-empty" />
+                    )}
                     <div className="cart-item-info">
                       <span className="cart-item-name">{c.name}</span>
                       <span className="cart-item-code">{c.code}</span>
@@ -193,10 +212,21 @@ export default function SaleCart() {
                 <span className="cart-total-label">Total</span>
                 <span className="cart-total-amount">${formatPrice(cartTotal)}</span>
               </div>
-              <button className="btn btn-primary btn-checkout" onClick={handleCheckout}>
+              {can('sale.create') && (
+              <button className="btn btn-primary btn-checkout" onClick={() => setConfirmCheckout(true)}>
                 Cobrar ${formatPrice(cartTotal)}
               </button>
+              )}
             </div>
+          )}
+
+          {confirmCheckout && can('sale.create') && (
+            <ConfirmDialog
+              title="Confirmar Venta"
+              message={`¿Cobrar ${formatPrice(cartTotal)} por ${cart.length} artículo(s)?`}
+              onConfirm={() => { setConfirmCheckout(false); handleCheckout(); }}
+              onCancel={() => setConfirmCheckout(false)}
+            />
           )}
 
           {error && <p className="error-text">{error}</p>}

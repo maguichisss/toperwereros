@@ -221,6 +221,9 @@ def list_layaways(
 
     Returns:
         LayawayListResponse with ``layaways`` list and ``total`` count.
+
+    Raises:
+        HTTPException: 500 on unexpected database errors.
     """
 
     query = db.query(Layaway)
@@ -396,6 +399,9 @@ def _recalculate_layaway(layaway: Layaway) -> None:
 
     Args:
         layaway: The Layaway ORM object (must have ``items`` and ``payments`` loaded).
+
+    Returns:
+        ``None``. Modifies ``layaway.total`` and ``layaway.balance`` in-place.
     """
 
     layaway.total = sum(li.unit_price * li.quantity for li in layaway.items) or Decimal("0.00")
@@ -758,6 +764,12 @@ def complete_layaway(
         db: Active database session.
         current_user: The user completing the layaway (used as ``created_by``
             on the generated Sale).
+
+    Returns:
+        ``None``. Modifies ``layaway.status`` and ``layaway.sale_id`` in-place.
+
+    Raises:
+        HTTPException: 500 on unexpected database errors.
     """
 
     if layaway.sale_id:

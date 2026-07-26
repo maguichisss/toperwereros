@@ -129,7 +129,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 1 }}>
           <h2 style={{ margin: 0 }}>{product ? 'Editar Producto' : 'Añadir Producto'}</h2>
-          <button type="button" onClick={onCancel} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)', lineHeight: 1, padding: '0.25rem', flexShrink: 0 }}>✕</button>
+          <button type="button" onClick={onCancel} aria-label="Cerrar" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)', lineHeight: 1, padding: '0.25rem', flexShrink: 0 }}>✕</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">

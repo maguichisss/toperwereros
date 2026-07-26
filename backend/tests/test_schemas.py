@@ -16,6 +16,8 @@ from app.schemas import (
     SaleItemCreate,
     LayawayCreate,
     LayawayItemCreate,
+    LayawayItemAdd,
+    LayawayItemUpdate,
     PaymentCreate,
 )
 
@@ -138,3 +140,32 @@ class TestPaymentConstraints:
     def test_amount_negative_rejected(self):
         with pytest.raises(ValidationError):
             PaymentCreate(amount=Decimal("-5.00"))
+
+
+class TestLayawayItemAddConstraints:
+    def test_valid_item_add(self):
+        item = LayawayItemAdd(product_id=1, quantity=2)
+        assert item.product_id == 1
+        assert item.quantity == 2
+
+    def test_quantity_below_one_rejected(self):
+        with pytest.raises(ValidationError):
+            LayawayItemAdd(product_id=1, quantity=0)
+
+    def test_quantity_negative_rejected(self):
+        with pytest.raises(ValidationError):
+            LayawayItemAdd(product_id=1, quantity=-1)
+
+
+class TestLayawayItemUpdateConstraints:
+    def test_valid_item_update(self):
+        item = LayawayItemUpdate(quantity=3)
+        assert item.quantity == 3
+
+    def test_quantity_below_one_rejected(self):
+        with pytest.raises(ValidationError):
+            LayawayItemUpdate(quantity=0)
+
+    def test_quantity_negative_rejected(self):
+        with pytest.raises(ValidationError):
+            LayawayItemUpdate(quantity=-5)

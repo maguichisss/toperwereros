@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { layawaysApi, customersApi, productsApi } from '../api/client.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import { formatPrice } from '../utils.js';
 
@@ -10,6 +11,7 @@ function daysElapsed(dateStr) {
 }
 
 export default function LayawayView() {
+  const { can } = useAuth();
   const [mode, setMode] = useState('active');
   const [activeLayaways, setActiveLayaways] = useState([]);
   const [allLayaways, setAllLayaways] = useState([]);
@@ -99,7 +101,9 @@ export default function LayawayView() {
       <div className="sales-tabs">
         <button className={mode === 'active' ? 'active' : ''} onClick={() => setMode('active')}>Apartados Activos</button>
         <button className={mode === 'all' ? 'active' : ''} onClick={() => setMode('all')}>Todos</button>
-        <button className={mode === 'create' ? 'active' : ''} onClick={() => { setMode('create'); setError(''); }}>Nuevo Apartado</button>
+        {can('apartado.create') && (
+          <button className={mode === 'create' ? 'active' : ''} onClick={() => { setMode('create'); setError(''); }}>Nuevo Apartado</button>
+        )}
       </div>
 
       {error && <p className="error-text">{error}</p>}
@@ -258,6 +262,7 @@ function CreateView({ onBack, onCreated }) {
   const [productResults, setProductResults] = useState([]);
   const [showProductResults, setShowProductResults] = useState(false);
   const [deposit, setDeposit] = useState('');
+  const [confirmCreate, setConfirmCreate] = useState(false);
 
   const customerTimer = useRef(null);
   const productTimer = useRef(null);
@@ -327,7 +332,7 @@ function CreateView({ onBack, onCreated }) {
         if (existing.quantity >= existing.stock) return prev;
         return prev.map(c => c.product_id === product.id ? { ...c, quantity: c.quantity + 1 } : c);
       }
-      return [{ product_id: product.id, name: product.name, code: product.code, price: parseFloat(product.price), quantity: 1, stock: product.stock }, ...prev];
+      return [{ product_id: product.id, name: product.name, code: product.code, image_url: product.image_url, price: parseFloat(product.price), quantity: 1, stock: product.stock }, ...prev];
     });
     setProductSearch('');
     setProductResults([]);
@@ -464,6 +469,8 @@ function CreateView({ onBack, onCreated }) {
 
       <div className="products-section">
         <h3>Productos</h3>
+        {can('apartado.create') && (
+        <>
         <div ref={productResultsRef} className="cart-search">
           <input
             className="search-input"
@@ -479,8 +486,14 @@ function CreateView({ onBack, onCreated }) {
             <div className="search-results">
               {productResults.map(p => (
                 <div key={p.id} className="search-result-item" onClick={() => addToCart(p)}>
+                  {p.image_url ? (
+                    <img className="result-thumb" src={p.image_url} alt="" />
+                  ) : (
+                    <div className="result-thumb result-thumb-empty" />
+                  )}
                   <span className="result-name">{p.name}</span>
                   <span className="result-code">{p.code}</span>
+                  {p.ubicacion && <span className="result-ubicacion">{p.ubicacion}</span>}
                   <span className="result-price">${formatPrice(p.price)}</span>
                   <span className="result-stock">Stock: {p.stock}</span>
                 </div>
@@ -488,11 +501,18 @@ function CreateView({ onBack, onCreated }) {
             </div>
           )}
         </div>
+        </>
+        )}
 
         {cart.length > 0 && (
           <div className="cart-items">
             {cart.map(c => (
               <div key={c.product_id} className="cart-item">
+                {c.image_url ? (
+                  <img className="cart-item-thumb" src={c.image_url} alt="" />
+                ) : (
+                  <div className="cart-item-thumb cart-item-thumb-empty" />
+                )}
                 <div className="cart-item-info">
                   <span className="cart-item-name">{c.name}</span>
                   <span className="cart-item-code">{c.code}</span>
@@ -536,10 +556,19 @@ function CreateView({ onBack, onCreated }) {
             <p className="layaway-balance-preview">
               Balance restante: <strong>${formatPrice(cartTotal - parseFloat(deposit || 0))}</strong>
             </p>
-            <button className="btn btn-primary btn-checkout" onClick={handleCreate}>
+            <button className="btn btn-primary btn-checkout" onClick={() => setConfirmCreate(true)}>
               Crear Apartado — Depósito ${formatPrice(deposit || 0)}
             </button>
           </div>
+        )}
+
+        {confirmCreate && (
+          <ConfirmDialog
+            title="Crear Apartado"
+            message={`¿Crear apartado para ${selectedCustomer?.name || newCustomer.name.trim()} con ${cart.length} artículo(s) y depósito de ${formatPrice(deposit)}?`}
+            onConfirm={() => { setConfirmCreate(false); handleCreate(); }}
+            onCancel={() => setConfirmCreate(false)}
+          />
         )}
 
         {cart.length === 0 && (
@@ -551,11 +580,27 @@ function CreateView({ onBack, onCreated }) {
 }
 
 function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdated }) {
+  const { can } = useAuth();
   const [paymentAmount, setPaymentAmount] = useState('');
   const [detailError, setDetailError] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+  const [productResults, setProductResults] = useState([]);
+  const [showProductResults, setShowProductResults] = useState(false);
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [editingQty, setEditingQty] = useState('');
+  const productTimer = useRef(null);
+  const productResultsRef = useRef(null);
 
   const days = daysElapsed(layaway.created_at);
   const overdue = days > DAYS_OVERDUE;
+  const isActive = layaway.status === 'active';
+
+  const refreshLayaway = useCallback(async () => {
+    try {
+      const updated = await layawaysApi.get(layaway.id);
+      onUpdated(updated);
+    } catch {}
+  }, [layaway.id, onUpdated]);
 
   async function handleAddPayment() {
     if (!paymentAmount || parseFloat(paymentAmount) <= 0) return;
@@ -569,6 +614,80 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
     }
   }
 
+  async function handleChangeQty(item, delta) {
+    const newQty = item.quantity + delta;
+    if (newQty < 1) return;
+    setDetailError('');
+    try {
+      const updated = await layawaysApi.updateItem(layaway.id, item.id, newQty);
+      onUpdated(updated);
+    } catch (e) {
+      setDetailError(e.message);
+    }
+  }
+
+  async function handleRemoveItem(item) {
+    setDetailError('');
+    try {
+      const updated = await layawaysApi.removeItem(layaway.id, item.id);
+      onUpdated(updated);
+    } catch (e) {
+      setDetailError(e.message);
+    }
+  }
+
+  async function handleSaveQty(item) {
+    const qty = parseInt(editingQty, 10);
+    setEditingItemId(null);
+    if (isNaN(qty) || qty < 1 || qty === item.quantity) return;
+    setDetailError('');
+    try {
+      const updated = await layawaysApi.updateItem(layaway.id, item.id, qty);
+      onUpdated(updated);
+    } catch (e) {
+      setDetailError(e.message);
+    }
+  }
+
+  const searchProducts = useCallback(async (q) => {
+    if (!q.trim()) { setProductResults([]); return; }
+    try {
+      const res = await productsApi.list({ q, perPage: 10 });
+      const existingIds = new Set(layaway.items.map(i => i.product_id));
+      setProductResults(res.products.filter(p => p.stock > 0 && !existingIds.has(p.id)));
+      setShowProductResults(true);
+    } catch {}
+  }, [layaway.items]);
+
+  function handleProductSearchChange(value) {
+    setProductSearch(value);
+    clearTimeout(productTimer.current);
+    productTimer.current = setTimeout(() => searchProducts(value), 300);
+  }
+
+  async function handleAddProduct(product) {
+    setDetailError('');
+    try {
+      const updated = await layawaysApi.addItem(layaway.id, product.id, 1);
+      onUpdated(updated);
+      setProductSearch('');
+      setProductResults([]);
+      setShowProductResults(false);
+    } catch (e) {
+      setDetailError(e.message);
+    }
+  }
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (productResultsRef.current && !productResultsRef.current.contains(e.target)) {
+        setShowProductResults(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
   function handleCancel() {
     setDetailError('');
     onCancel(layaway.id);
@@ -578,8 +697,6 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
     setDetailError('');
     onComplete(layaway.id);
   }
-
-  const isActive = layaway.status === 'active';
 
   return (
     <div className="layaway-detail">
@@ -601,21 +718,93 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
         <h3>Productos</h3>
         <table className="receipt-items">
           <thead>
-            <tr><th>Producto</th><th>Código</th><th>Cant</th><th>Precio</th><th>Subtotal</th></tr>
+            <tr>
+              <th>Producto</th>
+              <th>Código</th>
+              <th>Cant</th>
+              <th>Precio</th>
+              <th>Subtotal</th>
+              {isActive && <th style={{ width: '40px' }}></th>}
+            </tr>
           </thead>
           <tbody>
             {layaway.items.map(item => (
               <tr key={item.id}>
                 <td>{item.product_name}</td>
                 <td style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{item.product_code}</td>
-                <td style={{ textAlign: 'center' }}>{item.quantity}</td>
+                <td style={{ textAlign: 'center' }}>
+                  {editingItemId === item.id ? (
+                    <input
+                      type="number"
+                      min="1"
+                      value={editingQty}
+                      onChange={e => setEditingQty(e.target.value)}
+                      onBlur={() => handleSaveQty(item)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleSaveQty(item); if (e.key === 'Escape') setEditingItemId(null); }}
+                      autoFocus
+                      style={{ width: '50px', textAlign: 'center' }}
+                    />
+                  ) : isActive ? (
+                    <span className="qty-controls">
+                      <button className="qty-btn" onClick={() => handleChangeQty(item, -1)} disabled={item.quantity <= 1}>−</button>
+                      <span
+                        className="qty-value layaway-editable"
+                        onClick={() => { setEditingItemId(item.id); setEditingQty(String(item.quantity)); }}
+                        title="Clic para editar cantidad"
+                      >
+                        {item.quantity}
+                      </span>
+                      <button className="qty-btn" onClick={() => handleChangeQty(item, 1)}>+</button>
+                    </span>
+                  ) : (
+                    item.quantity
+                  )}
+                </td>
                 <td style={{ textAlign: 'center' }}>${formatPrice(item.unit_price)}</td>
                 <td style={{ textAlign: 'right' }}>${formatPrice(parseFloat(item.unit_price) * item.quantity)}</td>
+                {isActive && (
+                  <td style={{ textAlign: 'center' }}>
+                    <button className="edit-icon layaway-remove-item" onClick={() => handleRemoveItem(item)} title="Quitar producto">✕</button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
         <div className="receipt-total" style={{ textAlign: 'right' }}>Total: ${formatPrice(layaway.total)}</div>
+
+        {isActive && can('apartado.edit') && (
+          <div className="cart-search" ref={productResultsRef}>
+            <input
+              className="search-input"
+              placeholder="Agregar producto..."
+              value={productSearch}
+              onChange={e => handleProductSearchChange(e.target.value)}
+              onFocus={() => productResults.length > 0 && setShowProductResults(true)}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
+            />
+            {showProductResults && productResults.length > 0 && (
+              <div className="search-results">
+                {productResults.map(p => (
+                  <div key={p.id} className="search-result-item" onClick={() => handleAddProduct(p)}>
+                    {p.image_url ? (
+                      <img className="result-thumb" src={p.image_url} alt="" />
+                    ) : (
+                      <div className="result-thumb result-thumb-empty" />
+                    )}
+                    <span className="result-name">{p.name}</span>
+                    <span className="result-code">{p.code}</span>
+                    {p.ubicacion && <span className="result-ubicacion">{p.ubicacion}</span>}
+                    <span className="result-price">${formatPrice(p.price)}</span>
+                    <span className="result-stock">Stock: {p.stock}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="detail-section">
@@ -651,7 +840,7 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
         </div>
       )}
 
-      {isActive && (
+      {isActive && can('apartado.edit') && (
         <div className="detail-section">
           <h3>Agregar Abono</h3>
           <div className="payment-form">

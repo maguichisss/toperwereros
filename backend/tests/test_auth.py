@@ -107,7 +107,7 @@ class TestListUsers:
 
 class TestUpdateProfile:
     def test_update_email(self, client, admin_user, admin_headers):
-        resp = client.put(
+        resp = client.patch(
             "/api/auth/profile",
             json={"email": "new@test.com"},
             headers=admin_headers,
@@ -116,9 +116,29 @@ class TestUpdateProfile:
         assert resp.json()["email"] == "new@test.com"
 
     def test_update_duplicate_email(self, client, admin_user, employee_user, admin_headers):
-        resp = client.put(
+        resp = client.patch(
             "/api/auth/profile",
             json={"email": "employee@test.com"},
             headers=admin_headers,
         )
         assert resp.status_code == 400
+
+    def test_partial_update_preserves_other_fields(self, client, admin_user, admin_headers):
+        resp = client.patch(
+            "/api/auth/profile",
+            json={"email": "partial@test.com"},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["email"] == "partial@test.com"
+        assert data["username"] == "admin"
+
+    def test_empty_body_noop(self, client, admin_user, admin_headers):
+        resp = client.patch(
+            "/api/auth/profile",
+            json={},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["email"] == "admin@test.com"

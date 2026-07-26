@@ -66,6 +66,7 @@ export default function CategoryManager() {
           placeholder="Nombre de nueva categoría"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
+          aria-label="Nombre de nueva categoría"
           autoComplete="off"
           autoCorrect="off"
           spellCheck="false"
@@ -101,6 +102,7 @@ export default function CategoryManager() {
                 onChange={(e) => setEditName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleUpdate(c.id)}
                 autoFocus
+                aria-label="Editar nombre de categoría"
                 style={{ flex: 1, padding: '0.3rem 0.5rem' }}
                 autoComplete="off"
                 autoCorrect="off"

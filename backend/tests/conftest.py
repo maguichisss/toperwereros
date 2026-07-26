@@ -119,6 +119,22 @@ def employee_user(db: Session, _roles: dict[str, Role]) -> User:
 
 
 @pytest.fixture()
+def viewer_user(db: Session, _roles: dict[str, Role]) -> User:
+    """Create a viewer user and return the ORM object."""
+    user = User(
+        username="viewer",
+        email="viewer@test.com",
+        hashed_password=hash_password("view123"),
+        active=True,
+        role_id=_roles["viewer"].id,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@pytest.fixture()
 def admin_token(admin_user: User) -> str:
     """Return a valid JWT token for the admin user."""
     return create_access_token({"sub": admin_user.id})
@@ -131,6 +147,12 @@ def employee_token(employee_user: User) -> str:
 
 
 @pytest.fixture()
+def viewer_token(viewer_user: User) -> str:
+    """Return a valid JWT token for the viewer user."""
+    return create_access_token({"sub": viewer_user.id})
+
+
+@pytest.fixture()
 def admin_headers(admin_token: str) -> dict[str, str]:
     """Return Authorization headers for the admin user."""
     return {"Authorization": f"Bearer {admin_token}"}
@@ -140,6 +162,12 @@ def admin_headers(admin_token: str) -> dict[str, str]:
 def employee_headers(employee_token: str) -> dict[str, str]:
     """Return Authorization headers for the employee user."""
     return {"Authorization": f"Bearer {employee_token}"}
+
+
+@pytest.fixture()
+def viewer_headers(viewer_token: str) -> dict[str, str]:
+    """Return Authorization headers for the viewer user."""
+    return {"Authorization": f"Bearer {viewer_token}"}
 
 
 @pytest.fixture()

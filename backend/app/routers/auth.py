@@ -59,7 +59,7 @@ def login(
         HTTPException: 401 if credentials are invalid or the user is inactive.
     """
 
-    user = db.query(User).filter(User.username == data.username).first()
+    user = db.query(User).filter(User.username == data.username.strip().lower()).first()
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
     if not user.active:
@@ -78,6 +78,9 @@ def me(current_user: User = Depends(get_current_user)) -> UserResponse:
 
     Returns:
         UserResponse with id, username, email, role, and avatar info.
+
+    Raises:
+        HTTPException: 401 if the token is invalid or the user is not found.
     """
 
     return UserResponse(
@@ -133,7 +136,7 @@ def change_password(
     return {"ok": True, "detail": "Contraseña actualizada correctamente"}
 
 
-@router.put("/profile", response_model=UserResponse, tags=["Auth"], summary="Update profile",
+@router.patch("/profile", response_model=UserResponse, tags=["Auth"], summary="Update profile",
               description="Update own email and/or avatar URL. Email uniqueness is enforced across users.")
 def update_profile(
     data: ProfileUpdateRequest,
@@ -252,6 +255,9 @@ def list_users(
 
     Returns:
         List of UserResponse objects.
+
+    Raises:
+        HTTPException: 403 if the user lacks ``user.manage`` permission.
     """
 
     users = db.query(User).order_by(User.username).all()
@@ -296,7 +302,8 @@ def register(
         HTTPException: 400 if username or email already exists.
     """
 
-    existing = db.query(User).filter(User.username == data.username).first()
+    username = data.username.strip().lower()
+    existing = db.query(User).filter(User.username == username).first()
     if existing:
         raise HTTPException(400, "El nombre de usuario ya existe")
     if data.email:
@@ -304,7 +311,7 @@ def register(
         if existing_email:
             raise HTTPException(400, "El email ya está registrado")
     user = User(
-        username=data.username,
+        username=username,
         email=data.email,
         hashed_password=hash_password(data.password),
         role_id=data.role_id,

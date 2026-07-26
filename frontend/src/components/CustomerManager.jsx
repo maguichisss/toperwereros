@@ -70,6 +70,7 @@ export default function CustomerManager() {
           placeholder="Nombre *"
           value={newName}
           onChange={e => setNewName(e.target.value)}
+          aria-label="Nombre del cliente"
           style={{ flex: 1 }}
           autoComplete="off"
           autoCorrect="off"
@@ -79,6 +80,7 @@ export default function CustomerManager() {
           placeholder="Teléfono"
           value={newPhone}
           onChange={e => setNewPhone(e.target.value)}
+          aria-label="Teléfono del cliente"
           style={{ flex: 0.7 }}
           autoComplete="off"
           autoCorrect="off"
@@ -88,6 +90,7 @@ export default function CustomerManager() {
           placeholder="Email"
           value={newEmail}
           onChange={e => setNewEmail(e.target.value)}
+          aria-label="Email del cliente"
           style={{ flex: 0.7 }}
           autoComplete="off"
           autoCorrect="off"
@@ -133,6 +136,7 @@ export default function CustomerManager() {
                         onChange={e => setEditName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleUpdate(c.id)}
                         autoFocus
+                        aria-label="Editar nombre"
                         style={{ width: '100%', padding: '0.3rem 0.4rem' }}
                         autoComplete="off"
                         autoCorrect="off"
@@ -144,6 +148,7 @@ export default function CustomerManager() {
                         value={editPhone}
                         onChange={e => setEditPhone(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleUpdate(c.id)}
+                        aria-label="Editar teléfono"
                         style={{ width: '100%', padding: '0.3rem 0.4rem' }}
                         autoComplete="off"
                         autoCorrect="off"
@@ -155,6 +160,7 @@ export default function CustomerManager() {
                         value={editEmail}
                         onChange={e => setEditEmail(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleUpdate(c.id)}
+                        aria-label="Editar email"
                         style={{ width: '100%', padding: '0.3rem 0.4rem' }}
                         autoComplete="off"
                         autoCorrect="off"
