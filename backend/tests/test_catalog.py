@@ -9,7 +9,8 @@ import pytest
 from PIL import Image as PILImage
 from fpdf import FPDF
 
-from app.routers.catalog import PDFConfig, DEFAULT_PDF_CONFIG, cover_image, draw_card, group_and_order
+from app.routers.catalog import PDFConfig, DEFAULT_PDF_CONFIG, THEMES, apply_theme, cover_image, css_color, draw_card, group_and_order
+from app.patterns import pattern_jpeg
 from app.models import Product, Category
 from decimal import Decimal
 
@@ -112,6 +113,26 @@ class TestCatalogPDF:
         _create_product(db, name="A", code="A01")
         resp = client.get("/api/catalog/pdf?format=docx", headers=admin_headers)
         assert resp.status_code == 400
+
+    def test_pdf_theme_html(self, client, admin_headers, db):
+        _create_product(db, name="Widget", code="W01")
+        resp = client.get("/api/catalog/pdf?format=html&theme=nocturno", headers=admin_headers)
+        assert resp.status_code == 200
+        assert b"#f0b429" in resp.content
+        assert b'"DejaVu Sans", Helvetica' in resp.content
+
+    def test_pdf_default_theme_is_classic(self, client, admin_headers, db):
+        _create_product(db, name="A", code="A01")
+        plain = client.get("/api/catalog/pdf?format=html", headers=admin_headers)
+        explicit = client.get("/api/catalog/pdf?format=html&theme=classic", headers=admin_headers)
+        assert plain.status_code == 200
+        assert plain.content == explicit.content
+
+    def test_pdf_invalid_theme_400(self, client, admin_headers, db):
+        _create_product(db, name="A", code="A01")
+        resp = client.get("/api/catalog/pdf?theme=unknown", headers=admin_headers)
+        assert resp.status_code == 400
+        assert b"theme debe ser uno de" in resp.content
 
     def test_pdf_q_filter(self, client, admin_headers, db):
         _create_product(db, name="AlphaWidget", code="AW01")
@@ -275,3 +296,66 @@ class TestCustomPDFConfig:
             numbers = re.findall(r"\d+(?:\.\d+)?", segment)
             baseline_y = float(numbers[-1])
             assert band_bottom_pdf < baseline_y < band_top_pdf, f"{text} baseline {baseline_y} outside band"
+
+
+class TestThemes:
+    def test_all_override_keys_are_config_fields(self):
+        from dataclasses import fields
+        field_names = {f.name for f in fields(PDFConfig)}
+        for theme in THEMES.values():
+            assert set(theme.overrides) <= field_names, f"theme {theme.name} has unknown overrides"
+
+    def test_classic_has_no_overrides(self):
+        assert THEMES["classic"].overrides == {}
+        assert apply_theme(DEFAULT_PDF_CONFIG, "classic") == DEFAULT_PDF_CONFIG
+
+    def test_every_theme_renders_pdf_and_html(self):
+        product = Product(name="Producto de Prueba", code="ABC123", price=Decimal("99"), stock=1)
+        for name in THEMES:
+            cfg = apply_theme(DEFAULT_PDF_CONFIG, name)
+            pdf_bytes = cfg.render_pdf([product], "agosto 03", "agosto 09", 32)
+            assert pdf_bytes.startswith(b"%PDF")
+            assert len(pdf_bytes) > 0
+            html = cfg.render_html([product], "agosto 03", "agosto 09", 32)
+            assert css_color(cfg.band_fill) in html
+            assert cfg.font_family_css in html
+
+    def test_page_fill_differs_per_theme(self):
+        palettes = {name: apply_theme(DEFAULT_PDF_CONFIG, name) for name in THEMES}
+        assert len({cfg.page_fill for cfg in palettes.values()}) > 1
+        assert len({cfg.band_fill for cfg in palettes.values()}) > 1
+
+    def test_expected_theme_set(self):
+        assert set(THEMES) == {
+            "classic", "nocturno", "kraft", "elegante",
+            "marino", "sol", "cyber", "vino", "rosa",
+            "arcoiris", "nebulosa", "triangulos", "olas", "mandala",
+            "aurora", "confeti", "galaxia", "marco", "flores",
+        }
+
+    def test_widened_margin_themes_keep_four_rows(self):
+        widened = ["nebulosa", "aurora", "confeti", "galaxia", "marco", "flores"]
+        assert set(widened) <= set(THEMES)
+        for name in widened:
+            cfg = apply_theme(DEFAULT_PDF_CONFIG, name)
+            assert (cfg.margin, cfg.header_y, cfg.bottom_margin) == (13, 20, 11), name
+            assert cfg.rows_per_page == 4, name
+
+    def test_pattern_themes_embed_background(self):
+        product = Product(name="P", code="C1", price=Decimal("10"), stock=1)
+        pattern_themes = [t for t in THEMES.values() if t.overrides.get("page_pattern")]
+        assert len(pattern_themes) == 10
+        for theme in pattern_themes:
+            cfg = apply_theme(DEFAULT_PDF_CONFIG, theme.name)
+            html = cfg.render_html([product], "agosto 03", "agosto 09", 32)
+            assert "data:image/jpeg;base64," in html
+            assert cfg.render_pdf([product], "agosto 03", "agosto 09", 32).startswith(b"%PDF")
+
+    def test_pattern_images_are_valid_jpeg(self):
+        pids = ("rainbow", "nebula", "triangles", "waves", "mandala",
+                "aurora", "confeti", "galaxia", "marco", "flores")
+        jpegs = {pid: pattern_jpeg(pid) for pid in pids}
+        for pid, data in jpegs.items():
+            assert data[:2] == b"\xff\xd8", f"pattern {pid} is not a JPEG"
+            assert len(data) > 1000
+        assert len({data for data in jpegs.values()}) == 10

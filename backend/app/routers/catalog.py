@@ -1,9 +1,10 @@
 """Catalog output generation — renders in-stock products as PDF or HTML."""
 
+import base64
 import io
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from html import escape
 
@@ -18,10 +19,27 @@ from app.database import get_db
 from app.config import safe_upload_path, escape_like
 from app.models import Product, Category, Color, User
 from app.auth import require_permission
+from app.patterns import pattern_jpeg
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+_FONT_DIR = os.path.join(os.path.dirname(__file__), "..", "fonts")
+
+_FONT_FILES: dict[tuple[str, str], str] = {
+    ("DejaVu", ""): "DejaVuSans.ttf",
+    ("DejaVu", "B"): "DejaVuSans-Bold.ttf",
+    ("DejaVuSerif", ""): "DejaVuSerif.ttf",
+    ("DejaVuSerif", "B"): "DejaVuSerif-Bold.ttf",
+    ("DejaVuMono", ""): "DejaVuSansMono.ttf",
+}
+
+
+def _register_fonts(pdf: FPDF) -> None:
+    """Register the bundled DejaVu TrueType families on a fresh PDF instance."""
+    for (family, style), fname in _FONT_FILES.items():
+        pdf.add_font(family, style, os.path.join(_FONT_DIR, fname), uni=True)
 
 
 def css_color(color: tuple[int, int, int]) -> str:
@@ -85,15 +103,25 @@ class PDFConfig:
     code_size: float = 6.2
 
     # --- colors ---
+    page_fill: tuple[int, int, int] = (255, 255, 255)
     card_fill: tuple[int, int, int] = (255, 255, 255)
     card_border: tuple[int, int, int] = (200, 200, 200)
+    card_border_width: float = 0.2
     header_line: tuple[int, int, int] = (180, 180, 180)
     title_color: tuple[int, int, int] = (0, 0, 0)
+    subtitle_color: tuple[int, int, int] = (0, 0, 0)
     name_color: tuple[int, int, int] = (0, 0, 0)
     placeholder_fill: tuple[int, int, int] = (235, 235, 235)
     placeholder_text: tuple[int, int, int] = (180, 180, 180)
     band_fill: tuple[int, int, int] = (26, 115, 232)
     band_text: tuple[int, int, int] = (255, 255, 255)
+
+    # --- page background pattern ---
+    page_pattern: str = ""
+
+    # --- fonts (CSS) ---
+    font_family_css: str = "Helvetica, Arial, sans-serif"
+    code_family_css: str = '"Courier New", monospace'
 
     # --- content ---
     title: str = "Catálogo Toperwereros"
@@ -129,17 +157,26 @@ class PDFConfig:
     def render_page_header(self, pdf: FPDF, week_start_str: str, week_end_str: str, week_num: int) -> None:
         """Add a new page with the catalog title and weekly validity header."""
         pdf.add_page()
+        pdf.set_fill_color(*self.page_fill)
+        pdf.rect(0, 0, self.page_w, self.page_h, style="F")
+        if self.page_pattern:
+            try:
+                pdf.image(io.BytesIO(pattern_jpeg(self.page_pattern)), x=0, y=0, w=self.page_w, h=self.page_h)
+            except Exception:
+                logger.warning("Omitiendo patrón de fondo inválido: %s", self.page_pattern)
         pdf.set_font(self.base_family, "B", self.title_size)
         pdf.set_text_color(*self.title_color)
         pdf.set_xy(self.margin, self.title_y)
         pdf.cell(90, 6, self.title)
         pdf.set_font(self.base_family, "", self.subtitle_size)
+        pdf.set_text_color(*self.subtitle_color)
         pdf.cell(0, 6, f"Válido de {week_start_str} a {week_end_str}  |  semana {week_num}", align="R")
         pdf.set_draw_color(*self.header_line)
         pdf.line(self.margin, self.rule_y, self.margin + self.grid_width, self.rule_y)
 
     def render_card(self, pdf: FPDF, x: float, y: float, product: Product) -> None:
         """Draw one product card: image, name, and price band with code."""
+        pdf.set_line_width(self.card_border_width)
         pdf.set_fill_color(*self.card_fill)
         pdf.set_draw_color(*self.card_border)
         pdf.rect(x, y, self.card_w, self.card_h, style="DF", round_corners=True, corner_radius=self.card_corner_radius)
@@ -152,6 +189,8 @@ class PDFConfig:
                 path = safe_upload_path(product.image_url)
                 if path and os.path.exists(path):
                     pdf.image(cover_image(path, self), x=ix, y=iy, w=self.img_w, h=self.img_h)
+                    pdf.set_draw_color(*self.card_border)
+                    pdf.rect(ix, iy, self.img_w, self.img_h, style="D", round_corners=True, corner_radius=self.card_corner_radius)
                     image_ok = True
             except Exception:
                 logger.warning("Omitiendo imagen inválida del producto %s (%s)", product.id, product.image_url)
@@ -200,6 +239,7 @@ class PDFConfig:
         """Render the ordered products to a multi-page PDF byte string."""
         pdf = FPDF()
         pdf.set_auto_page_break(auto=False)
+        _register_fonts(pdf)
         self.render_page_header(pdf, week_start_str, week_end_str, week_num)
         for idx, page_products in enumerate(paginate(products, self)):
             if idx > 0:
@@ -258,6 +298,14 @@ class PDFConfig:
         mm = lambda v: f"{v:g}mm"
         pt = lambda v: f"{v:g}pt"
         c = css_color
+        if self.page_pattern:
+            try:
+                page_bg = f'url("data:image/jpeg;base64,{base64.b64encode(pattern_jpeg(self.page_pattern)).decode("ascii")}")'
+            except Exception:
+                logger.warning("Omitiendo patrón de fondo inválido: %s", self.page_pattern)
+                page_bg = "none"
+        else:
+            page_bg = "none"
         return f"""
 :root {{
   --page-w: {mm(self.page_w)};
@@ -283,6 +331,7 @@ class PDFConfig:
   --card-w: {mm(self.card_w)};
   --card-h: {mm(self.card_h)};
   --card-radius: {mm(self.card_corner_radius)};
+  --card-border-width: {mm(self.card_border_width)};
 
   --img-margin: {mm(self.img_inset)} {mm(self.img_margin_right)} 0 {mm(self.img_inset)};
   --img-w: {mm(self.img_w)};
@@ -303,8 +352,15 @@ class PDFConfig:
   --price-padding-x: {mm(self.price_padding_x)};
   --price-font: {pt(self.price_size)};
 
+  --font-family: {self.font_family_css};
+  --font-family-code: {self.code_family_css};
+  --page-bg-image: {page_bg};
+
+  --color-page: {c(self.page_fill)};
   --color-surface: {c(self.card_fill)};
   --color-text: {c(self.name_color)};
+  --color-title: {c(self.title_color)};
+  --color-subtitle: {c(self.subtitle_color)};
   --color-card-border: {c(self.card_border)};
   --color-header-rule: {c(self.header_line)};
   --color-image-bg: {c(self.placeholder_fill)};
@@ -314,36 +370,453 @@ class PDFConfig:
 }}
 
 * {{ box-sizing: border-box; }}
-body {{ margin: 0; background: #fff; font-family: Helvetica, Arial, sans-serif; }}
+body {{ margin: 0; background: var(--color-page); font-family: var(--font-family); }}
 
 @page {{ size: {mm(self.page_w)} {mm(self.page_h)}; margin: 0; }}
 
-.page {{ position: relative; width: var(--page-w); height: var(--page-h); background: var(--color-surface); page-break-after: always; }}
+.page {{ position: relative; width: var(--page-w); height: var(--page-h); background-color: var(--color-page); background-image: var(--page-bg-image); background-size: cover; background-position: center; page-break-after: always; }}
 .page:last-child {{ page-break-after: auto; }}
 
 .page-header {{ position: relative; height: var(--header-h); }}
-.page-title {{ position: absolute; left: var(--title-x); top: var(--title-y); font-size: var(--title-font); font-weight: bold; color: var(--color-text); white-space: nowrap; }}
-.page-subtitle {{ position: absolute; right: var(--subtitle-right); top: var(--subtitle-y); font-size: var(--subtitle-font); color: var(--color-text); white-space: nowrap; }}
+.page-title {{ position: absolute; left: var(--title-x); top: var(--title-y); font-size: var(--title-font); font-weight: bold; color: var(--color-title); white-space: nowrap; }}
+.page-subtitle {{ position: absolute; right: var(--subtitle-right); top: var(--subtitle-y); font-size: var(--subtitle-font); color: var(--color-subtitle); white-space: nowrap; }}
 .page-rule {{ position: absolute; left: var(--body-margin-left); top: var(--rule-y); width: var(--body-w); height: var(--rule-h); background: var(--color-header-rule); }}
 
 .page-body {{ display: flex; flex-direction: column; gap: var(--row-gap); margin-left: var(--body-margin-left); width: var(--body-w); }}
 .row {{ display: grid; grid-template-columns: repeat(var(--cols), var(--card-w)); gap: var(--col-gap); }}
 
-.card {{ display: flex; flex-direction: column; width: var(--card-w); height: var(--card-h); background: var(--color-surface); border: 1px solid var(--color-card-border); border-radius: var(--card-radius); break-inside: avoid; }}
+.card {{ display: flex; flex-direction: column; width: var(--card-w); height: var(--card-h); background: var(--color-surface); border: var(--card-border-width) solid var(--color-card-border); border-radius: var(--card-radius); break-inside: avoid; }}
 
-.product-image {{ margin: var(--img-margin); width: var(--img-w); height: var(--img-h); background: var(--color-image-bg); border: 1px solid var(--color-card-border); border-radius: var(--img-radius); display: flex; align-items: center; justify-content: center; overflow: hidden; }}
+.product-image {{ margin: var(--img-margin); width: var(--img-w); height: var(--img-h); background: var(--color-image-bg); border: var(--card-border-width) solid var(--color-card-border); border-radius: var(--img-radius); display: flex; align-items: center; justify-content: center; overflow: hidden; }}
 .product-image img {{ width: 100%; height: 100%; object-fit: cover; }}
 .product-image .initial {{ font-size: var(--initial-font); font-weight: bold; color: var(--color-image-initial); }}
 
 .product-name {{ margin: var(--name-margin); font-size: var(--name-font); font-weight: bold; line-height: var(--name-line-height); color: var(--color-text); max-height: var(--name-max-h); overflow: hidden; }}
 
-.product-code {{ font-family: "Courier New", monospace; font-size: var(--code-font); font-weight: normal; color: var(--color-band-text); white-space: nowrap; }}
+.product-code {{ font-family: var(--font-family-code); font-size: var(--code-font); font-weight: normal; color: var(--color-band-text); white-space: nowrap; }}
 
 .product-price {{ margin: var(--price-margin); height: var(--price-h); background: var(--color-band); border-radius: var(--price-radius); display: flex; justify-content: space-between; align-items: center; padding: 0 var(--price-padding-x); font-size: var(--price-font); font-weight: bold; color: var(--color-band-text); white-space: nowrap; }}
 """
 
 
 DEFAULT_PDF_CONFIG = PDFConfig()
+
+
+@dataclass(frozen=True)
+class CatalogTheme:
+    """A named set of ``PDFConfig`` field overrides for the catalog output."""
+
+    name: str
+    label: str
+    overrides: dict[str, object]
+
+
+THEMES: dict[str, CatalogTheme] = {
+    "classic": CatalogTheme(
+        name="classic",
+        label="Clásico",
+        overrides={},
+    ),
+    "nocturno": CatalogTheme(
+        name="nocturno",
+        label="Nocturno",
+        overrides={
+            "page_fill": (24, 26, 32),
+            "card_fill": (34, 38, 46),
+            "card_border": (56, 60, 70),
+            "header_line": (70, 74, 84),
+            "title_color": (240, 240, 245),
+            "subtitle_color": (160, 165, 175),
+            "name_color": (240, 240, 245),
+            "placeholder_fill": (44, 48, 58),
+            "placeholder_text": (120, 126, 140),
+            "band_fill": (240, 180, 41),
+            "band_text": (24, 26, 32),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "kraft": CatalogTheme(
+        name="kraft",
+        label="Kraft",
+        overrides={
+            "page_fill": (250, 246, 238),
+            "card_fill": (255, 252, 246),
+            "card_border": (214, 198, 172),
+            "header_line": (190, 172, 145),
+            "title_color": (90, 60, 30),
+            "subtitle_color": (140, 110, 75),
+            "name_color": (70, 50, 25),
+            "placeholder_fill": (240, 232, 218),
+            "placeholder_text": (180, 160, 130),
+            "band_fill": (139, 94, 46),
+            "band_text": (255, 250, 240),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "elegante": CatalogTheme(
+        name="elegante",
+        label="Elegante",
+        overrides={
+            "page_fill": (255, 255, 255),
+            "card_fill": (252, 250, 246),
+            "card_border": (210, 205, 190),
+            "header_line": (150, 150, 140),
+            "title_color": (30, 60, 50),
+            "subtitle_color": (110, 110, 100),
+            "name_color": (40, 45, 40),
+            "placeholder_fill": (238, 236, 230),
+            "placeholder_text": (150, 148, 140),
+            "band_fill": (40, 90, 70),
+            "band_text": (250, 250, 245),
+            "base_family": "DejaVuSerif",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Serif", Georgia, serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "marino": CatalogTheme(
+        name="marino",
+        label="Marino",
+        overrides={
+            "page_fill": (230, 240, 245),
+            "card_fill": (245, 250, 252),
+            "card_border": (170, 200, 215),
+            "header_line": (150, 185, 205),
+            "title_color": (10, 45, 70),
+            "subtitle_color": (80, 120, 150),
+            "name_color": (20, 50, 75),
+            "placeholder_fill": (215, 232, 240),
+            "placeholder_text": (130, 165, 185),
+            "band_fill": (10, 110, 160),
+            "band_text": (255, 255, 255),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "sol": CatalogTheme(
+        name="sol",
+        label="Sol",
+        overrides={
+            "page_fill": (255, 250, 230),
+            "card_fill": (255, 253, 244),
+            "card_border": (235, 210, 160),
+            "header_line": (225, 195, 135),
+            "title_color": (180, 110, 10),
+            "subtitle_color": (200, 150, 70),
+            "name_color": (120, 80, 20),
+            "placeholder_fill": (250, 240, 214),
+            "placeholder_text": (205, 175, 110),
+            "band_fill": (240, 130, 20),
+            "band_text": (255, 255, 255),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "cyber": CatalogTheme(
+        name="cyber",
+        label="Cyber",
+        overrides={
+            "page_fill": (20, 18, 34),
+            "card_fill": (30, 28, 48),
+            "card_border": (70, 65, 110),
+            "header_line": (90, 80, 140),
+            "title_color": (0, 255, 190),
+            "subtitle_color": (150, 150, 200),
+            "name_color": (220, 220, 255),
+            "placeholder_fill": (42, 40, 66),
+            "placeholder_text": (140, 135, 190),
+            "band_fill": (255, 45, 140),
+            "band_text": (255, 255, 255),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "vino": CatalogTheme(
+        name="vino",
+        label="Vino",
+        overrides={
+            "page_fill": (33, 10, 20),
+            "card_fill": (43, 15, 28),
+            "card_border": (95, 45, 60),
+            "header_line": (120, 60, 75),
+            "title_color": (230, 190, 90),
+            "subtitle_color": (190, 150, 120),
+            "name_color": (235, 220, 210),
+            "placeholder_fill": (58, 24, 38),
+            "placeholder_text": (170, 120, 130),
+            "band_fill": (200, 160, 70),
+            "band_text": (33, 10, 20),
+            "base_family": "DejaVuSerif",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Serif", Georgia, serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "rosa": CatalogTheme(
+        name="rosa",
+        label="Rosa",
+        overrides={
+            "page_fill": (250, 240, 242),
+            "card_fill": (255, 250, 251),
+            "card_border": (235, 200, 205),
+            "header_line": (225, 180, 190),
+            "title_color": (140, 45, 70),
+            "subtitle_color": (200, 150, 160),
+            "name_color": (110, 40, 60),
+            "placeholder_fill": (245, 225, 230),
+            "placeholder_text": (205, 155, 170),
+            "band_fill": (210, 60, 100),
+            "band_text": (255, 255, 255),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "arcoiris": CatalogTheme(
+        name="arcoiris",
+        label="Arcoíris",
+        overrides={
+            "page_pattern": "rainbow",
+            "page_fill": (255, 255, 255),
+            "card_fill": (255, 255, 255),
+            "card_border": (220, 220, 240),
+            "header_line": (200, 200, 230),
+            "title_color": (80, 60, 160),
+            "subtitle_color": (150, 130, 200),
+            "name_color": (60, 60, 80),
+            "placeholder_fill": (245, 244, 255),
+            "placeholder_text": (190, 180, 220),
+            "band_fill": (63, 81, 181),
+            "band_text": (255, 255, 255),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "nebulosa": CatalogTheme(
+        name="nebulosa",
+        label="Nebulosa",
+        overrides={
+            "page_pattern": "nebula",
+            "margin": 13, "header_y": 20, "bottom_margin": 11, "title_x": 13, "subtitle_right": 13,
+            "page_fill": (11, 7, 22),
+            "card_fill": (28, 22, 48),
+            "card_border": (70, 55, 120),
+            "header_line": (90, 70, 150),
+            "title_color": (0, 229, 255),
+            "subtitle_color": (150, 150, 210),
+            "name_color": (235, 235, 255),
+            "placeholder_fill": (42, 34, 70),
+            "placeholder_text": (160, 150, 210),
+            "band_fill": (0, 229, 255),
+            "band_text": (11, 7, 22),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "triangulos": CatalogTheme(
+        name="triangulos",
+        label="Triángulos",
+        overrides={
+            "page_pattern": "triangles",
+            "page_fill": (247, 243, 239),
+            "card_fill": (255, 253, 250),
+            "card_border": (215, 205, 195),
+            "header_line": (195, 185, 175),
+            "title_color": (40, 120, 130),
+            "subtitle_color": (150, 150, 140),
+            "name_color": (60, 70, 70),
+            "placeholder_fill": (240, 235, 228),
+            "placeholder_text": (185, 175, 160),
+            "band_fill": (27, 154, 170),
+            "band_text": (255, 255, 255),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "olas": CatalogTheme(
+        name="olas",
+        label="Olas",
+        overrides={
+            "page_pattern": "waves",
+            "page_fill": (242, 248, 250),
+            "card_fill": (250, 253, 255),
+            "card_border": (195, 215, 225),
+            "header_line": (175, 200, 215),
+            "title_color": (14, 100, 115),
+            "subtitle_color": (130, 170, 185),
+            "name_color": (40, 75, 85),
+            "placeholder_fill": (230, 242, 248),
+            "placeholder_text": (165, 195, 210),
+            "band_fill": (14, 124, 134),
+            "band_text": (255, 255, 255),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "mandala": CatalogTheme(
+        name="mandala",
+        label="Mándala",
+        overrides={
+            "page_pattern": "mandala",
+            "page_fill": (255, 249, 236),
+            "card_fill": (255, 253, 246),
+            "card_border": (225, 205, 165),
+            "header_line": (210, 190, 150),
+            "title_color": (140, 100, 20),
+            "subtitle_color": (180, 150, 90),
+            "name_color": (90, 70, 30),
+            "placeholder_fill": (248, 240, 222),
+            "placeholder_text": (200, 175, 120),
+            "band_fill": (86, 66, 140),
+            "band_text": (250, 245, 235),
+            "base_family": "DejaVuSerif",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Serif", Georgia, serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "aurora": CatalogTheme(
+        name="aurora",
+        label="Aurora",
+        overrides={
+            "page_pattern": "aurora",
+            "margin": 13, "header_y": 20, "bottom_margin": 11, "title_x": 13, "subtitle_right": 13,
+            "page_fill": (10, 14, 28),
+            "card_fill": (24, 30, 48),
+            "card_border": (60, 72, 100),
+            "header_line": (70, 84, 112),
+            "title_color": (120, 240, 190),
+            "subtitle_color": (140, 170, 200),
+            "name_color": (230, 240, 245),
+            "placeholder_fill": (38, 46, 70),
+            "placeholder_text": (120, 140, 170),
+            "band_fill": (64, 220, 160),
+            "band_text": (10, 26, 24),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "confeti": CatalogTheme(
+        name="confeti",
+        label="Confeti",
+        overrides={
+            "page_pattern": "confeti",
+            "margin": 13, "header_y": 20, "bottom_margin": 11, "title_x": 13, "subtitle_right": 13,
+            "page_fill": (252, 250, 244),
+            "card_fill": (255, 255, 255),
+            "card_border": (225, 215, 200),
+            "header_line": (210, 200, 185),
+            "title_color": (220, 70, 70),
+            "subtitle_color": (180, 140, 110),
+            "name_color": (70, 60, 55),
+            "placeholder_fill": (248, 244, 236),
+            "placeholder_text": (200, 185, 165),
+            "band_fill": (255, 90, 90),
+            "band_text": (255, 255, 255),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "galaxia": CatalogTheme(
+        name="galaxia",
+        label="Galaxia",
+        overrides={
+            "page_pattern": "galaxia",
+            "margin": 13, "header_y": 20, "bottom_margin": 11, "title_x": 13, "subtitle_right": 13,
+            "page_fill": (8, 6, 16),
+            "card_fill": (24, 20, 40),
+            "card_border": (70, 60, 110),
+            "header_line": (90, 78, 140),
+            "title_color": (0, 229, 255),
+            "subtitle_color": (150, 140, 200),
+            "name_color": (235, 230, 255),
+            "placeholder_fill": (40, 34, 66),
+            "placeholder_text": (150, 140, 200),
+            "band_fill": (0, 200, 255),
+            "band_text": (8, 6, 16),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "marco": CatalogTheme(
+        name="marco",
+        label="Marco",
+        overrides={
+            "page_pattern": "marco",
+            "margin": 13, "header_y": 20, "bottom_margin": 11, "title_x": 13, "subtitle_right": 13,
+            "page_fill": (250, 247, 242),
+            "card_fill": (255, 254, 250),
+            "card_border": (215, 205, 195),
+            "header_line": (200, 190, 180),
+            "title_color": (14, 120, 130),
+            "subtitle_color": (150, 145, 135),
+            "name_color": (60, 65, 65),
+            "placeholder_fill": (244, 240, 233),
+            "placeholder_text": (190, 180, 165),
+            "band_fill": (14, 154, 167),
+            "band_text": (255, 255, 255),
+            "base_family": "DejaVu",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Sans", Helvetica, Arial, sans-serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+    "flores": CatalogTheme(
+        name="flores",
+        label="Flores",
+        overrides={
+            "page_pattern": "flores",
+            "margin": 13, "header_y": 20, "bottom_margin": 11, "title_x": 13, "subtitle_right": 13,
+            "page_fill": (252, 247, 238),
+            "card_fill": (255, 253, 248),
+            "card_border": (220, 205, 175),
+            "header_line": (205, 190, 160),
+            "title_color": (46, 96, 60),
+            "subtitle_color": (150, 130, 100),
+            "name_color": (70, 70, 55),
+            "placeholder_fill": (245, 240, 226),
+            "placeholder_text": (190, 170, 135),
+            "band_fill": (46, 96, 60),
+            "band_text": (250, 248, 240),
+            "base_family": "DejaVuSerif",
+            "code_family": "DejaVuMono",
+            "font_family_css": '"DejaVu Serif", Georgia, serif',
+            "code_family_css": '"DejaVu Sans Mono", "Courier New", monospace',
+        },
+    ),
+}
+
+
+def apply_theme(cfg: PDFConfig, theme_name: str) -> PDFConfig:
+    """Return a copy of ``cfg`` with the named theme's overrides applied."""
+    return replace(cfg, **THEMES[theme_name].overrides)
 
 
 def paginate(products: list[Product], cfg: PDFConfig = DEFAULT_PDF_CONFIG) -> list[list[Product]]:
@@ -427,6 +900,7 @@ def draw_placeholder(pdf: FPDF, x: float, y: float, initial: str, cfg: PDFConfig
         cfg: PDF configuration for the placeholder layout, fonts, and colors.
     """
 
+    pdf.set_line_width(cfg.card_border_width)
     pdf.set_fill_color(*cfg.placeholder_fill)
     pdf.set_draw_color(*cfg.card_border)
     pdf.rect(x, y, cfg.img_w, cfg.img_h, style="DF", round_corners=True, corner_radius=cfg.card_corner_radius)
@@ -466,11 +940,12 @@ def draw_card(pdf: FPDF, x: float, y: float, product: Product, cfg: PDFConfig = 
 
 
 @router.get("/pdf", tags=["Catalog"], summary="Generate PDF catalog",
-              description="Generate a printable product catalog as PDF (default) or HTML. 4-column card grid, 16 products per page. Only in-stock products. Optional comma-separated product IDs and free-text search filters.")
+              description="Generate a printable product catalog as PDF (default) or HTML. 4-column card grid, 16 products per page. Only in-stock products. Optional comma-separated product IDs, free-text search filters, and visual theme.")
 def catalog_pdf(
     ids: str = "",
     q: str = Query(None, description="Search term matched against code, name, ubicacion, price, category, and color"),
     format: str = Query("pdf", description="Output format: 'pdf' (default) or 'html'"),
+    theme: str = Query("classic", description=f"Visual theme: {'; '.join(THEMES)}"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("product.view")),
 ) -> Response:
@@ -487,6 +962,7 @@ def catalog_pdf(
         q: Optional search term matched against code, name, ubicacion, price,
             category, and color.
         format: Output format, ``"pdf"`` (default) or ``"html"``.
+        theme: Visual theme name from the catalog theme registry.
         db: Active database session.
         current_user: Authenticated user with ``product.view`` permission.
 
@@ -494,12 +970,14 @@ def catalog_pdf(
         A ``Response`` with the catalog as a downloadable PDF or viewable HTML.
 
     Raises:
-        HTTPException: 400 if ``ids`` is non-numeric or ``format`` is invalid;
-            500 if generation fails.
+        HTTPException: 400 if ``ids`` is non-numeric, ``format`` is invalid,
+            or ``theme`` is unknown; 500 if generation fails.
     """
 
     if format not in ("pdf", "html"):
         raise HTTPException(400, "El parámetro format debe ser 'pdf' o 'html'")
+    if theme not in THEMES:
+        raise HTTPException(400, f"El parámetro theme debe ser uno de: {', '.join(THEMES)}")
 
     products = (
         db.query(Product)
@@ -528,7 +1006,7 @@ def catalog_pdf(
     products = products.order_by(Product.name.asc()).all()
 
     try:
-        cfg = DEFAULT_PDF_CONFIG
+        cfg = apply_theme(DEFAULT_PDF_CONFIG, theme)
 
         today = date.today()
         monday = today - timedelta(days=today.weekday())

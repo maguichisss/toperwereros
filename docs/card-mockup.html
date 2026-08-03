@@ -8,14 +8,26 @@
   from the same numbers so the two cannot drift.
   Shared values (mm unless noted):
     card_w=45  card_h=65  img_w=40  img_h=48  img_inset=2  col_gap=2  row_gap=2
-    margin=10  header_y=17  page_h=297  bottom_margin=7  cols=4
+    margin=10  header_y=9  page_h=297  bottom_margin=7  cols=4
     card_corner_radius=2  band_corner_radius=1.0  band_height=5  band top=60
-    name 10pt bold (line 4.5, max 2 lines)  code 6.2pt Courier  price 11.3pt bold
+    card_border_width=0.2  page_fill=#fff (page vs card background separated)
+    name 10pt bold (line 4.5, max 2 lines)  code 6.2pt Courier  price 11pt bold
     placeholder 18pt  title 12pt  subtitle 7pt
     card_border #C8C8C8  header_line #B4B4B4  placeholder_fill #EBEBEB
     placeholder_text #B4B4B4  band_fill #1A73E8  band_text #fff
+    title_color #000  subtitle_color #000
     code_max_len=20  price_decimals=0
   No group banners: continuous 4x4 grid (16 cards/page).
+
+  Themes (GET /api/catalog/pdf?theme=...): classic (default, above), nocturno,
+  kraft, elegante, marino, sol, cyber, vino, rosa (solid palettes) and
+  arcoiris, nebulosa, triangulos, olas, mandala, aurora, confeti, galaxia,
+  marco, flores (PIL-generated background patterns — the same JPEG is embedded
+  in the PDF and as a data: URI in the HTML; below, patterns are approximated
+  with CSS gradients).  nebulosa, aurora, confeti, galaxia, marco and flores use
+  wider margins (margin=13, header_y=20, bottom_margin=11) so the pattern is
+  visible at the page edges while keeping 16 cards/page.  Use the switcher to
+  preview the palettes.
 -->
 <html lang="es">
 <head>
@@ -76,8 +88,11 @@
     --price-font: 4mm;
 
     /* colors */
+    --color-page: #fff;
     --color-surface: #fff;
     --color-text: #000;
+    --color-title: #000;
+    --color-subtitle: #000;
     --color-card-border: #C8C8C8;
     --color-header-rule: #B4B4B4;
     --color-image-bg: #EBEBEB;
@@ -85,9 +100,261 @@
     --color-band: #1A73E8;
     --color-band-text: #fff;
 
+    /* fonts */
+    --font-family: "DejaVu Sans", Helvetica, Arial, sans-serif;
+    --font-family-code: "DejaVu Sans Mono", "Courier New", monospace;
+
     /* borders */
-    --card-border: 1px solid var(--color-card-border);
-    --img-border: 1px solid var(--color-card-border);
+    --card-border-width: 0.2mm;
+    --card-border: var(--card-border-width) solid var(--color-card-border);
+    --img-border: var(--card-border-width) solid var(--color-card-border);
+  }
+
+  /* theme palettes (match CatalogTheme overrides in catalog.py) */
+  body[data-theme="nocturno"] {
+    --color-page: #181A20;
+    --color-surface: #22262E;
+    --color-text: #F0F0F5;
+    --color-title: #F0F0F5;
+    --color-subtitle: #A0A5AF;
+    --color-card-border: #383C46;
+    --color-header-rule: #464A54;
+    --color-image-bg: #2C303A;
+    --color-image-initial: #787E8C;
+    --color-band: #F0B429;
+    --color-band-text: #181A20;
+  }
+  body[data-theme="kraft"] {
+    --color-page: #FAF6EE;
+    --color-surface: #FFFCF6;
+    --color-text: #46321A;
+    --color-title: #5A3C1E;
+    --color-subtitle: #8C6E4B;
+    --color-card-border: #D6C6AC;
+    --color-header-rule: #BEAC91;
+    --color-image-bg: #F0E8DA;
+    --color-image-initial: #B4A082;
+    --color-band: #8B5E2E;
+    --color-band-text: #FFFAF0;
+  }
+  body[data-theme="elegante"] {
+    --color-page: #FFFFFF;
+    --color-surface: #FCFAF6;
+    --color-text: #282D28;
+    --color-title: #1E3C32;
+    --color-subtitle: #6E6E64;
+    --color-card-border: #D2CDBE;
+    --color-header-rule: #96968C;
+    --color-image-bg: #EEECE6;
+    --color-image-initial: #96948C;
+    --color-band: #285A46;
+    --color-band-text: #FAFAF5;
+  }
+  body[data-theme="elegante"] .page-title,
+  body[data-theme="elegante"] .page-subtitle,
+  body[data-theme="elegante"] .product-name {
+    font-family: "DejaVu Serif", Georgia, serif;
+  }
+
+  /* --- additional palettes (mirror CatalogTheme overrides) --- */
+  body[data-theme="marino"] {
+    --color-page: #E6F0F5; --color-surface: #F5FAFC; --color-text: #14324B;
+    --color-title: #0A2D46; --color-subtitle: #507896; --color-card-border: #AAC8D7;
+    --color-header-rule: #96B9CD; --color-image-bg: #D7E8F0; --color-image-initial: #82A5B9;
+    --color-band: #0A6EA0; --color-band-text: #fff;
+  }
+  body[data-theme="sol"] {
+    --color-page: #FFFAE6; --color-surface: #FFFDF4; --color-text: #785014;
+    --color-title: #B46E0A; --color-subtitle: #C89646; --color-card-border: #EBD2A0;
+    --color-header-rule: #E1C387; --color-image-bg: #FAF0D6; --color-image-initial: #CDAF6E;
+    --color-band: #F08214; --color-band-text: #fff;
+  }
+  body[data-theme="cyber"] {
+    --color-page: #141222; --color-surface: #1E1C30; --color-text: #DCDCFF;
+    --color-title: #00FFBE; --color-subtitle: #9696C8; --color-card-border: #46416E;
+    --color-header-rule: #5A508C; --color-image-bg: #2A2842; --color-image-initial: #8C87BE;
+    --color-band: #FF2D8C; --color-band-text: #fff;
+  }
+  body[data-theme="vino"] {
+    --color-page: #210A14; --color-surface: #2B0F1C; --color-text: #EBDCCE;
+    --color-title: #E6BE5A; --color-subtitle: #BE9678; --color-card-border: #5F2D3C;
+    --color-header-rule: #783C4B; --color-image-bg: #3A1826; --color-image-initial: #AA7882;
+    --color-band: #C8A046; --color-band-text: #210A14;
+  }
+  body[data-theme="vino"] .page-title,
+  body[data-theme="vino"] .page-subtitle,
+  body[data-theme="vino"] .product-name {
+    font-family: "DejaVu Serif", Georgia, serif;
+  }
+  body[data-theme="rosa"] {
+    --color-page: #FAF0F2; --color-surface: #FFFAFB; --color-text: #6E283C;
+    --color-title: #8C2D46; --color-subtitle: #C896A0; --color-card-border: #EBC8CD;
+    --color-header-rule: #E1B4BE; --color-image-bg: #F5E1E6; --color-image-initial: #CD9BAA;
+    --color-band: #D23C64; --color-band-text: #fff;
+  }
+  body[data-theme="arcoiris"] {
+    --color-page: #fff; --color-surface: #fff; --color-text: #3C3C50;
+    --color-title: #503CA0; --color-subtitle: #9682C8; --color-card-border: #DCDCF0;
+    --color-header-rule: #C8C8E6; --color-image-bg: #F5F4FF; --color-image-initial: #BEB4DC;
+    --color-band: #3F51B5; --color-band-text: #fff;
+  }
+  body[data-theme="nebulosa"] {
+    --color-page: #0B0716; --color-surface: #1C1630; --color-text: #EBEBFF;
+    --color-title: #00E5FF; --color-subtitle: #9696D2; --color-card-border: #463778;
+    --color-header-rule: #5A4696; --color-image-bg: #2A2246; --color-image-initial: #A096D2;
+    --color-band: #00E5FF; --color-band-text: #0B0716;
+  }
+  body[data-theme="triangulos"] {
+    --color-page: #F7F3EF; --color-surface: #FFFDFA; --color-text: #3C4646;
+    --color-title: #287882; --color-subtitle: #96968C; --color-card-border: #D7CDC3;
+    --color-header-rule: #C3B9AF; --color-image-bg: #F0EBE4; --color-image-initial: #B9AFA0;
+    --color-band: #1B9AAA; --color-band-text: #fff;
+  }
+  body[data-theme="olas"] {
+    --color-page: #F2F8FA; --color-surface: #FAFDFF; --color-text: #284B55;
+    --color-title: #0E6473; --color-subtitle: #82AAB9; --color-card-border: #C3D7E1;
+    --color-header-rule: #AFC8D7; --color-image-bg: #E6F2F8; --color-image-initial: #A5C3D2;
+    --color-band: #0E7C86; --color-band-text: #fff;
+  }
+  body[data-theme="mandala"] {
+    --color-page: #FFF9EC; --color-surface: #FFFDF6; --color-text: #5A461E;
+    --color-title: #8C6414; --color-subtitle: #B4965A; --color-card-border: #E1CDA5;
+    --color-header-rule: #D2BE96; --color-image-bg: #F8F0DE; --color-image-initial: #C8AF78;
+    --color-band: #56428C; --color-band-text: #FAF5EB;
+  }
+  body[data-theme="mandala"] .page-title,
+  body[data-theme="mandala"] .page-subtitle,
+  body[data-theme="mandala"] .product-name {
+    font-family: "DejaVu Serif", Georgia, serif;
+  }
+  body[data-theme="aurora"] {
+    --color-page: #0A0E1C; --color-surface: #181E30; --color-text: #E6F0F5;
+    --color-title: #78F0BE; --color-subtitle: #8CAAC8; --color-card-border: #3C4864;
+    --color-header-rule: #465470; --color-image-bg: #262E46; --color-image-initial: #788CAA;
+    --color-band: #40DCA0; --color-band-text: #0A1A18;
+  }
+  body[data-theme="confeti"] {
+    --color-page: #FCFAF4; --color-surface: #FFFFFF; --color-text: #463C37;
+    --color-title: #DC4646; --color-subtitle: #B48C6E; --color-card-border: #E1D7C8;
+    --color-header-rule: #D2C8B9; --color-image-bg: #F8F4EC; --color-image-initial: #C8B9A5;
+    --color-band: #FF5A5A; --color-band-text: #FFFFFF;
+  }
+  body[data-theme="galaxia"] {
+    --color-page: #080610; --color-surface: #181428; --color-text: #EBE6FF;
+    --color-title: #00E5FF; --color-subtitle: #968CC8; --color-card-border: #463C6E;
+    --color-header-rule: #5A4E8C; --color-image-bg: #282246; --color-image-initial: #968CC8;
+    --color-band: #00C8FF; --color-band-text: #080610;
+  }
+  body[data-theme="marco"] {
+    --color-page: #FAF7F2; --color-surface: #FFFEFA; --color-text: #3C4141;
+    --color-title: #0E7882; --color-subtitle: #969187; --color-card-border: #D7CDC3;
+    --color-header-rule: #C8BEB4; --color-image-bg: #F4F0E9; --color-image-initial: #BEB4A5;
+    --color-band: #0E9AA7; --color-band-text: #FFFFFF;
+  }
+  body[data-theme="flores"] {
+    --color-page: #FCF7EE; --color-surface: #FFFDF8; --color-text: #464637;
+    --color-title: #2E603C; --color-subtitle: #968264; --color-card-border: #DCCDAF;
+    --color-header-rule: #CDBEA0; --color-image-bg: #F5F0E2; --color-image-initial: #BEAA87;
+    --color-band: #2E603C; --color-band-text: #FAF8F0;
+  }
+  body[data-theme="flores"] .page-title,
+  body[data-theme="flores"] .page-subtitle,
+  body[data-theme="flores"] .product-name {
+    font-family: "DejaVu Serif", Georgia, serif;
+  }
+
+  /* widened margins (margin=13, header_y=20, bottom_margin=11 in the PDF) */
+  body[data-theme="nebulosa"],
+  body[data-theme="aurora"],
+  body[data-theme="confeti"],
+  body[data-theme="galaxia"],
+  body[data-theme="marco"],
+  body[data-theme="flores"] {
+    --header-h: 28mm;
+    --title-x: 13mm;
+    --title-y: 19mm;
+    --subtitle-right: 13mm;
+    --subtitle-y: 19mm;
+    --rule-y: 26mm;
+    --body-margin-left: 13mm;
+  }
+
+  /* background pattern approximations (the real output embeds the same JPEG) */
+  body[data-theme="arcoiris"] .page {
+    background-image: linear-gradient(135deg, #FF9A9E, #FAD0C4, #FFD1A1, #FFF6B7, #B5EAD7, #A1C4FD, #D4A5FF);
+  }
+  body[data-theme="nebulosa"] .page {
+    background-image:
+      radial-gradient(circle at 30% 25%, rgba(123, 47, 190, 0.55), transparent 55%),
+      radial-gradient(circle at 72% 68%, rgba(0, 229, 255, 0.4), transparent 50%),
+      radial-gradient(circle at 50% 120%, rgba(255, 45, 140, 0.35), transparent 55%);
+  }
+  body[data-theme="triangulos"] .page {
+    background-image:
+      repeating-linear-gradient(135deg, #1B9AAA 0 22px, #FF6B5E 22px 44px, #ECD0A0 44px 66px);
+  }
+  body[data-theme="olas"] .page {
+    background-image:
+      repeating-radial-gradient(ellipse 140% 60% at 50% -10%, transparent 0 34px, rgba(14, 124, 134, 0.22) 34px 36px),
+      repeating-linear-gradient(180deg, transparent 0 90px, rgba(50, 160, 170, 0.18) 90px 92px);
+  }
+  body[data-theme="mandala"] .page {
+    background-image:
+      repeating-radial-gradient(circle at 28% 22%, #56428C 0 3px, transparent 3px 30px),
+      repeating-radial-gradient(circle at 76% 60%, #C8A046 0 3px, transparent 3px 30px),
+      repeating-radial-gradient(circle at 50% 90%, #56428C 0 3px, transparent 3px 30px);
+  }
+  body[data-theme="aurora"] .page {
+    background-image:
+      radial-gradient(45% 30% at 50% -5%, rgba(64, 220, 160, 0.9), transparent 70%),
+      radial-gradient(45% 30% at 50% 105%, rgba(0, 200, 220, 0.85), transparent 70%),
+      radial-gradient(28% 20% at 12% 10%, rgba(60, 160, 255, 0.55), transparent 70%),
+      radial-gradient(28% 20% at 88% 90%, rgba(150, 80, 220, 0.55), transparent 70%);
+  }
+  body[data-theme="confeti"] .page {
+    background-color: #FCFAF4;
+    background-image:
+      radial-gradient(circle at 12px 12px, #FF5A5A 0 4px, transparent 4px 28px),
+      radial-gradient(circle at 12px 12px, #FAB428 0 4px, transparent 4px 28px),
+      radial-gradient(circle at 12px 12px, #3CBE78 0 4px, transparent 4px 28px),
+      radial-gradient(circle at 12px 12px, #468CFF 0 4px, transparent 4px 28px);
+    background-size: 56px 56px;
+    background-repeat: repeat-x, repeat-x, repeat-x, repeat-x;
+    background-position: top center, 14px -6px, 28px 12px, 42px -2px;
+  }
+  body[data-theme="galaxia"] .page {
+    background-image:
+      radial-gradient(45% 35% at 50% -10%, rgba(150, 60, 220, 0.7), transparent 70%),
+      radial-gradient(45% 35% at 50% 110%, rgba(0, 200, 255, 0.65), transparent 70%),
+      radial-gradient(35% 45% at -5% 50%, rgba(255, 45, 140, 0.5), transparent 70%),
+      radial-gradient(35% 45% at 105% 50%, rgba(150, 60, 220, 0.5), transparent 70%),
+      radial-gradient(2px 2px at 20% 30%, #fff 0 1px, transparent 1px 14px),
+      radial-gradient(2px 2px at 70% 20%, #C8D2FF 0 1px, transparent 1px 14px),
+      radial-gradient(2px 2px at 40% 80%, #C8D2FF 0 1px, transparent 1px 14px),
+      radial-gradient(2px 2px at 85% 65%, #FFEBCC 0 1px, transparent 1px 14px);
+  }
+  body[data-theme="marco"] .page {
+    background-color: #FAF7F2;
+    background-image:
+      repeating-linear-gradient(90deg, #0E9AA7 0 12px, #F08214 12px 24px, #D23C78 24px 36px, #C8A046 36px 48px),
+      repeating-linear-gradient(90deg, #C8A046 0 12px, #0E9AA7 12px 24px, #F08214 24px 36px, #D23C78 36px 48px),
+      repeating-linear-gradient(180deg, #C8A046 0 12px, #0E9AA7 12px 24px, #F08214 24px 36px, #D23C78 36px 48px),
+      repeating-linear-gradient(180deg, #0E9AA7 0 12px, #F08214 12px 24px, #D23C78 24px 36px, #C8A046 36px 48px);
+    background-size: 100% 8mm, 100% 8mm, 8mm 100%, 8mm 100%;
+    background-repeat: no-repeat;
+    background-position: top left, bottom left, left top, right top;
+  }
+  body[data-theme="flores"] .page {
+    background-image:
+      radial-gradient(circle at 21px 21px, #2E603C 0 8px, transparent 8px 14px),
+      radial-gradient(circle at 25px 25px, #C86E46 0 3px, transparent 3px 14px),
+      radial-gradient(circle at calc(100% - 21px) 21px, #2E603C 0 8px, transparent 8px 14px),
+      radial-gradient(circle at 21px calc(100% - 21px), #2E603C 0 8px, transparent 8px 14px),
+      radial-gradient(circle at calc(100% - 21px) calc(100% - 21px), #C86E46 0 8px, transparent 8px 14px),
+      linear-gradient(#2E603C, #2E603C);
+    background-size: 14px 14px, 14px 14px, 14px 14px, 14px 14px, 14px 14px, calc(100% - 26px) 0.8mm;
+    background-position: 21px 21px, 25px 25px, calc(100% - 21px) 21px, 21px calc(100% - 21px), calc(100% - 21px) calc(100% - 21px), 13px 13px;
+    background-repeat: no-repeat;
   }
 
   * { box-sizing: border-box; }
@@ -95,18 +362,36 @@
   body {
     margin: 0;
     background: #f3f4f6;
-    font-family: Helvetica, Arial, sans-serif;
+    font-family: var(--font-family);
     padding: 16px;
   }
 
-  .wrap { display: flex; justify-content: center; }
+  .wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+
+  .theme-switcher {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  .theme-switcher button {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .theme-switcher button.active { border-color: #1A73E8; background: #eaf2fe; }
 
   /* --- page --- */
   .page {
     position: relative;
     width: var(--page-w);
     height: var(--page-h);
-    background: var(--color-surface);
+    background: var(--color-page);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
     border-radius: var(--page-radius);
     overflow: hidden;
@@ -123,7 +408,7 @@
     top: var(--title-y);
     font-size: var(--title-font);
     font-weight: bold;
-    color: var(--color-text);
+    color: var(--color-title);
     white-space: nowrap;
   }
   .page-subtitle {
@@ -131,7 +416,7 @@
     right: var(--subtitle-right);
     top: var(--subtitle-y);
     font-size: var(--subtitle-font);
-    color: var(--color-text);
+    color: var(--color-subtitle);
     white-space: nowrap;
   }
   .page-rule {
@@ -197,7 +482,7 @@
   }
 
   .product-code {
-    font-family: "Courier New", monospace;
+    font-family: var(--font-family-code);
     font-size: var(--code-font);
     font-weight: normal;
     color: var(--color-band-text);
@@ -229,6 +514,7 @@
 </head>
 <body>
   <div class="wrap">
+    <div class="theme-switcher" id="themeSwitcher"></div>
     <div class="page" id="page">
       <header class="page-header">
         <div class="page-title">Catálogo Toperwereros</div>
@@ -239,7 +525,7 @@
     </div>
   </div>
 
-  <p class="note">Tarjeta 45×65 mm con imagen 40×48, franja de precio #1A73E8 (precio + código), sin banners de categoría.</p>
+  <p class="note">Tarjeta 45×65 mm con imagen 40×48, franja de precio (precio + código), sin banners de categoría. 19 temas: colores sólidos y patrones de fondo (arcoiris, nebulosa, triangulos, olas, mandala, aurora, confeti, galaxia, marco, flores). Los 6 temas con marco ancho (nebulosa, aurora, confeti, galaxia, marco, flores) usan márgenes 13/20/11 y muestran el patrón en los bordes de la página.</p>
 
 <script>
   const products = [
@@ -295,6 +581,20 @@
   }
 
     render();
+
+  const themes = ["classic", "nocturno", "kraft", "elegante", "marino", "sol", "cyber", "vino", "rosa", "arcoiris", "nebulosa", "triangulos", "olas", "mandala", "aurora", "confeti", "galaxia", "marco", "flores"];
+  const switcher = document.getElementById("themeSwitcher");
+  themes.forEach((name) => {
+    const btn = document.createElement("button");
+    btn.textContent = name;
+    btn.dataset.theme = name;
+    if (name === "classic") btn.classList.add("active");
+    btn.addEventListener("click", () => {
+      document.body.dataset.theme = name;
+      switcher.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b === btn));
+    });
+    switcher.appendChild(btn);
+  });
 </script>
 </body>
 </html>
