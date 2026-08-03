@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<!--
+  Catalog card mockup — based on DEFAULT_PDF_CONFIG from backend/app/routers/catalog.py.
+  NOTE: vertical layout is a MOCKUP-ONLY variant (big photo, barcode removed):
+    placeholder is 40x44mm (PDF is 40x40), name starts at 50mm (PDF at 44mm)
+    with 4.5mm line-height (PDF 5mm), and the old name_clamp=13.5 is dropped.
+  Shared values (mm unless noted):
+    card_w=45  card_h=65  img_w=40  img_inset=2  col_gap=2  row_gap=2
+    margin=10  header_y=17  page_h=297  bottom_margin=7  cols=4  text_gap=4
+    card_corner_radius=2  band_corner_radius=1.0  band_height=3.5  band top=61.5
+    name 10pt bold  code 7pt Courier  price 12pt bold
+    placeholder 18pt  title 12pt  subtitle 7pt
+    card_border #C8C8C8  header_line #B4B4B4  placeholder_fill #EBEBEB
+    placeholder_text #B4B4B4      band_fill #1A73E8
+    code_max_len=20
+  No group banners: continuous 4x4 grid (16 cards/page).
+  MOCKUP-ONLY deltas (PDF draw_card unchanged): code printed INSIDE the price
+    band (price left, code right, white text); price shown without decimals.
+-->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup de catálogo (tarjetas)</title>
+<style>
+  :root {
+    /* page */
+    --page-w: 210mm;
+    --page-h: 297mm;
+    --page-radius: 4px;
+
+    /* page header */
+    --header-h: 17mm;
+    --title-x: 10mm;
+    --title-y: 8mm;
+    --title-font: 4.2mm;
+    --subtitle-right: 10mm;
+    --subtitle-y: 8mm;
+    --subtitle-font: 2.5mm;
+    --rule-y: 15mm;
+    --rule-h: 0.6px;
+
+    /* page body + grid */
+    --body-margin-left: 10mm;
+    --body-w: calc(var(--cols) * var(--card-w) + (var(--cols) - 1) * var(--col-gap));
+    --row-gap: 2mm;
+    --col-gap: 2mm;
+    --cols: 4;
+
+    /* card */
+    --card-w: 45mm;
+    --card-h: 65mm;
+    --card-radius: 2mm;
+
+    /* product-image */
+    --img-margin: 2mm 3mm 0 2mm;
+    --img-w: 40mm;
+    --img-h: 48mm;
+    --img-radius: 2mm;
+    --initial-font: 6.35mm;
+
+    /* product-name */
+    --name-margin: 0 1.5mm;
+    --name-font: 3.5mm;
+    --name-line-height: 4.5mm;
+    --name-max-h: 9mm;
+
+    /* product-code (inside the price band) */
+    --code-font: 2.2mm;
+
+    /* product-price (band with price left, code right) */
+    --price-margin: auto 1mm 0;
+    --price-h: 5mm;
+    --price-radius: 1mm;
+    --price-padding-x: 1.5mm;
+    --price-font: 4mm;
+
+    /* colors */
+    --color-surface: #fff;
+    --color-text: #000;
+    --color-card-border: #C8C8C8;
+    --color-header-rule: #B4B4B4;
+    --color-image-bg: #EBEBEB;
+    --color-image-initial: #B4B4B4;
+    --color-band: #1A73E8;
+    --color-band-text: #fff;
+
+    /* borders */
+    --card-border: 1px solid var(--color-card-border);
+    --img-border: 1px solid var(--color-card-border);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: #f3f4f6;
+    font-family: Helvetica, Arial, sans-serif;
+    padding: 16px;
+  }
+
+  .wrap { display: flex; justify-content: center; }
+
+  /* --- page --- */
+  .page {
+    position: relative;
+    width: var(--page-w);
+    height: var(--page-h);
+    background: var(--color-surface);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    border-radius: var(--page-radius);
+    overflow: hidden;
+  }
+
+  /* --- page header (add_page_header) --- */
+  .page-header {
+    position: relative;
+    height: var(--header-h);
+  }
+  .page-title {
+    position: absolute;
+    left: var(--body-margin-left);
+    top: var(--title-y);
+    font-size: var(--title-font);
+    font-weight: bold;
+    color: var(--color-text);
+    white-space: nowrap;
+  }
+  .page-subtitle {
+    position: absolute;
+    right: var(--subtitle-right);
+    top: var(--subtitle-y);
+    font-size: var(--subtitle-font);
+    color: var(--color-text);
+    white-space: nowrap;
+  }
+  .page-rule {
+    position: absolute;
+    left: var(--body-margin-left);
+    top: var(--rule-y);
+    width: var(--body-w);
+    height: var(--rule-h);
+    background: var(--color-header-rule);
+  }
+
+  /* --- page body: rows of cards --- */
+  .page-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--row-gap);
+    margin-left: var(--body-margin-left);
+    width: var(--body-w);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), var(--card-w));
+    gap: var(--col-gap);
+  }
+
+  /* --- card (draw_card) --- */
+  .card {
+    display: flex;
+    flex-direction: column;
+    width: var(--card-w);
+    height: var(--card-h);
+    background: var(--color-surface);
+    border: var(--card-border);
+    border-radius: var(--card-radius);
+  }
+
+  .product-image {
+    margin: var(--img-margin);
+    width: var(--img-w);
+    height: var(--img-h);
+    background: var(--color-image-bg);
+    border: var(--img-border);
+    border-radius: var(--img-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .product-image .initial {
+    font-size: var(--initial-font);
+    font-weight: bold;
+    color: var(--color-image-initial);
+  }
+
+  .product-name {
+    margin: var(--name-margin);
+    font-size: var(--name-font);
+    font-weight: bold;
+    line-height: var(--name-line-height);
+    color: var(--color-text);
+    max-height: var(--name-max-h);
+    overflow: hidden;
+  }
+
+  .product-code {
+    font-family: "Courier New", monospace;
+    font-size: var(--code-font);
+    font-weight: normal;
+    color: var(--color-band-text);
+    white-space: nowrap;
+  }
+
+  .product-price {
+    margin: var(--price-margin);
+    height: var(--price-h);
+    background: var(--color-band);
+    border-radius: var(--price-radius);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 var(--price-padding-x);
+    font-size: var(--price-font);
+    font-weight: bold;
+    color: var(--color-band-text);
+    white-space: nowrap;
+  }
+
+  .note {
+    margin-top: 18px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="page" id="page">
+      <header class="page-header">
+        <div class="page-title">Catálogo Toperwereros</div>
+        <div class="page-subtitle">Válido de agosto 03 a agosto 09&nbsp;&nbsp;|&nbsp;&nbsp;semana 32</div>
+        <div class="page-rule"></div>
+      </header>
+      <main class="page-body"></main>
+    </div>
+  </div>
+
+  <p class="note">Tarjeta 45×65 mm con imagen 40×44 (variante mockup: foto grande, sin código de barras), franja de precio #1A73E8, sin banners de categoría.</p>
+
+<script>
+  const products = [
+    { name: "Camisa Manga Larga", code: "CAM001", price: 450.00 },
+    { name: "Playera Básica Algodón", code: "PLY002", price: 185.00 },
+    { name: "Pantalón de Mezclilla", code: "PAN003", price: 520.00 },
+    { name: "Vestido Floral 123 Grande", code: "VES0112304VES0112304", price: 640.00 },
+    { name: "Chamarra de Lana", code: "CHA005", price: 899.00 },
+    { name: "Blusa Casual", code: "BLU006", price: 240.00 },
+    { name: "Zapatos Deportivos", code: "ZAP007", price: 780.00 },
+    { name: "Sandalias de Verano", code: "SAN008", price: 320.00 },
+    { name: "Tenis Urbanos", code: "TEN009", price: 950.00 },
+    { name: "Botas de Piel", code: "BOT010", price: 1250.00 },
+    { name: "Gorra Deportiva", code: "GOR011", price: 150.00 },
+    { name: "Cinturón de Cuero", code: "CIN012", price: 210.00 },
+    { name: "Bufanda de Lana", code: "BUF013", price: 180.00 },
+    { name: "Lentes de Sol", code: "LEN014", price: 390.00 },
+    { name: "Reloj de Pulsera", code: "REL015", price: 1150.00 },
+    { name: "Mochila Urbana", code: "MOC016", price: 560.00 },
+  ];
+
+  const COLS = 4;
+
+  function cardHtml(p) {
+    return (
+      '<div class="product-image"><span class="initial">' +
+      p.name.charAt(0).toUpperCase() +
+      "</span></div>" +
+      '<div class="product-name">' + p.name + "</div>" +
+      '<div class="product-price"><span>$' +
+      Math.round(p.price) +
+      '</span><span class="product-code">' + p.code.slice(0, 20) + "</span></div>"
+    );
+  }
+
+  function render() {
+    const body = document.querySelector(".page-body");
+    body.innerHTML = "";
+    const rows = Math.ceil(products.length / COLS);
+    for (let r = 0; r < rows; r++) {
+      const row = document.createElement("div");
+      row.className = "row";
+      for (let c = 0; c < COLS; c++) {
+        const i = r * COLS + c;
+        if (i >= products.length) break;
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = cardHtml(products[i]);
+        row.appendChild(card);
+      }
+      body.appendChild(row);
+    }
+  }
+
+    render();
+</script>
+</body>
+</html>

@@ -137,11 +137,7 @@ export default function ProductList() {
     try {
       showToast('Generando PDF…', 'info')
       let url = '/api/catalog/pdf'
-      if (pendingSearch) {
-        const res = await productsApi.listAll({ q: pendingSearch })
-        const ids = res.products.map(p => p.id)
-        if (ids.length) url += `?ids=${ids.join(',')}`
-      }
+      if (pendingSearch) url += `?q=${encodeURIComponent(pendingSearch)}`
       const token = localStorage.getItem('store_token')
       const r = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       if (!r.ok) throw new Error('Error al generar PDF')
@@ -195,7 +191,7 @@ export default function ProductList() {
             <option value={50}>50</option>
             <option value={100}>100</option>
           </select>
-          {can('product.create') && (
+          {can('product.view') && (
             <>
               <button className="btn btn-secondary" onClick={downloadCSV}>CSV</button>
               <button className="btn btn-secondary" onClick={openPDF}>PDF</button>
