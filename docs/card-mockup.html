@@ -1,21 +1,21 @@
 <!DOCTYPE html>
 <!--
-  Catalog card mockup — based on DEFAULT_PDF_CONFIG from backend/app/routers/catalog.py.
-  NOTE: vertical layout is a MOCKUP-ONLY variant (big photo, barcode removed):
-    placeholder is 40x44mm (PDF is 40x40), name starts at 50mm (PDF at 44mm)
-    with 4.5mm line-height (PDF 5mm), and the old name_clamp=13.5 is dropped.
+  Catalog card mockup — mirrors PDFConfig in backend/app/routers/catalog.py.
+  The backend generates this exact page too:
+    GET /api/catalog/pdf?format=html   (same layout, real products)
+    GET /api/catalog/pdf?format=pdf    (fpdf2 rendering)
+  Values below match the config defaults; the generated HTML/CSS is derived
+  from the same numbers so the two cannot drift.
   Shared values (mm unless noted):
-    card_w=45  card_h=65  img_w=40  img_inset=2  col_gap=2  row_gap=2
-    margin=10  header_y=17  page_h=297  bottom_margin=7  cols=4  text_gap=4
-    card_corner_radius=2  band_corner_radius=1.0  band_height=3.5  band top=61.5
-    name 10pt bold  code 7pt Courier  price 12pt bold
+    card_w=45  card_h=65  img_w=40  img_h=48  img_inset=2  col_gap=2  row_gap=2
+    margin=10  header_y=17  page_h=297  bottom_margin=7  cols=4
+    card_corner_radius=2  band_corner_radius=1.0  band_height=5  band top=60
+    name 10pt bold (line 4.5, max 2 lines)  code 6.2pt Courier  price 11.3pt bold
     placeholder 18pt  title 12pt  subtitle 7pt
     card_border #C8C8C8  header_line #B4B4B4  placeholder_fill #EBEBEB
-    placeholder_text #B4B4B4      band_fill #1A73E8
-    code_max_len=20
+    placeholder_text #B4B4B4  band_fill #1A73E8  band_text #fff
+    code_max_len=20  price_decimals=0
   No group banners: continuous 4x4 grid (16 cards/page).
-  MOCKUP-ONLY deltas (PDF draw_card unchanged): code printed INSIDE the price
-    band (price left, code right, white text); price shown without decimals.
 -->
 <html lang="es">
 <head>
@@ -239,7 +239,7 @@
     </div>
   </div>
 
-  <p class="note">Tarjeta 45×65 mm con imagen 40×44 (variante mockup: foto grande, sin código de barras), franja de precio #1A73E8, sin banners de categoría.</p>
+  <p class="note">Tarjeta 45×65 mm con imagen 40×48, franja de precio #1A73E8 (precio + código), sin banners de categoría.</p>
 
 <script>
   const products = [

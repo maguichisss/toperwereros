@@ -2,6 +2,7 @@
 
 import io
 import os
+import re
 import tempfile
 
 import pytest
@@ -39,8 +40,8 @@ class TestCoverImage:
         result.seek(0)
         resized = PILImage.open(result)
         dpi = 72
-        expected_w = int(40 * dpi / 25.4)
-        expected_h = int(40 * dpi / 25.4)
+        expected_w = int(DEFAULT_PDF_CONFIG.img_w * dpi / 25.4)
+        expected_h = int(DEFAULT_PDF_CONFIG.img_h * dpi / 25.4)
         assert resized.size == (expected_w, expected_h)
 
     def test_converts_rgba_png_to_jpeg(self, tmp_path):
@@ -90,6 +91,26 @@ class TestCatalogPDF:
     def test_pdf_invalid_ids_400(self, client, admin_headers, db):
         _create_product(db, name="A", code="A01")
         resp = client.get("/api/catalog/pdf?ids=abc", headers=admin_headers)
+        assert resp.status_code == 400
+
+    def test_pdf_default_format_is_pdf(self, client, admin_headers, db):
+        _create_product(db, name="A", code="A01")
+        resp = client.get("/api/catalog/pdf", headers=admin_headers)
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == "application/pdf"
+
+    def test_pdf_html_format(self, client, admin_headers, db):
+        _create_product(db, name="HTMLWidget", code="H001")
+        resp = client.get("/api/catalog/pdf?format=html", headers=admin_headers)
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == "text/html; charset=utf-8"
+        assert b"<!DOCTYPE html>" in resp.content
+        assert b"H001" in resp.content
+        assert b"HTMLWidget" in resp.content
+
+    def test_pdf_invalid_format_400(self, client, admin_headers, db):
+        _create_product(db, name="A", code="A01")
+        resp = client.get("/api/catalog/pdf?format=docx", headers=admin_headers)
         assert resp.status_code == 400
 
     def test_pdf_q_filter(self, client, admin_headers, db):
@@ -143,9 +164,14 @@ class TestPDFConfig:
         assert DEFAULT_PDF_CONFIG.card_w == 45
         assert DEFAULT_PDF_CONFIG.card_h == 65
         assert DEFAULT_PDF_CONFIG.img_w == 40
-        assert DEFAULT_PDF_CONFIG.img_h == 40
+        assert DEFAULT_PDF_CONFIG.img_h == 48
         assert DEFAULT_PDF_CONFIG.band_fill == (26, 115, 232)
         assert DEFAULT_PDF_CONFIG.title == "Catálogo Toperwereros"
+        assert DEFAULT_PDF_CONFIG.band_height == 5
+        assert DEFAULT_PDF_CONFIG.name_max_h == 9
+        assert DEFAULT_PDF_CONFIG.price_decimals == 0
+        assert DEFAULT_PDF_CONFIG.price_size == 11
+        assert DEFAULT_PDF_CONFIG.code_size == 6.2
 
     def test_page_bottom_derived(self):
         cfg = PDFConfig(page_h=297, bottom_margin=7)
@@ -154,6 +180,32 @@ class TestPDFConfig:
     def test_grid_width_derived(self):
         cfg = PDFConfig(cols=4, card_w=44, col_gap=4)
         assert cfg.grid_width == 188
+
+    def test_rows_per_page_derived(self):
+        assert DEFAULT_PDF_CONFIG.rows_per_page == 4
+
+
+class TestRenderHTML:
+    def test_css_derived_from_config(self):
+        html = DEFAULT_PDF_CONFIG.render_html([], "agosto 03", "agosto 09", 32)
+        assert html.startswith("<!DOCTYPE html>")
+        assert "#1a73e8" in html
+        assert "45mm" in html
+        assert "Catálogo Toperwereros" in html
+
+    def test_card_has_price_and_code_in_band(self):
+        product = Product(name="Widget", code="W001", price=Decimal("99.00"), stock=1)
+        html = DEFAULT_PDF_CONFIG.render_html([product], "a", "b", 1)
+        assert "$99" in html
+        assert "W001" in html
+        assert "product-price" in html
+        assert "product-code" in html
+
+    def test_no_decimals(self):
+        product = Product(name="Widget", code="W001", price=Decimal("1234.50"), stock=1)
+        html = DEFAULT_PDF_CONFIG.render_html([product], "a", "b", 1)
+        assert "$1234" in html
+        assert "$1234.50" not in html
 
 
 class TestGroupAndOrder:
@@ -203,3 +255,23 @@ class TestCustomPDFConfig:
         output = bytes(pdf.output())
         assert len(output) > 0
         assert output.startswith(b"%PDF")
+
+    def test_band_text_baseline_inside_band(self):
+        cfg = PDFConfig()
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=False)
+        pdf.add_page()
+        product = Product(name="Widget", code="W001", price=Decimal("99"), stock=1)
+        cfg.render_card(pdf, 10, 20, product)
+        content = bytes(next(iter(pdf.pages.values())).contents).decode("latin1")
+        k = pdf.k
+        band_top_pdf = (cfg.page_h - (20 + cfg.card_h - cfg.band_height)) * k
+        band_bottom_pdf = (cfg.page_h - (20 + cfg.card_h)) * k
+        for text in ("$99", "W001"):
+            idx = content.find(text)
+            assert idx != -1, f"text {text!r} not found in page content"
+            td_pos = content.rfind("Td", 0, idx)
+            segment = content[content.rfind("BT", 0, td_pos):td_pos]
+            numbers = re.findall(r"\d+(?:\.\d+)?", segment)
+            baseline_y = float(numbers[-1])
+            assert band_bottom_pdf < baseline_y < band_top_pdf, f"{text} baseline {baseline_y} outside band"
