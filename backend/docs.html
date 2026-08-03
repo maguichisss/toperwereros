@@ -61,7 +61,7 @@
 </div>
 
 <div class="grid">
-  <div class="stat"><div class="num">39</div><div class="label">Endpoints</div></div>
+  <div class="stat"><div class="num">41</div><div class="label">Endpoints</div></div>
   <div class="stat"><div class="num">9</div><div class="label">Modules</div></div>
   <div class="stat"><div class="num">3</div><div class="label">Roles</div></div>
   <div class="stat"><div class="num">15</div><div class="label">Permissions</div></div>
@@ -120,6 +120,8 @@
 <tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/avatar</code></td><td>authenticated</td><td>Upload avatar image. Magic bytes validated (JPEG/PNG/WebP, 5MB max).</td></tr>
 <tr><td><span class="method m-get">GET</span></td><td><code>/api/auth/users</code></td><td class="perm">user.manage</td><td>List all users ordered by username.</td></tr>
 <tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/register</code></td><td class="perm">user.manage</td><td>Create new user account. Username and email must be unique.</td></tr>
+<tr><td><span class="method m-put">PUT</span></td><td><code>/api/auth/users/{id}</code></td><td class="perm">user.manage</td><td>Update user fields (username, email, role, password, active). Admin only. Cannot change own role or deactivate self.</td></tr>
+<tr><td><span class="method m-patch">PATCH</span></td><td><code>/api/auth/users/{id}/active</code></td><td class="perm">user.manage</td><td>Toggle user active/disabled status. Admin only. Cannot deactivate self.</td></tr>
 </table>
 
 <h3>Products &mdash; <code>/api/products</code></h3>

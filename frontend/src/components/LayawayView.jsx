@@ -21,6 +21,9 @@ export default function LayawayView() {
   const [error, setError] = useState('');
   const [confirmCancel, setConfirmCancel] = useState(null);
   const [confirmComplete, setConfirmComplete] = useState(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
 
   const loadActive = useCallback(async () => {
     try {
@@ -96,6 +99,47 @@ export default function LayawayView() {
     }
   }, [mode, selectedId, selectedLayaway]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [search, mode]);
+
+  function filterLayaways(list) {
+    const q = search.trim().toLowerCase();
+    if (!q) return list;
+    const idMatch = q.match(/^id:\s*#?(\d+)$/);
+    if (idMatch) {
+      const targetId = parseInt(idMatch[1], 10);
+      return list.filter(l => l.id === targetId);
+    }
+    return list.filter(l => l.customer_name?.toLowerCase().includes(q));
+  }
+
+  function paginate(list) {
+    const start = (page - 1) * perPage;
+    return list.slice(start, start + perPage);
+  }
+
+  const filteredActive = filterLayaways(activeLayaways);
+  const filteredAll = filterLayaways(allLayaways);
+  const pagedActive = paginate(filteredActive);
+  const pagedAll = paginate(filteredAll);
+
+  const activeTotalPages = Math.ceil(filteredActive.length / perPage);
+  const allTotalPages = Math.ceil(filteredAll.length / perPage);
+  const currentTotalPages = mode === 'active' ? activeTotalPages : allTotalPages;
+
+  function pageNumbers(totalPages) {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
+  }
+
   return (
     <div className="layaway-view">
       <div className="sales-tabs">
@@ -105,6 +149,40 @@ export default function LayawayView() {
           <button className={mode === 'create' ? 'active' : ''} onClick={() => { setMode('create'); setError(''); }}>Nuevo Apartado</button>
         )}
       </div>
+
+      {(mode === 'active' || mode === 'all') && (
+        <div className="filter-bar" style={{ marginBottom: '0.75rem' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 200, width: '100%' }}>
+            <input
+              className="search-input"
+              placeholder="Buscar por nombre o #ID..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
+              style={{ paddingRight: search ? '2rem' : undefined }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '1.1rem', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <select
+            value={perPage}
+            onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
+            style={{ padding: '0.35rem 0.4rem', border: '1px solid #ccc', borderRadius: 4, fontSize: '0.85rem' }}
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+        </div>
+      )}
 
       {error && <p className="error-text">{error}</p>}
 
@@ -127,21 +205,49 @@ export default function LayawayView() {
       )}
 
       {mode === 'active' && (
-        <ActiveList
-          layaways={activeLayaways}
-          onSelect={handleSelect}
-          onCancel={setConfirmCancel}
-          onRefresh={loadActive}
-        />
+        <>
+          <ActiveList
+            layaways={pagedActive}
+            onSelect={handleSelect}
+            onCancel={setConfirmCancel}
+            onRefresh={loadActive}
+            isEmpty={activeLayaways.length === 0}
+            isFilterNoResults={activeLayaways.length > 0 && filteredActive.length === 0}
+          />
+          {activeTotalPages > 1 && (
+            <div className="pagination">
+              <button className="btn btn-pagination" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>‹</button>
+              {pageNumbers(activeTotalPages).map(n => (
+                <button key={n} className={`btn btn-pagination${n === page ? ' active' : ''}`} onClick={() => setPage(n)}>{n}</button>
+              ))}
+              <button className="btn btn-pagination" disabled={page >= activeTotalPages} onClick={() => setPage(p => Math.min(activeTotalPages, p + 1))}>›</button>
+            </div>
+          )}
+          {activeTotalPages > 1 && <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.3rem 0 0' }}>Página {page} de {activeTotalPages}</p>}
+        </>
       )}
 
       {mode === 'all' && (
-        <AllList
-          layaways={allLayaways}
-          onSelect={handleSelect}
-          onCancel={setConfirmCancel}
-          onRefresh={loadAll}
-        />
+        <>
+          <AllList
+            layaways={pagedAll}
+            onSelect={handleSelect}
+            onCancel={setConfirmCancel}
+            onRefresh={loadAll}
+            isEmpty={allLayaways.length === 0}
+            isFilterNoResults={allLayaways.length > 0 && filteredAll.length === 0}
+          />
+          {allTotalPages > 1 && (
+            <div className="pagination">
+              <button className="btn btn-pagination" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>‹</button>
+              {pageNumbers(allTotalPages).map(n => (
+                <button key={n} className={`btn btn-pagination${n === page ? ' active' : ''}`} onClick={() => setPage(n)}>{n}</button>
+              ))}
+              <button className="btn btn-pagination" disabled={page >= allTotalPages} onClick={() => setPage(p => Math.min(allTotalPages, p + 1))}>›</button>
+            </div>
+          )}
+          {allTotalPages > 1 && <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.3rem 0 0' }}>Página {page} de {allTotalPages}</p>}
+        </>
       )}
 
       {mode === 'create' && (
@@ -162,12 +268,14 @@ export default function LayawayView() {
   );
 }
 
-function ActiveList({ layaways, onSelect, onCancel, onRefresh }) {
+function ActiveList({ layaways, onSelect, onCancel, onRefresh, isEmpty, isFilterNoResults }) {
   useEffect(() => { onRefresh(); }, [onRefresh]);
 
   return (
     <div className="layaway-list">
-      {layaways.length === 0 ? (
+      {isFilterNoResults ? (
+        <p className="empty-state">No se encontraron apartados.</p>
+      ) : isEmpty ? (
         <p className="empty-state">No hay apartados activos.</p>
       ) : (
         layaways.map(l => {
@@ -180,7 +288,7 @@ function ActiveList({ layaways, onSelect, onCancel, onRefresh }) {
               onClick={() => onSelect(l.id)}
             >
               <div className="layaway-card-main">
-                <span className="layaway-customer">{l.customer_name}</span>
+                <span className="layaway-customer">#{l.id} {l.customer_name}</span>
                 <span className="layaway-items-count">{l.items?.length || 0} artículo(s)</span>
               </div>
               <div className="layaway-card-details">
@@ -201,7 +309,7 @@ function ActiveList({ layaways, onSelect, onCancel, onRefresh }) {
   );
 }
 
-function AllList({ layaways, onSelect, onCancel, onRefresh }) {
+function AllList({ layaways, onSelect, onCancel, onRefresh, isEmpty, isFilterNoResults }) {
   useEffect(() => { onRefresh(); }, [onRefresh]);
 
   const statusLabel = { active: 'Activo', completed: 'Completado', cancelled: 'Cancelado' };
@@ -209,7 +317,9 @@ function AllList({ layaways, onSelect, onCancel, onRefresh }) {
 
   return (
     <div className="layaway-list">
-      {layaways.length === 0 ? (
+      {isFilterNoResults ? (
+        <p className="empty-state">No se encontraron apartados.</p>
+      ) : isEmpty ? (
         <p className="empty-state">No hay apartados registrados.</p>
       ) : (
         layaways.map(l => {
@@ -222,11 +332,11 @@ function AllList({ layaways, onSelect, onCancel, onRefresh }) {
               onClick={() => onSelect(l.id)}
             >
               <div className="layaway-card-main">
-                <span className="layaway-customer">{l.customer_name}</span>
+                <span className="layaway-customer">#{l.id} {l.customer_name}</span>
                 <span className="layaway-items-count">{l.items?.length || 0} artículo(s)</span>
               </div>
               <div className="layaway-card-details">
-                <span style={{ color: statusColor[l.status], fontWeight: 600, fontSize: '0.8rem' }}>{statusLabel[l.status]}</span>
+                <span style={{ color: statusColor[l.status], fontWeight: 600, fontSize: '0.7rem' }}>{statusLabel[l.status]}</span>
                 <span className="layaway-days">{days} día(s)</span>
                 <span className="layaway-balance">${formatPrice(l.balance)}</span>
               </div>
@@ -247,6 +357,7 @@ function AllList({ layaways, onSelect, onCancel, onRefresh }) {
 }
 
 function CreateView({ onBack, onCreated }) {
+  const { can } = useAuth();
   const [step, setStep] = useState('customer');
   const [error, setError] = useState('');
 

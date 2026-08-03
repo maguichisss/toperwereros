@@ -4,8 +4,10 @@ Configures logging, CORS, rate limiting, static file serving for uploads,
 custom error handlers, and mounts all API routers under ``/api/``.
 """
 
+import json
 import logging
 import os
+from decimal import Decimal
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -67,7 +69,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         body.decode(),
         exc.errors(),
     )
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+    errors = json.loads(json.dumps(exc.errors(), default=str))
+    return JSONResponse(status_code=422, content={"detail": errors})
 
 app.add_middleware(
     CORSMiddleware,

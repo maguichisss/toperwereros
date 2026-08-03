@@ -1,6 +1,7 @@
 """Sales endpoints — create, list, and retrieve sales with stock validation."""
 
 import logging
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -53,6 +54,8 @@ def serialize_sale(sale: Sale) -> SaleResponse:
 def list_sales(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
+    start_date: str | None = Query(None, description="Start date YYYY-MM-DD (inclusive)"),
+    end_date: str | None = Query(None, description="End date YYYY-MM-DD (inclusive)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("sale.view")),
 ) -> list[SaleResponse]:
@@ -63,6 +66,8 @@ def list_sales(
     Args:
         page: 1-indexed page number (default 1).
         per_page: Items per page, 1–100 (default 20).
+        start_date: Optional start date filter (YYYY-MM-DD, inclusive).
+        end_date: Optional end date filter (YYYY-MM-DD, inclusive).
         db: Active database session.
         current_user: Authenticated user with ``sale.view`` permission.
 
@@ -74,9 +79,16 @@ def list_sales(
     """
 
     try:
-        total = db.query(Sale).count()
+        stmt = db.query(Sale)
+        if start_date:
+            dt = datetime.fromisoformat(start_date)
+            stmt = stmt.where(Sale.created_at >= dt)
+        if end_date:
+            dt = datetime.fromisoformat(end_date) + timedelta(days=1)
+            stmt = stmt.where(Sale.created_at < dt)
+        total = stmt.count()
         sales = (
-            db.query(Sale)
+            stmt
             .options(
                 selectinload(Sale.items).selectinload(SaleItem.product),
                 selectinload(Sale.creator),

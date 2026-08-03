@@ -1,5 +1,7 @@
 """Tests for category CRUD and in-use guard."""
 
+from unittest.mock import patch
+
 from app.models import Category, Product
 from decimal import Decimal
 
@@ -43,6 +45,14 @@ class TestCreateCategory:
         resp = client.post("/api/categories", json={"name": ""}, headers=admin_headers)
         assert resp.status_code == 422
 
+    def test_create_category_fails_when_commit_fails(self, client, admin_headers):
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.post("/api/categories", json={"name": "New Cat"}, headers=admin_headers)
+            assert resp.status_code == 500
+
 
 class TestUpdateCategory:
     def test_update_success(self, client, admin_headers, db):
@@ -60,6 +70,15 @@ class TestUpdateCategory:
         _create_category(db, "B")
         resp = client.put(f"/api/categories/{cat1.id}", json={"name": "B"}, headers=admin_headers)
         assert resp.status_code == 409
+
+    def test_update_category_fails_when_commit_fails(self, client, admin_headers, db):
+        cat = _create_category(db, "Old")
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.put(f"/api/categories/{cat.id}", json={"name": "New"}, headers=admin_headers)
+            assert resp.status_code == 500
 
 
 class TestDeleteCategory:
@@ -79,6 +98,15 @@ class TestDeleteCategory:
     def test_delete_not_found(self, client, admin_headers):
         resp = client.delete("/api/categories/9999", headers=admin_headers)
         assert resp.status_code == 404
+
+    def test_delete_category_fails_when_commit_fails(self, client, admin_headers, db):
+        cat = _create_category(db)
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.delete(f"/api/categories/{cat.id}", headers=admin_headers)
+            assert resp.status_code == 500
 
 
 class TestEmployeeCategoryAccess:

@@ -1,5 +1,7 @@
 """Tests for color CRUD and hex validation."""
 
+from unittest.mock import patch
+
 from app.models import Color, Product
 from decimal import Decimal
 
@@ -40,6 +42,18 @@ class TestCreateColor:
         resp = client.post("/api/colors", json={"name": "Dup", "hex": "#222222"}, headers=admin_headers)
         assert resp.status_code == 409
 
+    def test_create_whitespace_name(self, client, admin_headers):
+        resp = client.post("/api/colors", json={"name": "   ", "hex": "#000000"}, headers=admin_headers)
+        assert resp.status_code == 400
+
+    def test_create_color_fails_when_commit_fails(self, client, admin_headers):
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.post("/api/colors", json={"name": "CommitFailNew", "hex": "#00FF00"}, headers=admin_headers)
+            assert resp.status_code == 500
+
 
 class TestUpdateColor:
     def test_update_success(self, client, admin_headers, db):
@@ -56,6 +70,21 @@ class TestUpdateColor:
         c = _create_color(db)
         resp = client.put(f"/api/colors/{c.id}", json={"name": "X", "hex": "bad"}, headers=admin_headers)
         assert resp.status_code == 400
+
+    def test_update_color_fails_when_commit_fails(self, client, admin_headers, db):
+        c = _create_color(db)
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.put(f"/api/colors/{c.id}", json={"name": "CommitFailUpdate", "hex": "#0000FF"}, headers=admin_headers)
+            assert resp.status_code == 500
+
+    def test_update_duplicate_name(self, client, admin_headers, db):
+        c1 = _create_color(db, "Alpha", "#111111")
+        c2 = _create_color(db, "Beta", "#222222")
+        resp = client.put(f"/api/colors/{c2.id}", json={"name": "Alpha", "hex": "#333333"}, headers=admin_headers)
+        assert resp.status_code == 409
 
 
 class TestDeleteColor:
@@ -75,6 +104,15 @@ class TestDeleteColor:
     def test_delete_not_found(self, client, admin_headers):
         resp = client.delete("/api/colors/9999", headers=admin_headers)
         assert resp.status_code == 404
+
+    def test_delete_color_fails_when_commit_fails(self, client, admin_headers, db):
+        c = _create_color(db)
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.delete(f"/api/colors/{c.id}", headers=admin_headers)
+            assert resp.status_code == 500
 
 
 class TestEmployeeColorAccess:

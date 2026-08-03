@@ -202,6 +202,21 @@ class UserCreate(BaseModel):
         return v.strip().lower()
 
 
+class UserUpdate(BaseModel):
+    """Schema for admin updating another user's fields."""
+
+    username: str | None = Field(None, min_length=3, max_length=50)
+    email: str | None = None
+    role_id: int | None = None
+    password: str | None = Field(None, min_length=4)
+    active: bool | None = None
+
+    @field_validator("username")
+    @classmethod
+    def normalize_username(cls, v: str) -> str:
+        return v.strip().lower()
+
+
 class UserResponse(BaseModel):
     """Schema for returning user profile information."""
 

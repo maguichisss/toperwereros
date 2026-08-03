@@ -85,10 +85,12 @@ export const colorsApi = {
 
 export const salesApi = {
   create: (data) => request('/sales', { method: 'POST', body: JSON.stringify(data) }),
-  list: ({ page, perPage } = {}) => {
+  list: ({ page, perPage, startDate, endDate } = {}) => {
     const params = new URLSearchParams()
     if (page) params.set('page', page)
     if (perPage) params.set('per_page', perPage)
+    if (startDate) params.set('start_date', startDate)
+    if (endDate) params.set('end_date', endDate)
     const qs = params.toString()
     return request(`/sales${qs ? '?' + qs : ''}`)
   },
@@ -105,6 +107,9 @@ export const customersApi = {
 
 export const usersApi = {
   register: (data) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  list: () => request('/auth/users'),
+  update: (id, data) => request(`/auth/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  toggleActive: (id, active) => request(`/auth/users/${id}/active`, { method: 'PATCH', body: JSON.stringify({ active }) }),
 }
 
 export const authApi = {

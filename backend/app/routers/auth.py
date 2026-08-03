@@ -19,6 +19,7 @@ from app.schemas import (
     ChangePasswordRequest,
     ProfileUpdateRequest,
     UserCreate,
+    UserUpdate,
     UserResponse,
 )
 from app.auth import (
@@ -325,6 +326,138 @@ def register(
         logger.exception("Failed to register user")
         raise HTTPException(500, "Error al registrar el usuario")
     db.refresh(user)
+    return UserResponse(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        image_url=user.image_url,
+        active=user.active,
+        role_id=user.role_id,
+        role_name=user.role.name if user.role else None,
+        created_at=user.created_at,
+    )
+
+
+@router.put("/users/{user_id}", response_model=UserResponse, tags=["Auth"], summary="Update user",
+            description="Admin-only. Update username, email, role, password, or active status of a user.")
+def update_user(
+    user_id: int,
+    data: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("user.manage")),
+) -> UserResponse:
+    """Update an existing user's fields.
+
+    Args:
+        user_id: ID of the user to update.
+        data: Partial update payload (username, email, role_id, password, active).
+        db: Active database session.
+        current_user: Authenticated user with ``user.manage`` permission.
+
+    Returns:
+        The updated UserResponse.
+
+    Raises:
+        HTTPException: 404 if user not found.
+        HTTPException: 400 if username/email already exists, or safety guard violated.
+        HTTPException: 500 if database commit fails.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "Usuario no encontrado")
+
+    if data.username is not None:
+        username = data.username.strip().lower()
+        existing = db.query(User).filter(User.username == username, User.id != user_id).first()
+        if existing:
+            raise HTTPException(400, "El nombre de usuario ya existe")
+        user.username = username
+
+    if data.email is not None:
+        existing_email = db.query(User).filter(User.email == data.email, User.id != user_id).first()
+        if existing_email:
+            raise HTTPException(400, "El email ya está registrado")
+        user.email = data.email
+
+    if data.role_id is not None:
+        if user_id == current_user.id:
+            raise HTTPException(400, "No puedes cambiar tu propio rol")
+        user.role_id = data.role_id
+
+    if data.active is not None:
+        if user_id == current_user.id and not data.active:
+            raise HTTPException(400, "No puedes desactivar tu propia cuenta")
+        user.active = data.active
+
+    if data.password is not None:
+        user.hashed_password = hash_password(data.password)
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to update user %d", user_id)
+        raise HTTPException(500, "Error al actualizar el usuario")
+    db.refresh(user)
+    logger.info("User %d updated by admin %d", user_id, current_user.id)
+    return UserResponse(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        image_url=user.image_url,
+        active=user.active,
+        role_id=user.role_id,
+        role_name=user.role.name if user.role else None,
+        created_at=user.created_at,
+    )
+
+
+@router.patch("/users/{user_id}/active", response_model=UserResponse, tags=["Auth"],
+              summary="Toggle user active status",
+              description="Enable or disable a user account. Admin only. Cannot deactivate yourself.")
+def toggle_user_active(
+    user_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("user.manage")),
+) -> UserResponse:
+    """Toggle a user's active/disabled status.
+
+    Args:
+        user_id: ID of the user to toggle.
+        data: Dictionary with ``active`` boolean field.
+        db: Active database session.
+        current_user: Authenticated user with ``user.manage`` permission.
+
+    Returns:
+        The updated UserResponse.
+
+    Raises:
+        HTTPException: 404 if user not found.
+        HTTPException: 400 if trying to deactivate yourself.
+        HTTPException: 500 if database commit fails.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "Usuario no encontrado")
+
+    active = data.get("active")
+    if active is None:
+        raise HTTPException(400, "El campo 'active' es requerido")
+
+    if user_id == current_user.id and not active:
+        raise HTTPException(400, "No puedes desactivar tu propia cuenta")
+
+    user.active = active
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to toggle active status for user %d", user_id)
+        raise HTTPException(500, "Error al actualizar el estado del usuario")
+    db.refresh(user)
+    action = "activated" if active else "deactivated"
+    logger.info("User %d %s by admin %d", user_id, action, current_user.id)
     return UserResponse(
         id=user.id,
         username=user.username,

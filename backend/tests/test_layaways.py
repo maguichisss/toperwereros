@@ -1,6 +1,7 @@
 """Tests for layaway CRUD, payments, cancel, and complete."""
 
 from decimal import Decimal
+from unittest.mock import patch
 
 from app.models import Product, Customer
 
@@ -105,6 +106,52 @@ class TestCreateLayaway:
         assert resp.status_code == 201
         assert resp.json()["customer_name"] == "New Person"
 
+    def test_create_layaway_fails_when_commit_fails(self, client, admin_headers, db):
+        p = _create_product(db)
+        c = _create_customer(db)
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.post(
+                "/api/layaways",
+                json={
+                    "customer_id": c.id,
+                    "deposit": "30.00",
+                    "items": [{"product_id": p.id, "quantity": 1}],
+                },
+                headers=admin_headers,
+            )
+            assert resp.status_code == 500
+
+    def test_create_both_customer_id_and_customer(self, client, admin_headers, db):
+        p = _create_product(db)
+        c = _create_customer(db)
+        resp = client.post(
+            "/api/layaways",
+            json={
+                "customer_id": c.id,
+                "customer": {"name": "X", "phone": "0"},
+                "deposit": "30.00",
+                "items": [{"product_id": p.id, "quantity": 1}],
+            },
+            headers=admin_headers,
+        )
+        assert resp.status_code == 400
+
+    def test_create_nonexistent_customer_id(self, client, admin_headers, db):
+        p = _create_product(db)
+        resp = client.post(
+            "/api/layaways",
+            json={
+                "customer_id": 9999,
+                "deposit": "30.00",
+                "items": [{"product_id": p.id, "quantity": 1}],
+            },
+            headers=admin_headers,
+        )
+        assert resp.status_code == 404
+
 
 class TestAddPayment:
     def test_add_payment_success(self, client, admin_headers, db):
@@ -144,6 +191,31 @@ class TestAddPayment:
         resp = client.post("/api/layaways/9999/payments", json={"amount": "10.00"}, headers=admin_headers)
         assert resp.status_code == 404
 
+    def test_add_payment_fails_when_commit_fails(self, client, admin_headers, db):
+        layaway_resp, _, _ = _create_layaway(client, admin_headers, db)
+        layaway_id = layaway_resp.json()["id"]
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.post(
+                f"/api/layaways/{layaway_id}/payments",
+                json={"amount": "50.00"},
+                headers=admin_headers,
+            )
+            assert resp.status_code == 500
+
+    def test_payment_to_cancelled_layaway(self, client, admin_headers, db):
+        layaway_resp, _, _ = _create_layaway(client, admin_headers, db)
+        layaway_id = layaway_resp.json()["id"]
+        client.patch(f"/api/layaways/{layaway_id}/cancel", headers=admin_headers)
+        resp = client.post(
+            f"/api/layaways/{layaway_id}/payments",
+            json={"amount": "10.00"},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 400
+
 
 class TestCancelLayaway:
     def test_cancel_success(self, client, admin_headers, db):
@@ -162,6 +234,20 @@ class TestCancelLayaway:
         resp = client.patch(f"/api/layaways/{layaway_id}/cancel", headers=admin_headers)
         assert resp.status_code == 400
 
+    def test_cancel_fails_when_commit_fails(self, client, admin_headers, db):
+        layaway_resp, _, _ = _create_layaway(client, admin_headers, db)
+        layaway_id = layaway_resp.json()["id"]
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.patch(f"/api/layaways/{layaway_id}/cancel", headers=admin_headers)
+            assert resp.status_code == 500
+
+    def test_cancel_nonexistent_layaway(self, client, admin_headers):
+        resp = client.patch("/api/layaways/9999/cancel", headers=admin_headers)
+        assert resp.status_code == 404
+
 
 class TestCompleteLayaway:
     def test_complete_success(self, client, admin_headers, db):
@@ -178,6 +264,20 @@ class TestCompleteLayaway:
         client.patch(f"/api/layaways/{layaway_id}/complete", headers=admin_headers)
         resp = client.patch(f"/api/layaways/{layaway_id}/complete", headers=admin_headers)
         assert resp.status_code == 400
+
+    def test_complete_fails_when_commit_fails(self, client, admin_headers, db):
+        layaway_resp, _, _ = _create_layaway(client, admin_headers, db)
+        layaway_id = layaway_resp.json()["id"]
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.patch(f"/api/layaways/{layaway_id}/complete", headers=admin_headers)
+            assert resp.status_code == 500
+
+    def test_complete_nonexistent_layaway(self, client, admin_headers):
+        resp = client.patch("/api/layaways/9999/complete", headers=admin_headers)
+        assert resp.status_code == 404
 
 
 class TestListLayaways:
@@ -337,6 +437,21 @@ class TestAddLayawayItem:
         )
         assert resp.status_code == 404
 
+    def test_add_item_fails_when_commit_fails(self, client, admin_headers, db):
+        layaway_resp, _, _ = _create_layaway(client, admin_headers, db)
+        layaway_id = layaway_resp.json()["id"]
+        p2 = _create_product(db, name="Gadget", code="G001")
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.post(
+                f"/api/layaways/{layaway_id}/items",
+                json={"product_id": p2.id, "quantity": 2},
+                headers=admin_headers,
+            )
+            assert resp.status_code == 500
+
 
 class TestRemoveLayawayItem:
     def test_remove_item_success(self, client, admin_headers, db):
@@ -434,6 +549,27 @@ class TestRemoveLayawayItem:
             headers=admin_headers,
         )
         assert resp.status_code == 400
+
+    def test_remove_item_fails_when_commit_fails(self, client, admin_headers, db):
+        p2 = _create_product(db, name="Gadget", code="G001", price="50.00", stock=5)
+        layaway_resp, _, _ = _create_layaway(client, admin_headers, db, deposit="30.00")
+        layaway_id = layaway_resp.json()["id"]
+        client.post(
+            f"/api/layaways/{layaway_id}/items",
+            json={"product_id": p2.id, "quantity": 2},
+            headers=admin_headers,
+        )
+        layaway_data = client.get(f"/api/layaways/{layaway_id}", headers=admin_headers).json()
+        item_id = layaway_data["items"][0]["id"]
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.delete(
+                f"/api/layaways/{layaway_id}/items/{item_id}",
+                headers=admin_headers,
+            )
+            assert resp.status_code == 500
 
 
 class TestUpdateLayawayItem:
@@ -584,3 +720,19 @@ class TestUpdateLayawayItem:
             headers=admin_headers,
         )
         assert resp.status_code == 400
+
+    def test_update_item_fails_when_commit_fails(self, client, admin_headers, db):
+        layaway_resp, _, _ = _create_layaway(client, admin_headers, db, deposit="30.00")
+        layaway_id = layaway_resp.json()["id"]
+        layaway_data = client.get(f"/api/layaways/{layaway_id}", headers=admin_headers).json()
+        item_id = layaway_data["items"][0]["id"]
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.put(
+                f"/api/layaways/{layaway_id}/items/{item_id}",
+                json={"quantity": 5},
+                headers=admin_headers,
+            )
+            assert resp.status_code == 500

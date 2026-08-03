@@ -78,8 +78,8 @@ def create_color(
         db.commit()
     except Exception:
         db.rollback()
-        logger.warning("Duplicate color name on create: '%s'", name)
-        raise HTTPException(409, f"El color '{name}' ya existe")
+        logger.exception("Failed to create color")
+        raise HTTPException(500, "Error al crear el color")
     db.refresh(color)
     return color
 
@@ -127,8 +127,8 @@ def update_color(
         db.commit()
     except Exception:
         db.rollback()
-        logger.warning("Duplicate color name on update: '%s' (id=%d)", name, color_id)
-        raise HTTPException(409, f"El color '{name}' ya existe")
+        logger.exception("Failed to update color")
+        raise HTTPException(500, "Error al actualizar el color")
     db.refresh(color)
     return color
 

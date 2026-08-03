@@ -85,7 +85,7 @@ backend/
 │   ├── config.py             # Shared constants, upload helpers, LIKE escaping
 │   ├── logging_config.py     # Centralized logging setup
 │   └── routers/
-│       ├── auth.py           # Login, profile, user management (7 endpoints)
+│       ├── auth.py           # Login, profile, user management (9 endpoints)
 │       ├── products.py       # Product CRUD + search (5 endpoints)
 │       ├── categories.py     # Category CRUD (4 endpoints)
 │       ├── colors.py         # Color CRUD (4 endpoints)

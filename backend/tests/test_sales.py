@@ -152,3 +152,30 @@ class TestEmployeeSaleAccess:
         resp = client.get("/api/sales", headers=employee_headers)
         assert resp.status_code == 200
         assert len(resp.json()) == 1
+
+
+class TestViewerSaleAccess:
+    def test_viewer_can_list_sales(self, client, viewer_headers):
+        resp = client.get("/api/sales", headers=viewer_headers)
+        assert resp.status_code == 200
+
+    def test_viewer_cannot_create_sale(self, client, viewer_headers, db):
+        p = _create_product(db)
+        resp = client.post(
+            "/api/sales",
+            json={"items": [{"product_id": p.id, "quantity": 1}]},
+            headers=viewer_headers,
+        )
+        assert resp.status_code == 403
+
+    def test_list_sales_pagination(self, client, admin_headers, db):
+        for i in range(3):
+            p = _create_product(db, name=f"P{i}", code=f"C{i:03d}", stock=10)
+            client.post(
+                "/api/sales",
+                json={"items": [{"product_id": p.id, "quantity": 1}]},
+                headers=admin_headers,
+            )
+        resp = client.get("/api/sales?page=1&per_page=2", headers=admin_headers)
+        assert resp.status_code == 200
+        assert len(resp.json()) == 2

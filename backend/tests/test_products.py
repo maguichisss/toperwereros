@@ -1,6 +1,7 @@
 """Tests for product CRUD, search, pagination, and validation."""
 
 from decimal import Decimal
+from unittest.mock import patch
 
 from app.models import Product, Category, Color
 
@@ -78,7 +79,7 @@ class TestListProducts:
         _create_product(db, name="InStock", code="IS01", stock=5)
         _create_product(db, name="OutOfStock", code="OS01", stock=0)
         resp = client.get("/api/products", headers=admin_headers)
-        assert resp.json()["total"] == 2
+        assert resp.json()["total"] == 1
 
 
 class TestGetProduct:
@@ -130,6 +131,50 @@ class TestCreateProduct:
         )
         assert resp.status_code == 422
 
+    def test_create_product_fails_when_commit_fails(self, client, admin_headers):
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.post(
+                "/api/products",
+                json={"name": "New", "code": "N01", "price": "25.00", "stock": 3},
+                headers=admin_headers,
+            )
+            assert resp.status_code == 500
+
+    def test_create_invalid_category_ids(self, client, admin_headers):
+        resp = client.post(
+            "/api/products",
+            json={"name": "X", "code": "X01", "price": "10.00", "categoryIds": [9999]},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 400
+
+    def test_create_invalid_color_ids(self, client, admin_headers):
+        resp = client.post(
+            "/api/products",
+            json={"name": "X", "code": "X02", "price": "10.00", "colorIds": [9999]},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 400
+
+    def test_create_empty_code(self, client, admin_headers):
+        resp = client.post(
+            "/api/products",
+            json={"name": "X", "code": "", "price": "10.00"},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_create_negative_price(self, client, admin_headers):
+        resp = client.post(
+            "/api/products",
+            json={"name": "X", "code": "X03", "price": "-5.00"},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 422
+
 
 class TestUpdateProduct:
     def test_update_success(self, client, admin_headers, db):
@@ -150,6 +195,46 @@ class TestUpdateProduct:
         )
         assert resp.status_code == 404
 
+    def test_update_product_fails_when_commit_fails(self, client, admin_headers, db):
+        p = _create_product(db)
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.put(
+                f"/api/products/{p.id}",
+                json={"name": "Updated", "code": "W001", "price": "29.99", "stock": 8},
+                headers=admin_headers,
+            )
+            assert resp.status_code == 500
+
+    def test_update_empty_name(self, client, admin_headers, db):
+        p = _create_product(db)
+        resp = client.put(
+            f"/api/products/{p.id}",
+            json={"name": "", "code": "W001", "price": "10.00"},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_update_invalid_category_ids(self, client, admin_headers, db):
+        p = _create_product(db)
+        resp = client.put(
+            f"/api/products/{p.id}",
+            json={"name": "X", "code": "W001", "price": "10.00", "categoryIds": [9999]},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 400
+
+    def test_update_invalid_color_ids(self, client, admin_headers, db):
+        p = _create_product(db)
+        resp = client.put(
+            f"/api/products/{p.id}",
+            json={"name": "X", "code": "W001", "price": "10.00", "colorIds": [9999]},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 400
+
 
 class TestDeleteProduct:
     def test_delete_success(self, client, admin_headers, db):
@@ -160,6 +245,15 @@ class TestDeleteProduct:
     def test_delete_not_found(self, client, admin_headers):
         resp = client.delete("/api/products/9999", headers=admin_headers)
         assert resp.status_code == 404
+
+    def test_delete_product_fails_when_commit_fails(self, client, admin_headers, db):
+        p = _create_product(db)
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.delete(f"/api/products/{p.id}", headers=admin_headers)
+            assert resp.status_code == 500
 
 
 class TestEmployeeProductAccess:

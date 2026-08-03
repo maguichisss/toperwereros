@@ -5,6 +5,7 @@ export default function LoginPage() {
   const { login } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -52,17 +53,36 @@ export default function LoginPage() {
             required
           />
         </div>
-        <div className="form-group">
+        <div className="form-group" style={{ position: 'relative' }}>
           <label>Contraseña</label>
           <input
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="off"
             autoCorrect="off"
             spellCheck="false"
             required
+            style={{ paddingRight: '2.5rem' }}
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            style={{
+              position: 'absolute',
+              right: '0.5rem',
+              bottom: '0.4rem',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              color: 'var(--text-muted)',
+              padding: '0.2rem',
+            }}
+            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+          >
+            {showPassword ? '🙈' : '👁'}
+          </button>
         </div>
         {error && <p className="error-text">{error}</p>}
         <button

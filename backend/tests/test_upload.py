@@ -62,3 +62,23 @@ class TestUploadImage:
         )
         assert resp.status_code == 200
         assert resp.json()["image_url"].startswith("/uploads/")
+
+    def test_upload_too_large(self, client, admin_headers):
+        from tests.conftest import _make_image_bytes
+        content = _make_image_bytes("png") + b"\x00" * (5 * 1024 * 1024)
+        resp = client.post(
+            "/api/upload",
+            files={"image": ("big.png", io.BytesIO(content), "image/png")},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 400
+
+    def test_upload_viewer_forbidden(self, client, viewer_headers):
+        from tests.conftest import _make_image_bytes
+        content = _make_image_bytes("png")
+        resp = client.post(
+            "/api/upload",
+            files={"image": ("test.png", io.BytesIO(content), "image/png")},
+            headers=viewer_headers,
+        )
+        assert resp.status_code == 403

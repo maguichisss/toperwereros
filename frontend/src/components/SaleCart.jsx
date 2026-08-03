@@ -18,6 +18,9 @@ export default function SaleCart() {
   const [salesPage, setSalesPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState(null);
   const [confirmCheckout, setConfirmCheckout] = useState(false);
+  const [datePreset, setDatePreset] = useState('last30');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const searchTimer = useRef(null);
   const resultsRef = useRef(null);
 
@@ -92,17 +95,49 @@ export default function SaleCart() {
     setError('');
   }
 
+  function getDateRange() {
+    const today = new Date();
+    const fmt = d => d.toISOString().slice(0, 10);
+    switch (datePreset) {
+      case 'today':
+        return { startDate: fmt(today), endDate: fmt(today) };
+      case 'week': {
+        const d = new Date(today);
+        d.setDate(d.getDate() - 6);
+        return { startDate: fmt(d), endDate: fmt(today) };
+      }
+      case 'month': {
+        const d = new Date(today.getFullYear(), today.getMonth(), 1);
+        return { startDate: fmt(d), endDate: fmt(today) };
+      }
+      case 'last30': {
+        const d = new Date(today);
+        d.setDate(d.getDate() - 29);
+        return { startDate: fmt(d), endDate: fmt(today) };
+      }
+      case 'custom':
+        return { startDate: dateFrom || null, endDate: dateTo || null };
+      default:
+        return {};
+    }
+  }
+
   const loadSales = useCallback(async () => {
     try {
-      const res = await salesApi.list({ page: salesPage, perPage: 20 });
+      const { startDate, endDate } = getDateRange();
+      const res = await salesApi.list({ page: salesPage, perPage: 20, startDate, endDate });
       setSales(res);
       setSalesTotal(res.total || res.length);
     } catch {}
-  }, [salesPage]);
+  }, [salesPage, datePreset, dateFrom, dateTo]);
 
   useEffect(() => {
     if (mode === 'history') loadSales();
   }, [mode, loadSales]);
+
+  useEffect(() => {
+    setSalesPage(1);
+  }, [datePreset, dateFrom, dateTo]);
 
   if (saleResult) {
     return (
@@ -233,6 +268,45 @@ export default function SaleCart() {
         </div>
       )}
 
+      {mode === 'history' && !selectedSale && (
+        <div className="filter-bar" style={{ marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+          {[
+            { key: 'today', label: 'Hoy' },
+            { key: 'week', label: 'Esta semana' },
+            { key: 'month', label: 'Este mes' },
+            { key: 'last30', label: 'Últimos 30 días' },
+            { key: 'all', label: 'Todo' },
+            { key: 'custom', label: 'Personalizado' },
+          ].map(p => (
+            <button
+              key={p.key}
+              className={`btn ${datePreset === p.key ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }}
+              onClick={() => setDatePreset(p.key)}
+            >
+              {p.label}
+            </button>
+          ))}
+          {datePreset === 'custom' && (
+            <>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+                style={{ padding: '0.3rem 0.4rem', border: '1px solid var(--border)', borderRadius: 4, fontSize: '0.8rem' }}
+              />
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>a</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+                style={{ padding: '0.3rem 0.4rem', border: '1px solid var(--border)', borderRadius: 4, fontSize: '0.8rem' }}
+              />
+            </>
+          )}
+        </div>
+      )}
+
       {mode === 'history' && (
         <div className="history-mode">
           {selectedSale ? (
@@ -263,7 +337,9 @@ export default function SaleCart() {
           ) : (
             <>
               {sales.length === 0 ? (
-                <p className="empty-state">No hay ventas registradas.</p>
+                <p className="empty-state">
+                  {datePreset !== 'all' ? 'No hay ventas en el rango seleccionado.' : 'No hay ventas registradas.'}
+                </p>
               ) : (
                 <div className="sale-list">
                   {sales.map(s => (
