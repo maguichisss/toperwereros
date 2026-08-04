@@ -9,9 +9,9 @@ import pytest
 from PIL import Image as PILImage
 from fpdf import FPDF
 
-from app.routers.catalog import PDFConfig, DEFAULT_PDF_CONFIG, THEMES, apply_theme, cover_image, css_color, draw_card, group_and_order
+from app.routers.catalog import PDFConfig, DEFAULT_PDF_CONFIG, THEMES, apply_theme, cover_image, css_color, draw_card, order_by_category_color_stock
 from app.patterns import pattern_jpeg
-from app.models import Product, Category
+from app.models import Product, Category, Color
 from decimal import Decimal
 
 def _create_product(db, name="Widget", code="W001", price="100.00", stock=5, image_url=None):
@@ -229,40 +229,64 @@ class TestRenderHTML:
         assert "$1234.50" not in html
 
 
-class TestGroupAndOrder:
-    def test_orders_groups_by_count_desc(self):
+class TestOrderByCategoryColorStock:
+    def test_orders_by_category_count_desc(self):
         ropa = Category(name="Ropa")
         calzado = Category(name="Calzado")
-        sin = Category(name="Sin categoría")
-        cat_a = [Product(name=n, code=c, price=Decimal("10"), stock=1) for n, c in
-                 [("C1", "A01"), ("C2", "A02"), ("C3", "A03")]]
-        cat_b = [Product(name=n, code=c, price=Decimal("10"), stock=1) for n, c in
-                 [("Z1", "B01"), ("Z2", "B02")]]
-        cat_c = [Product(name=n, code=c, price=Decimal("10"), stock=1) for n, c in
-                 [("S1", "C01")]]
-        for p in cat_a:
+        prod = [
+            Product(name=n, code=c, price=Decimal("10"), stock=1)
+            for n, c in [("C1", "A01"), ("C2", "A02"), ("C3", "A03")]
+        ]
+        prod += [
+            Product(name=n, code=c, price=Decimal("10"), stock=1)
+            for n, c in [("Z1", "B01"), ("Z2", "B02")]
+        ]
+        for p in prod[:3]:
             p.categories = [ropa]
-        for p in cat_b:
+        for p in prod[3:]:
             p.categories = [calzado]
-        for p in cat_c:
-            p.categories = [sin]
-        groups = group_and_order(cat_a + cat_b + cat_c)
-        assert [name for name, _ in groups] == ["Ropa", "Calzado", "Sin categoría"]
+        ordered = order_by_category_color_stock(prod)
+        assert [p.name for p in ordered] == ["C1", "C2", "C3", "Z1", "Z2"]
 
-    def test_preserves_within_group_order(self):
+    def test_orders_within_category_by_color_then_stock(self):
         cat = Category(name="Ropa")
-        products = []
-        for name, code in [("Zeta", "Z01"), ("Alpha", "A01"), ("Beta", "B01")]:
-            p = Product(name=name, code=code, price=Decimal("10"), stock=1)
+        rojo = Color(name="Rojo", hex="#ff0000")
+        azul = Color(name="Azul", hex="#0000ff")
+        p_red_high = Product(name="Rojo Alto", code="R1", price=Decimal("10"), stock=9)
+        p_red_low = Product(name="Rojo Bajo", code="R2", price=Decimal("10"), stock=1)
+        p_blue = Product(name="Azul", code="B1", price=Decimal("10"), stock=5)
+        p_none = Product(name="Sin Color", code="N1", price=Decimal("10"), stock=2)
+        for p in (p_red_high, p_red_low, p_blue, p_none):
             p.categories = [cat]
-            products.append(p)
-        groups = group_and_order(products)
-        assert [p.name for p in groups[0][1]] == ["Zeta", "Alpha", "Beta"]
+        p_red_high.colors = [rojo]
+        p_red_low.colors = [rojo]
+        p_blue.colors = [azul]
+        ordered = order_by_category_color_stock([p_none, p_blue, p_red_low, p_red_high])
+        assert [p.name for p in ordered] == [
+            "Azul", "Rojo Bajo", "Rojo Alto", "Sin Color",
+        ]
 
-    def test_no_category_label_used(self):
-        p = Product(name="Suelto", code="S01", price=Decimal("10"), stock=1)
-        groups = group_and_order([p], PDFConfig(no_category_label="Varios"))
-        assert groups[0][0] == "Varios"
+    def test_uncategorized_products_sort_last(self):
+        cat = Category(name="Ropa")
+        single = Product(name="Solo", code="S01", price=Decimal("10"), stock=1)
+        single.categories = [cat]
+        uncat = [
+            Product(name=f"Suelto{i}", code=f"U{i:02d}", price=Decimal("10"), stock=1)
+            for i in range(3)
+        ]
+        ordered = order_by_category_color_stock(uncat + [single])
+        assert [p.name for p in ordered] == ["Solo", "Suelto0", "Suelto1", "Suelto2"]
+
+    def test_uses_min_category_and_color_name(self):
+        cat_z = Category(name="Zapatos")
+        cat_a = Category(name="Accesorios")
+        color_b = Color(name="Blanco", hex="#ffffff")
+        color_a = Color(name="Azul", hex="#0000ff")
+        p = Product(name="Poli", code="P01", price=Decimal("10"), stock=1)
+        p.categories = [cat_z, cat_a]
+        p.colors = [color_b, color_a]
+        ordered = order_by_category_color_stock([p])
+        assert [p.name for p in ordered] == ["Poli"]
 
 
 class TestCustomPDFConfig:

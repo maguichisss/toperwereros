@@ -4,6 +4,7 @@ import base64
 import io
 import logging
 import os
+from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from html import escape
@@ -830,29 +831,42 @@ MONTHS_ES: list[str] = [
 ]
 
 
-def group_and_order(
-    products: list[Product], cfg: PDFConfig = DEFAULT_PDF_CONFIG
-) -> list[tuple[str, list[Product]]]:
-    """Group products by category and order the groups by descending count.
+def order_by_category_color_stock(products: list[Product]) -> list[Product]:
+    """Order products by category size, then category, color, and stock.
 
-    Products are grouped by their first category (or the no-category label)
-    and the groups are sorted from largest to smallest.  The order of products
-    within each group is preserved.
+    Mirrors the SQL ``ORDER BY category_count DESC, category ASC, color ASC,
+    stock ASC``: each product uses its alphabetically-first category and color
+    name, the biggest categories come first, and products without a category
+    sort last.
 
     Args:
-        products: Products in the desired display order.
-        cfg: PDF configuration providing the no-category label.
+        products: Products in any input order.
 
     Returns:
-        A list of ``(category_name, products)`` tuples ordered by count
-        descending.
+        The products in display order.
     """
 
-    groups: dict[str, list[Product]] = {}
+    counts: Counter[str] = Counter()
+    info: dict[int, tuple[str | None, str | None]] = {}
     for product in products:
-        cat_name = product.categories[0].name if product.categories else cfg.no_category_label
-        groups.setdefault(cat_name, []).append(product)
-    return sorted(groups.items(), key=lambda item: len(item[1]), reverse=True)
+        category = min((c.name for c in product.categories), default=None)
+        color = min((c.name for c in product.colors), default=None)
+        info[id(product)] = (category, color)
+        if category:
+            counts[category] += 1
+
+    def sort_key(product: Product) -> tuple:
+        category, color = info[id(product)]
+        return (
+            category is None,
+            -counts.get(category, 0),
+            category or "",
+            color is None,
+            color or "",
+            product.stock,
+        )
+
+    return sorted(products, key=sort_key)
 
 
 def cover_image(path: str, cfg: PDFConfig = DEFAULT_PDF_CONFIG) -> io.BytesIO:
@@ -951,8 +965,9 @@ def catalog_pdf(
 ) -> Response:
     """Generate a product catalog for in-stock products as PDF or HTML.
 
-    Products are ordered by descending category product count, then name,
-    and rendered in a continuous 4-column card grid (16 per page).  Each card
+    Products are ordered by descending category product count, then category
+    name, then color, then stock (uncategorized products last), and rendered
+    in a continuous 4-column card grid (16 per page).  Each card
     contains a cropped product image, name, and a price band with the code.
     A weekly header with the valid date range is added to every page.
 
@@ -981,7 +996,7 @@ def catalog_pdf(
 
     products = (
         db.query(Product)
-        .options(selectinload(Product.categories))
+        .options(selectinload(Product.categories), selectinload(Product.colors))
         .filter(Product.stock > 0)
     )
     if ids:
@@ -1003,7 +1018,7 @@ def catalog_pdf(
                 Product.colors.any(Color.name.ilike(pattern, escape="\\")),
             )
         )
-    products = products.order_by(Product.name.asc()).all()
+    products = products.all()
 
     try:
         cfg = apply_theme(DEFAULT_PDF_CONFIG, theme)
@@ -1015,7 +1030,7 @@ def catalog_pdf(
         week_end_str = f"{MONTHS_ES[sunday.month]} {sunday.day:02d}"
         week_num = monday.isocalendar()[1]
 
-        ordered_products = [p for _, ps in group_and_order(products, cfg) for p in ps]
+        ordered_products = order_by_category_color_stock(products)
 
         if format == "html":
             html = cfg.render_html(ordered_products, week_start_str, week_end_str, week_num)
