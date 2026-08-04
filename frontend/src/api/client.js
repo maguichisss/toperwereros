@@ -143,6 +143,7 @@ export const layawaysApi = {
     return request(`/layaways?${params.toString()}`)
   },
   get: (id) => request(`/layaways/${id}`),
+  update: (id, data) => request(`/layaways/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   addPayment: (id, amount) => request(`/layaways/${id}/payments`, { method: 'POST', body: JSON.stringify({ amount }) }),
   cancel: (id) => request(`/layaways/${id}/cancel`, { method: 'PATCH' }),
   complete: (id) => request(`/layaways/${id}/complete`, { method: 'PATCH' }),

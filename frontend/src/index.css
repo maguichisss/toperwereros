@@ -1444,6 +1444,32 @@ header nav button:hover {
   font-size: 1rem;
 }
 
+.layaway-notes-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.notes-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-card);
+  resize: vertical;
+  min-height: 80px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.notes-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
+}
+
 .layaway-balance-section {
   display: flex;
   justify-content: space-between;

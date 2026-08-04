@@ -49,6 +49,66 @@ class TestCreateLayaway:
         assert len(data["items"]) == 1
         assert len(data["payments"]) == 1
 
+    def test_create_with_notes(self, client, admin_headers, db):
+        p = _create_product(db)
+        c = _create_customer(db)
+        resp = client.post(
+            "/api/layaways",
+            json={
+                "customer_id": c.id,
+                "deposit": "30.00",
+                "items": [{"product_id": p.id, "quantity": 1}],
+                "notes": "Cliente pagará en dos abonos",
+            },
+            headers=admin_headers,
+        )
+        assert resp.status_code == 201
+        assert resp.json()["notes"] == "Cliente pagará en dos abonos"
+
+    def test_update_notes_success(self, client, admin_headers, db):
+        layaway_resp, _, _ = _create_layaway(client, admin_headers, db)
+        layaway_id = layaway_resp.json()["id"]
+        resp = client.patch(
+            f"/api/layaways/{layaway_id}",
+            json={"notes": "Notas actualizadas"},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["notes"] == "Notas actualizadas"
+
+    def test_update_notes_not_active(self, client, admin_headers, db):
+        layaway_resp, _, _ = _create_layaway(client, admin_headers, db)
+        layaway_id = layaway_resp.json()["id"]
+        client.patch(f"/api/layaways/{layaway_id}/complete", headers=admin_headers)
+        resp = client.patch(
+            f"/api/layaways/{layaway_id}",
+            json={"notes": "Nope"},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 400
+
+    def test_update_notes_not_found(self, client, admin_headers):
+        resp = client.patch(
+            "/api/layaways/9999",
+            json={"notes": "Nope"},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 404
+
+    def test_update_notes_fails_when_commit_fails(self, client, admin_headers, db):
+        layaway_resp, _, _ = _create_layaway(client, admin_headers, db)
+        layaway_id = layaway_resp.json()["id"]
+        def raise_on_commit(self):
+            raise RuntimeError("Simulated commit failure")
+
+        with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
+            resp = client.patch(
+                f"/api/layaways/{layaway_id}",
+                json={"notes": "Falla"},
+                headers=admin_headers,
+            )
+            assert resp.status_code == 500
+
     def test_create_stock_decremented(self, client, admin_headers, db):
         _create_layaway(client, admin_headers, db)
         # Refresh product from DB
@@ -176,6 +236,8 @@ class TestAddPayment:
         assert resp.status_code == 201
         assert resp.json()["status"] == "completed"
         assert resp.json()["sale_id"] is not None
+        assert resp.json()["balance"] == "0.00"
+        assert [p["amount"] for p in resp.json()["payments"]] == ["30.00", "70.00"]
 
     def test_add_payment_overpayment_rejected(self, client, admin_headers, db):
         layaway_resp, _, _ = _create_layaway(client, admin_headers, db, deposit="30.00")
@@ -257,6 +319,19 @@ class TestCompleteLayaway:
         assert resp.status_code == 200
         assert resp.json()["status"] == "completed"
         assert resp.json()["sale_id"] is not None
+
+    def test_complete_records_remaining_abono(self, client, admin_headers, db):
+        layaway_resp, _, _ = _create_layaway(client, admin_headers, db, deposit="30.00")
+        layaway_id = layaway_resp.json()["id"]
+        assert layaway_resp.json()["balance"] == "70.00"
+        resp = client.patch(f"/api/layaways/{layaway_id}/complete", headers=admin_headers)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["status"] == "completed"
+        assert body["sale_id"] is not None
+        assert body["balance"] == "0.00"
+        payments = body["payments"]
+        assert [p["amount"] for p in payments] == ["30.00", "70.00"]
 
     def test_complete_not_active(self, client, admin_headers, db):
         layaway_resp, _, _ = _create_layaway(client, admin_headers, db)

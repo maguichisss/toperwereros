@@ -373,6 +373,7 @@ function CreateView({ onBack, onCreated }) {
   const [productResults, setProductResults] = useState([]);
   const [showProductResults, setShowProductResults] = useState(false);
   const [deposit, setDeposit] = useState('');
+  const [notes, setNotes] = useState('');
   const [confirmCreate, setConfirmCreate] = useState(false);
 
   const customerTimer = useRef(null);
@@ -495,6 +496,7 @@ function CreateView({ onBack, onCreated }) {
       deposit: parseFloat(deposit),
       items: cart.map(c => ({ product_id: c.product_id, quantity: c.quantity })),
     };
+    if (notes.trim()) body.notes = notes.trim();
     if (custId) {
       body.customer_id = custId;
     } else {
@@ -667,6 +669,18 @@ function CreateView({ onBack, onCreated }) {
             <p className="layaway-balance-preview">
               Balance restante: <strong>${formatPrice(cartTotal - parseFloat(deposit || 0))}</strong>
             </p>
+            <div className="form-group">
+              <label>Notas</label>
+              <textarea
+                className="notes-textarea"
+                placeholder="Notas opcionales del apartado..."
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                rows={3}
+                autoComplete="off"
+                autoCorrect="off"
+              />
+            </div>
             <button className="btn btn-primary btn-checkout" onClick={() => setConfirmCreate(true)}>
               Crear Apartado — Depósito ${formatPrice(deposit || 0)}
             </button>
@@ -699,12 +713,17 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
   const [showProductResults, setShowProductResults] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingQty, setEditingQty] = useState('');
+  const [notesDraft, setNotesDraft] = useState('');
   const productTimer = useRef(null);
   const productResultsRef = useRef(null);
 
   const days = daysElapsed(layaway.created_at);
   const overdue = days > DAYS_OVERDUE;
   const isActive = layaway.status === 'active';
+
+  useEffect(() => {
+    setNotesDraft(layaway.notes || '');
+  }, [layaway.notes]);
 
   const refreshLayaway = useCallback(async () => {
     try {
@@ -754,6 +773,18 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
     setDetailError('');
     try {
       const updated = await layawaysApi.updateItem(layaway.id, item.id, qty);
+      onUpdated(updated);
+    } catch (e) {
+      setDetailError(e.message);
+    }
+  }
+
+  async function handleSaveNotes() {
+    const value = notesDraft.trim();
+    if (value === (layaway.notes || '').trim()) return;
+    setDetailError('');
+    try {
+      const updated = await layawaysApi.update(layaway.id, { notes: value || null });
       onUpdated(updated);
     } catch (e) {
       setDetailError(e.message);
@@ -914,6 +945,24 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
                 ))}
               </div>
             )}
+          </div>
+        )}
+      </div>
+
+      <div className="detail-section">
+        <h3>Notas</h3>
+        <textarea
+          className="notes-textarea"
+          value={notesDraft}
+          onChange={e => setNotesDraft(e.target.value)}
+          rows={3}
+          disabled={!isActive}
+          autoComplete="off"
+          autoCorrect="off"
+        />
+        {isActive && can('apartado.edit') && (
+          <div className="layaway-notes-actions">
+            <button className="btn btn-primary" onClick={handleSaveNotes}>Actualizar notas</button>
           </div>
         )}
       </div>

@@ -309,7 +309,13 @@ class LayawayCreate(BaseModel):
     customer: CustomerCreate | None = None
     deposit: Decimal = Field(gt=0)
     items: list[LayawayItemCreate] = Field(min_length=1)
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+class LayawayUpdate(BaseModel):
+    """Schema for updating top-level layaway fields."""
+
+    notes: str | None = Field(default=None, max_length=2000)
 
 
 class LayawayItemResponse(BaseModel):

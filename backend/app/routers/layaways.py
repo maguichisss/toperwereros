@@ -20,6 +20,7 @@ from app.models import (
 from app.schemas import (
     LayawayCreate,
     LayawayResponse,
+    LayawayUpdate,
     LayawayItemResponse,
     LayawayPaymentResponse,
     LayawayListResponse,
@@ -293,6 +294,47 @@ def get_layaway(
         raise HTTPException(500, "Error al obtener el apartado")
     if not layaway:
         raise HTTPException(404, "Apartado no encontrado")
+    return serialize_layaway(layaway)
+
+
+@router.patch("/{layaway_id}", response_model=LayawayResponse, tags=["Layaways"], summary="Update layaway",
+              description="Update top-level layaway fields (notes) on an active layaway.")
+def update_layaway(
+    layaway_id: int,
+    data: LayawayUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("apartado.edit")),
+) -> LayawayResponse:
+    """Update the notes on an active layaway.
+
+    Args:
+        layaway_id: ID of the layaway to update.
+        data: Payload with the new ``notes`` value.
+        db: Active database session.
+        current_user: Authenticated user with ``apartado.edit`` permission.
+
+    Returns:
+        Updated LayawayResponse.
+
+    Raises:
+        HTTPException: 404 if the layaway is not found.
+        HTTPException: 400 if the layaway is not active.
+        HTTPException: 500 on unexpected database errors.
+    """
+
+    layaway = _load_layaway(db, layaway_id)
+    if layaway.status != "active":
+        raise HTTPException(400, "Solo se pueden editar apartados activos")
+
+    layaway.notes = data.notes
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to update layaway %d", layaway_id)
+        raise HTTPException(500, "Error al actualizar el apartado")
+    db.refresh(layaway, attribute_names=["items", "payments", "customer"])
+
     return serialize_layaway(layaway)
 
 
@@ -758,6 +800,9 @@ def complete_layaway(
     """Mark a layaway as completed and create a linked Sale.
 
     Idempotent: if the layaway already has a ``sale_id`` this is a no-op.
+    When the layaway still has a positive balance, a final Abono
+    (``LayawayPayment``) for the remaining amount is recorded and the balance
+    is zeroed.
 
     Args:
         layaway: The Layaway ORM object to complete.
@@ -766,7 +811,8 @@ def complete_layaway(
             on the generated Sale).
 
     Returns:
-        ``None``. Modifies ``layaway.status`` and ``layaway.sale_id`` in-place.
+        ``None``. Modifies ``layaway.status``, ``layaway.sale_id``, and
+        ``layaway.balance`` in-place, and may add a ``LayawayPayment``.
 
     Raises:
         HTTPException: 500 on unexpected database errors.
@@ -790,5 +836,8 @@ def complete_layaway(
 
     layaway.sale_id = sale.id
     layaway.status = "completed"
-    if layaway.balance < 0:
+    if layaway.balance > 0:
+        db.add(LayawayPayment(layaway_id=layaway.id, amount=layaway.balance))
+        layaway.balance = Decimal("0.00")
+    elif layaway.balance < 0:
         layaway.balance = Decimal("0.00")
