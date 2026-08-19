@@ -8,16 +8,17 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from slowapi import Limiter
-from slowapi.util import get_remote_address
 
-from app.config import UPLOAD_DIR, MAX_SIZE, detect_image_type, safe_upload_path
+from app.config import UPLOAD_DIR, MAX_SIZE, detect_image_type, safe_upload_path, GCS_BUCKET, get_forwarded_ip
 from app.database import get_db
-from app.models import User
+from app.models import User, Role
 from app.schemas import (
     LoginRequest,
     TokenResponse,
     ChangePasswordRequest,
     ProfileUpdateRequest,
+    RoleCreate,
+    RoleResponse,
     UserCreate,
     UserUpdate,
     UserResponse,
@@ -33,7 +34,7 @@ from app.auth import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_forwarded_ip)
 
 
 @router.post("/login", response_model=TokenResponse, tags=["Auth"], summary="Login",
@@ -67,6 +68,63 @@ def login(
         raise HTTPException(status_code=401, detail="Usuario inactivo")
     token = create_access_token({"sub": user.id})
     return TokenResponse(access_token=token)
+
+
+@router.get("/roles", response_model=list[RoleResponse], tags=["Auth"], summary="List roles",
+              description="Return all roles. Requires admin (user.manage) permission.")
+def list_roles(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("user.manage")),
+) -> list[RoleResponse]:
+    """Return all roles ordered by id. Requires ``user.manage`` permission.
+
+    Args:
+        db: Active database session.
+        current_user: Authenticated user with ``user.manage`` permission.
+
+    Returns:
+        List of RoleResponse objects.
+    """
+
+    roles = db.query(Role).order_by(Role.id).all()
+    return [RoleResponse(id=r.id, name=r.name) for r in roles]
+
+
+@router.post("/roles", response_model=RoleResponse, status_code=201, tags=["Auth"], summary="Create role",
+              description="Create a new role. Requires admin (user.manage) permission.")
+def create_role(
+    data: RoleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("user.manage")),
+) -> RoleResponse:
+    """Create a new role. Requires ``user.manage`` permission.
+
+    Args:
+        data: Role creation payload (name).
+        db: Active database session.
+        current_user: Authenticated user with ``user.manage`` permission.
+
+    Returns:
+        The newly created RoleResponse.
+
+    Raises:
+        HTTPException: 400 if role name already exists.
+    """
+
+    name = data.name.strip().lower()
+    existing = db.query(Role).filter(Role.name == name).first()
+    if existing:
+        raise HTTPException(400, "El nombre del rol ya existe")
+    role = Role(name=name)
+    db.add(role)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to create role")
+        raise HTTPException(500, "Error al crear el rol")
+    db.refresh(role)
+    return RoleResponse(id=role.id, name=role.name)
 
 
 @router.get("/me", response_model=UserResponse, tags=["Auth"], summary="Get current user",
@@ -228,16 +286,24 @@ def upload_avatar(
         raise HTTPException(400, "Solo se permiten imágenes JPEG, PNG y WebP")
     ext, expected_mime = result
     if current_user.image_url:
-        old_path = safe_upload_path(current_user.image_url)
-        if old_path and os.path.exists(old_path):
-            os.remove(old_path)
+        if GCS_BUCKET:
+            from app.gcs import delete_from_gcs
+            delete_from_gcs(current_user.image_url)
+        else:
+            old_path = safe_upload_path(current_user.image_url)
+            if old_path and os.path.exists(old_path):
+                os.remove(old_path)
     filename = f"avatar_{uuid.uuid4().hex}{ext}"
-    path = os.path.join(UPLOAD_DIR, filename)
     try:
-        with open(path, "wb") as f:
-            f.write(content)
-    except OSError:
-        logger.exception("Failed to write avatar file")
+        if GCS_BUCKET:
+            from app.gcs import upload_to_gcs
+            upload_to_gcs(content, filename)
+        else:
+            path = os.path.join(UPLOAD_DIR, filename)
+            with open(path, "wb") as f:
+                f.write(content)
+    except Exception:
+        logger.exception("Failed to upload avatar")
         raise HTTPException(500, "Error al subir el avatar")
     return {"image_url": f"/uploads/{filename}"}
 

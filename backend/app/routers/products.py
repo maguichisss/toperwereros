@@ -8,7 +8,7 @@ from sqlalchemy import or_, String
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
-from app.config import safe_upload_path, escape_like
+from app.config import safe_upload_path, escape_like, GCS_BUCKET
 from app.models import Product, Category, Color, User
 from app.schemas import ProductCreate, ProductResponse, ProductListResponse
 from app.auth import require_permission
@@ -232,9 +232,13 @@ def update_product(
     product.ubicacion = data.ubicacion
     product.price = data.price
     if data.image_url != product.image_url and product.image_url:
-        old_path = safe_upload_path(product.image_url)
-        if old_path and os.path.exists(old_path):
-            os.remove(old_path)
+        if GCS_BUCKET:
+            from app.gcs import delete_from_gcs
+            delete_from_gcs(product.image_url)
+        else:
+            old_path = safe_upload_path(product.image_url)
+            if old_path and os.path.exists(old_path):
+                os.remove(old_path)
     product.image_url = data.image_url
     if data.category_ids is not None:
         categories = db.query(Category).filter(Category.id.in_(data.category_ids)).all()
@@ -279,11 +283,15 @@ def delete_product(
         raise HTTPException(404, "Producto no encontrado")
 
     if product.image_url:
-        filepath = safe_upload_path(product.image_url)
-        if filepath and os.path.exists(filepath):
-            os.remove(filepath)
+        if GCS_BUCKET:
+            from app.gcs import delete_from_gcs
+            delete_from_gcs(product.image_url)
         else:
-            logger.warning("Image file not found for product %d: %s", product.id, product.image_url)
+            filepath = safe_upload_path(product.image_url)
+            if filepath and os.path.exists(filepath):
+                os.remove(filepath)
+            else:
+                logger.warning("Image file not found for product %d: %s", product.id, product.image_url)
 
     db.delete(product)
     try:

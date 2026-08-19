@@ -2,10 +2,14 @@
 
 import os
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 UPLOAD_DIR: str = os.path.join(os.getcwd(), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+GCS_BUCKET: str = os.getenv("GCS_BUCKET", "")
+SIGNING_CREDENTIALS_LIFETIME: int = int(os.getenv("SIGNING_CREDENTIALS_LIFETIME", "86400"))
+SIGNED_URL_EXPIRY_HOURS: int = int(os.getenv("SIGNED_URL_EXPIRY_HOURS", "1"))
 
 MAGIC_BYTES: dict[bytes, tuple[str, str]] = {
     b'\xff\xd8\xff': ('.jpg', 'image/jpeg'),
@@ -68,3 +72,14 @@ def escape_like(s: str) -> str:
     """
 
     return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def get_forwarded_ip(request: Request) -> str:
+    """Get the real client IP from X-Forwarded-For header (Cloud Run / reverse proxy).
+
+    Falls back to request.client.host when no forwarded header is present.
+    """
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"

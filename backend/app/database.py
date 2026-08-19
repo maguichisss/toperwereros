@@ -16,7 +16,13 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:postgres@localhost:5432/store_catalog",
 )
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_timeout=30,
+    pool_recycle=1800,
+    max_overflow=0,
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

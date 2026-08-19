@@ -17,7 +17,7 @@ from sqlalchemy import or_, String
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
-from app.config import safe_upload_path, escape_like
+from app.config import safe_upload_path, escape_like, GCS_BUCKET
 from app.models import Product, Category, Color, User
 from app.auth import require_permission
 from app.patterns import pattern_jpeg
@@ -150,10 +150,31 @@ class PDFConfig:
 
     def _image_exists(self, url: str) -> bool:
         try:
+            if GCS_BUCKET:
+                from app.gcs import resolve_image_url
+                return bool(resolve_image_url(url))
             path = safe_upload_path(url)
             return bool(path and os.path.exists(path))
         except Exception:
             return False
+
+    def _get_image_bytes(self, product: Product) -> io.BytesIO | None:
+        """Get product image as BytesIO, from local disk or GCS."""
+        if not product.image_url:
+            return None
+        try:
+            if GCS_BUCKET:
+                from app.gcs import download_from_gcs
+                object_name = product.image_url.removeprefix("/uploads/")
+                data = download_from_gcs(object_name)
+                return io.BytesIO(data)
+            path = safe_upload_path(product.image_url)
+            if path and os.path.exists(path):
+                with open(path, "rb") as f:
+                    return io.BytesIO(f.read())
+        except Exception:
+            logger.warning("Could not load image for product %s: %s", product.id, product.image_url)
+        return None
 
     def render_page_header(self, pdf: FPDF, week_start_str: str, week_end_str: str, week_num: int) -> None:
         """Add a new page with the catalog title and weekly validity header."""
@@ -185,14 +206,13 @@ class PDFConfig:
         ix = x + self.img_inset
         iy = y + self.img_inset
         image_ok = False
-        if product.image_url:
+        image_data = self._get_image_bytes(product)
+        if image_data:
             try:
-                path = safe_upload_path(product.image_url)
-                if path and os.path.exists(path):
-                    pdf.image(cover_image(path, self), x=ix, y=iy, w=self.img_w, h=self.img_h)
-                    pdf.set_draw_color(*self.card_border)
-                    pdf.rect(ix, iy, self.img_w, self.img_h, style="D", round_corners=True, corner_radius=self.card_corner_radius)
-                    image_ok = True
+                pdf.image(cover_image(image_data, self), x=ix, y=iy, w=self.img_w, h=self.img_h)
+                pdf.set_draw_color(*self.card_border)
+                pdf.rect(ix, iy, self.img_w, self.img_h, style="D", round_corners=True, corner_radius=self.card_corner_radius)
+                image_ok = True
             except Exception:
                 logger.warning("Omitiendo imagen inválida del producto %s (%s)", product.id, product.image_url)
         if not image_ok:
@@ -258,7 +278,12 @@ class PDFConfig:
         code = escape(product.code[:self.code_max_len])
         price = escape(f"{self.price_prefix}{product.price:.{self.price_decimals}f}")
         if product.image_url and self._image_exists(product.image_url):
-            image = f'<img src="{escape(product.image_url)}" alt="">'
+            if GCS_BUCKET:
+                from app.gcs import resolve_image_url
+                img_src = resolve_image_url(product.image_url, expires_hours=168)
+            else:
+                img_src = product.image_url
+            image = f'<img src="{escape(img_src)}" alt="">'
         else:
             image = f'<span class="initial">{escape(product.name[:1].upper())}</span>'
         return (
@@ -869,14 +894,14 @@ def order_by_category_color_stock(products: list[Product]) -> list[Product]:
     return sorted(products, key=sort_key)
 
 
-def cover_image(path: str, cfg: PDFConfig = DEFAULT_PDF_CONFIG) -> io.BytesIO:
+def cover_image(source: str | io.BytesIO, cfg: PDFConfig = DEFAULT_PDF_CONFIG) -> io.BytesIO:
     """Crop and resize an image to fill the PDF card dimensions at 72 DPI.
 
     The image is center-cropped to maintain aspect ratio, then saved as a
     JPEG byte buffer.
 
     Args:
-        path: Absolute path to the source image file.
+        source: Absolute path to the source image file, or a BytesIO object.
         cfg: PDF configuration for the target image size and JPEG quality.
 
     Returns:
@@ -890,7 +915,7 @@ def cover_image(path: str, cfg: PDFConfig = DEFAULT_PDF_CONFIG) -> io.BytesIO:
     dpi = 72
     target_w = int(cfg.img_w * dpi / 25.4)
     target_h = int(cfg.img_h * dpi / 25.4)
-    img = PILImage.open(path)
+    img = PILImage.open(source)
     img = img.convert("RGB")
     ratio = max(target_w / img.width, target_h / img.height)
     img = img.resize((int(img.width * ratio), int(img.height * ratio)), PILImage.LANCZOS)

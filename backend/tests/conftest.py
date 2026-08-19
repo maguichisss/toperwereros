@@ -5,7 +5,10 @@ and pre-built admin/employee user fixtures with valid JWT tokens.
 """
 
 import io
+import os
 from decimal import Decimal
+
+os.environ.setdefault("JWT_SECRET", "test-secret-for-testing")
 
 import pytest
 from fastapi import UploadFile

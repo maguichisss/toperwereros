@@ -1,4 +1,4 @@
-"""Image upload endpoints — validates magic bytes and saves to disk."""
+"""Image upload endpoints — validates magic bytes and saves to disk or GCS."""
 
 import logging
 import os
@@ -7,16 +7,15 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
-from slowapi.util import get_remote_address
 
-from app.config import UPLOAD_DIR, MAX_SIZE, detect_image_type
+from app.config import UPLOAD_DIR, MAX_SIZE, detect_image_type, GCS_BUCKET, get_forwarded_ip
 from app.models import User
 from app.auth import require_permission
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_forwarded_ip)
 
 
 @router.post("", tags=["Upload"], summary="Upload image",
@@ -27,7 +26,7 @@ def upload_image(
     image: UploadFile = File(...),
     current_user: User = Depends(require_permission("product.edit")),
 ) -> dict[str, str]:
-    """Upload a product image to the local uploads directory.
+    """Upload a product image to local disk or Google Cloud Storage.
 
     Validates that the file is ≤ 5 MB, has a recognized image header (JPEG,
     PNG, or WebP), and stores it with a random UUID filename.
@@ -64,11 +63,15 @@ def upload_image(
         raise HTTPException(400, "Solo se permiten imágenes JPEG, PNG y WebP")
     ext, expected_mime = result
     filename = f"{uuid.uuid4().hex}{ext}"
-    path = os.path.join(UPLOAD_DIR, filename)
     try:
-        with open(path, "wb") as f:
-            f.write(content)
-    except OSError:
-        logger.exception("Failed to write upload file")
+        if GCS_BUCKET:
+            from app.gcs import upload_to_gcs
+            upload_to_gcs(content, filename)
+        else:
+            path = os.path.join(UPLOAD_DIR, filename)
+            with open(path, "wb") as f:
+                f.write(content)
+    except Exception:
+        logger.exception("Failed to upload image")
         raise HTTPException(500, "Error al subir la imagen")
     return {"image_url": f"/uploads/{filename}"}

@@ -7,7 +7,7 @@ accepting snake_case field names in Python code (via ``populate_by_name=True``).
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 
 def to_camel(s: str) -> str:
@@ -117,6 +117,11 @@ class ProductResponse(BaseModel):
     categories: list[CategoryResponse] = []
     colors: list[ColorResponse] = []
 
+    @field_serializer("image_url")
+    def _resolve_image_url(self, value: str | None) -> str | None:
+        from app.gcs import resolve_image_url
+        return resolve_image_url(value)
+
 
 class CategoryName(BaseModel):
     """Minimal category representation for product list items."""
@@ -149,6 +154,11 @@ class ProductListItem(BaseModel):
     updated_at: datetime
     categories: list[CategoryName] = []
     colors: list[ColorName] = []
+
+    @field_serializer("image_url")
+    def _resolve_image_url(self, value: str | None) -> str | None:
+        from app.gcs import resolve_image_url
+        return resolve_image_url(value)
 
 
 class ProductListResponse(BaseModel):
@@ -186,6 +196,24 @@ class ProfileUpdateRequest(BaseModel):
 
     email: str | None = None
     image_url: str | None = None
+
+
+class RoleCreate(BaseModel):
+    """Schema for creating a new role."""
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+    name: str = Field(min_length=1, max_length=50)
+
+
+class RoleResponse(BaseModel):
+    """Schema for returning a role."""
+
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
 
 
 class UserCreate(BaseModel):
@@ -229,6 +257,11 @@ class UserResponse(BaseModel):
     role_id: int
     role_name: str | None = None
     created_at: datetime
+
+    @field_serializer("image_url")
+    def _resolve_image_url(self, value: str | None) -> str | None:
+        from app.gcs import resolve_image_url
+        return resolve_image_url(value)
 
 
 # ── Sales ───────────────────────────────────────────────────────────────────

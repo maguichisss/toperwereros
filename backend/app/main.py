@@ -15,18 +15,17 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from app.logging_config import setup_logging
-from app.config import UPLOAD_DIR
+from app.config import UPLOAD_DIR, GCS_BUCKET, get_forwarded_ip
 from app.routers.docs import REDOC_HTML
 from app.routers import categories, products, upload, colors, catalog, sales, customers, layaways, auth
 
 setup_logging()
 logger = logging.getLogger(__name__)
 
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_forwarded_ip)
 
 app = FastAPI(
     title="Store Catalog API",
@@ -74,13 +73,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+if not GCS_BUCKET:
+    app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 app.include_router(categories.router, prefix="/api/categories")
 app.include_router(products.router, prefix="/api/products")
@@ -116,3 +115,28 @@ def custom_redoc() -> str:
     """
 
     return REDOC_HTML
+
+
+@app.get("/api/health", include_in_schema=False)
+def health() -> dict[str, str]:
+    """Health check endpoint for Cloud Run readiness/liveness probes.
+
+    Verifies database connectivity in addition to basic status.
+
+    Returns:
+        JSON dict with ``"status": "ok"`` and ``"db": "connected"``.
+    """
+    from sqlalchemy import text
+    from app.database import SessionLocal
+
+    result = {"status": "ok", "db": "disconnected"}
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        result["db"] = "connected"
+    except Exception:
+        logger.warning("Health check: database connection failed")
+    if result["db"] != "connected":
+        return JSONResponse(status_code=503, content=result)
+    return result
