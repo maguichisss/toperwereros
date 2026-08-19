@@ -7,7 +7,7 @@ BACKUP_DIR="backups/$(date +%Y-%m-%d_%H%M%S)"
 mkdir -p "$BACKUP_DIR"/uploads
 
 echo "Dumping database..."
-docker compose -f "$COMPOSE_FILE" exec -T db pg_dump -U postgres store_catalog | gzip > "$BACKUP_DIR"/store_catalog.sql.gz
+docker compose -f "$COMPOSE_FILE" exec -T db pg_dump --no-owner -U postgres store_catalog | gzip > "$BACKUP_DIR"/store_catalog.sql.gz
 
 echo "Copying uploads..."
 docker compose -f "$COMPOSE_FILE" cp backend:/app/uploads/. "$BACKUP_DIR"/uploads/
