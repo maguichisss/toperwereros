@@ -103,7 +103,7 @@ class TestLoginConstraints:
 class TestUserCreateConstraints:
     def test_username_min_length(self):
         with pytest.raises(ValidationError):
-            UserCreate(username="ab", password="pass1234", role_id=1)
+            UserCreate(username="ab", password="pass12345678", role_id=1)
 
     def test_password_min_length(self):
         with pytest.raises(ValidationError):

@@ -10,6 +10,8 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 GCS_BUCKET: str = os.getenv("GCS_BUCKET", "")
 SIGNING_CREDENTIALS_LIFETIME: int = int(os.getenv("SIGNING_CREDENTIALS_LIFETIME", "86400"))
 SIGNED_URL_EXPIRY_HOURS: int = int(os.getenv("SIGNED_URL_EXPIRY_HOURS", "1"))
+LOCKOUT_MAX_ATTEMPTS: int = int(os.getenv("LOCKOUT_MAX_ATTEMPTS", "5"))
+LOCKOUT_DURATION_MINUTES: int = int(os.getenv("LOCKOUT_DURATION_MINUTES", "15"))
 
 MAGIC_BYTES: dict[bytes, tuple[str, str]] = {
     b'\xff\xd8\xff': ('.jpg', 'image/jpeg'),

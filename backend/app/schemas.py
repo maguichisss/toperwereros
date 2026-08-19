@@ -188,7 +188,7 @@ class ChangePasswordRequest(BaseModel):
     """Schema for password change request."""
 
     current_password: str
-    new_password: str = Field(min_length=4)
+    new_password: str = Field(min_length=12)
 
 
 class ProfileUpdateRequest(BaseModel):
@@ -220,7 +220,7 @@ class UserCreate(BaseModel):
     """Schema for creating a new user account."""
 
     username: str = Field(min_length=3, max_length=50)
-    password: str = Field(min_length=4)
+    password: str = Field(min_length=12)
     email: str | None = None
     role_id: int
 
@@ -236,7 +236,7 @@ class UserUpdate(BaseModel):
     username: str | None = Field(None, min_length=3, max_length=50)
     email: str | None = None
     role_id: int | None = None
-    password: str | None = Field(None, min_length=4)
+    password: str | None = Field(None, min_length=12)
     active: bool | None = None
 
     @field_validator("username")

@@ -98,6 +98,8 @@ class User(Base):
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     image_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     role: Mapped[Optional["Role"]] = relationship("Role", back_populates="users")
 

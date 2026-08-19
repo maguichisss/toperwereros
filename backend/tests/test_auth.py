@@ -130,7 +130,7 @@ class TestChangePassword:
     def test_change_password_success(self, client, admin_user, admin_headers):
         resp = client.post(
             "/api/auth/change-password",
-            json={"current_password": "admin123", "new_password": "newpass123"},
+            json={"current_password": "admin123", "new_password": "newpass123456"},
             headers=admin_headers,
         )
         assert resp.status_code == 200
@@ -139,7 +139,7 @@ class TestChangePassword:
     def test_change_password_wrong_current(self, client, admin_user, admin_headers):
         resp = client.post(
             "/api/auth/change-password",
-            json={"current_password": "wrong", "new_password": "newpass123"},
+            json={"current_password": "wrong", "new_password": "newpass123456"},
             headers=admin_headers,
         )
         assert resp.status_code == 400
@@ -159,7 +159,7 @@ class TestChangePassword:
         with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
             resp = client.post(
                 "/api/auth/change-password",
-                json={"current_password": "admin123", "new_password": "newpass123"},
+                json={"current_password": "admin123", "new_password": "newpass123456"},
                 headers=admin_headers,
             )
             assert resp.status_code == 500
@@ -169,7 +169,7 @@ class TestRegister:
     def test_register_success(self, client, admin_headers, db, _roles):
         resp = client.post(
             "/api/auth/register",
-            json={"username": "newuser", "password": "pass1234", "role_id": _roles["employee"].id},
+            json={"username": "newuser", "password": "pass12345678", "role_id": _roles["employee"].id},
             headers=admin_headers,
         )
         assert resp.status_code == 201
@@ -178,7 +178,7 @@ class TestRegister:
     def test_register_duplicate_username(self, client, admin_user, admin_headers, _roles):
         resp = client.post(
             "/api/auth/register",
-            json={"username": "admin", "password": "pass1234", "role_id": _roles["employee"].id},
+            json={"username": "admin", "password": "pass12345678", "role_id": _roles["employee"].id},
             headers=admin_headers,
         )
         assert resp.status_code == 400
@@ -186,7 +186,7 @@ class TestRegister:
     def test_register_duplicate_email(self, client, admin_user, admin_headers, _roles):
         resp = client.post(
             "/api/auth/register",
-            json={"username": "unique", "password": "pass1234", "email": "admin@test.com", "role_id": _roles["employee"].id},
+            json={"username": "unique", "password": "pass12345678", "email": "admin@test.com", "role_id": _roles["employee"].id},
             headers=admin_headers,
         )
         assert resp.status_code == 400
@@ -194,7 +194,7 @@ class TestRegister:
     def test_register_no_permission(self, client, employee_headers, _roles):
         resp = client.post(
             "/api/auth/register",
-            json={"username": "newuser", "password": "pass1234", "role_id": _roles["employee"].id},
+            json={"username": "newuser", "password": "pass12345678", "role_id": _roles["employee"].id},
             headers=employee_headers,
         )
         assert resp.status_code == 403
@@ -206,7 +206,7 @@ class TestRegister:
         with patch("sqlalchemy.orm.Session.commit", raise_on_commit):
             resp = client.post(
                 "/api/auth/register",
-                json={"username": "newuser", "password": "pass1234", "role_id": _roles["employee"].id},
+                json={"username": "newuser", "password": "pass12345678", "role_id": _roles["employee"].id},
                 headers=admin_headers,
             )
             assert resp.status_code == 500
@@ -298,13 +298,13 @@ class TestUpdateUser:
     def test_update_user_password(self, client, admin_headers, employee_user):
         resp = client.put(
             f"/api/auth/users/{employee_user.id}",
-            json={"password": "newpass123"},
+            json={"password": "newpass123456"},
             headers=admin_headers,
         )
         assert resp.status_code == 200
         login = client.post(
             "/api/auth/login",
-            json={"username": "employee", "password": "newpass123"},
+            json={"username": "employee", "password": "newpass123456"},
         )
         assert login.status_code == 200
 
@@ -347,6 +347,66 @@ class TestUpdateUser:
                 headers=admin_headers,
             )
             assert resp.status_code == 500
+
+
+class TestLoginLockout:
+    def _reset_limiter(self):
+        from app.routers.auth import limiter
+        limiter._storage.reset()
+
+    def test_failed_attempts_increment(self, client, admin_user):
+        self._reset_limiter()
+        for i in range(4):
+            resp = client.post("/api/auth/login", json={"username": "admin", "password": "wrong"})
+            assert resp.status_code == 401
+
+    def test_locks_after_max_attempts(self, client, admin_user, db):
+        self._reset_limiter()
+        for i in range(5):
+            resp = client.post("/api/auth/login", json={"username": "admin", "password": "wrong"})
+            assert resp.status_code == 401
+        db.expire_all()
+        user = db.query(User).filter(User.username == "admin").first()
+        assert user.locked_until is not None
+        assert user.failed_login_attempts == 5
+
+    def test_locked_account_rejects_correct_password(self, client, admin_user, db):
+        self._reset_limiter()
+        for i in range(5):
+            client.post("/api/auth/login", json={"username": "admin", "password": "wrong"})
+        self._reset_limiter()
+        resp = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+        assert resp.status_code == 401
+
+    def test_successful_login_resets_counter(self, client, admin_user, db):
+        self._reset_limiter()
+        for i in range(4):
+            client.post("/api/auth/login", json={"username": "admin", "password": "wrong"})
+        self._reset_limiter()
+        resp = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+        assert resp.status_code == 200
+        db.expire_all()
+        user = db.query(User).filter(User.username == "admin").first()
+        assert user.failed_login_attempts == 0
+        assert user.locked_until is None
+
+
+class TestPasswordValidation:
+    def test_change_password_too_short(self, client, admin_user, admin_headers):
+        resp = client.post(
+            "/api/auth/change-password",
+            json={"current_password": "admin123", "new_password": "short"},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_register_password_too_short(self, client, admin_headers, _roles):
+        resp = client.post(
+            "/api/auth/register",
+            json={"username": "newuser", "password": "short", "role_id": _roles["employee"].id},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 422
 
 
 class TestToggleUserActive:

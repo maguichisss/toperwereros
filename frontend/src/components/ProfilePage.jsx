@@ -61,8 +61,8 @@ export default function ProfilePage() {
       setPasswordError('Las contraseñas no coinciden')
       return
     }
-    if (newPassword.length < 4) {
-      setPasswordError('La contraseña debe tener al menos 4 caracteres')
+    if (newPassword.length < 12) {
+      setPasswordError('La contraseña debe tener al menos 12 caracteres')
       return
     }
     setPasswordBusy(true)

@@ -3,13 +3,14 @@
 import logging
 import os
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from slowapi import Limiter
 
-from app.config import UPLOAD_DIR, MAX_SIZE, detect_image_type, safe_upload_path, GCS_BUCKET, get_forwarded_ip
+from app.config import UPLOAD_DIR, MAX_SIZE, detect_image_type, safe_upload_path, GCS_BUCKET, get_forwarded_ip, LOCKOUT_MAX_ATTEMPTS, LOCKOUT_DURATION_MINUTES
 from app.database import get_db
 from app.models import User, Role
 from app.schemas import (
@@ -62,10 +63,28 @@ def login(
     """
 
     user = db.query(User).filter(User.username == data.username.strip().lower()).first()
-    if not user or not verify_password(data.password, user.hashed_password):
+
+    if not user:
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+
     if not user.active:
         raise HTTPException(status_code=401, detail="Usuario inactivo")
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if user.locked_until and user.locked_until > now:
+        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+
+    if not verify_password(data.password, user.hashed_password):
+        user.failed_login_attempts += 1
+        if user.failed_login_attempts >= LOCKOUT_MAX_ATTEMPTS:
+            user.locked_until = now + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+        db.commit()
+        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.commit()
+
     token = create_access_token({"sub": user.id})
     return TokenResponse(access_token=token)
 
