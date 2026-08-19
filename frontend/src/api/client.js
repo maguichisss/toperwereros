@@ -112,6 +112,11 @@ export const usersApi = {
   toggleActive: (id, active) => request(`/auth/users/${id}/active`, { method: 'PATCH', body: JSON.stringify({ active }) }),
 }
 
+export const rolesApi = {
+  list: () => request('/auth/roles'),
+  create: (name) => request('/auth/roles', { method: 'POST', body: JSON.stringify({ name }) }),
+}
+
 export const authApi = {
   changePassword: (data) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
   updateProfile: (data) => request('/auth/profile', { method: 'PATCH', body: JSON.stringify(data) }),

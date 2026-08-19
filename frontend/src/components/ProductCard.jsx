@@ -8,7 +8,7 @@ const ProductCard = memo(({ product, onEdit, onDelete, onShowImage, canEdit }) =
     if (clickTimer.current) {
       clearTimeout(clickTimer.current)
       clickTimer.current = null
-      onShowImage(`${product.image_url}?t=${product.updated_at}`)
+      onShowImage(product.image_url)
     } else {
       clickTimer.current = setTimeout(() => {
         clickTimer.current = null
@@ -22,7 +22,7 @@ const ProductCard = memo(({ product, onEdit, onDelete, onShowImage, canEdit }) =
       {product.image_url ? (
         <img
           className="card-image"
-          src={`${product.image_url}?t=${product.updated_at}`}
+          src={product.image_url}
           alt={product.name}
           loading="lazy"
           onClick={handleClick}

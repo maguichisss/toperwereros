@@ -269,8 +269,6 @@ export default function LayawayView() {
 }
 
 function ActiveList({ layaways, onSelect, onCancel, onRefresh, isEmpty, isFilterNoResults }) {
-  useEffect(() => { onRefresh(); }, [onRefresh]);
-
   return (
     <div className="layaway-list">
       {isFilterNoResults ? (
@@ -310,8 +308,6 @@ function ActiveList({ layaways, onSelect, onCancel, onRefresh, isEmpty, isFilter
 }
 
 function AllList({ layaways, onSelect, onCancel, onRefresh, isEmpty, isFilterNoResults }) {
-  useEffect(() => { onRefresh(); }, [onRefresh]);
-
   const statusLabel = { active: 'Activo', completed: 'Completado', cancelled: 'Cancelado' };
   const statusColor = { active: 'var(--primary)', completed: 'var(--success)', cancelled: 'var(--text-muted)' };
 

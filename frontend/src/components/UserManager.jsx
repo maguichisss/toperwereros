@@ -1,17 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
-import { usersApi } from '../api/client.js'
+import { usersApi, rolesApi } from '../api/client.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
-
-const ROLES = [
-  { id: 4, name: 'admin' },
-  { id: 5, name: 'employee' },
-  { id: 6, name: 'viewer' },
-]
 
 export default function UserManager() {
   const { user: currentUser } = useAuth()
   const [users, setUsers] = useState([])
+  const [roles, setRoles] = useState([])
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [email, setEmail] = useState('')
@@ -27,7 +22,10 @@ export default function UserManager() {
 
   const [confirmToggle, setConfirmToggle] = useState(null)
 
-  useEffect(() => { fetchUsers() }, [])
+  useEffect(() => {
+    fetchUsers()
+    rolesApi.list().then(setRoles).catch(() => {})
+  }, [])
 
   async function fetchUsers() {
     try {
@@ -122,7 +120,7 @@ export default function UserManager() {
           <div className="form-group">
             <label>Rol</label>
             <select value={roleId} onChange={(e) => setRoleId(Number(e.target.value))}>
-              {ROLES.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
         </div>
@@ -184,7 +182,7 @@ export default function UserManager() {
                 <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                   <label>Rol</label>
                   <select value={editForm.role_id} onChange={(e) => setEditForm({ ...editForm, role_id: Number(e.target.value) })}>
-                    {ROLES.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
                   </select>
                 </div>
               )}

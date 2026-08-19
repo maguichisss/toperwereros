@@ -54,7 +54,7 @@ export default function ProductList() {
     setSearch(value);
     clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
-      setPendingSearch(value);
+      setPendingSearch(value.trim());
       setPage(1);
     }, 300);
   }
