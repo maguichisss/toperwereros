@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: store_catalog
       POSTGRES_USER: postgres
@@ -16,12 +17,16 @@ services:
       retries: 10
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      target: backend-dev
+    restart: unless-stopped
     ports:
       - "3001:3001"
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/store_catalog
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
       - ./backend:/app
       - /app/__pycache__
@@ -31,7 +36,10 @@ services:
         condition: service_healthy
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: frontend-dev
+    restart: unless-stopped
     ports:
       - "5173:5173"
     environment:

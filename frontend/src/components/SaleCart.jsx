@@ -147,11 +147,12 @@ export default function SaleCart() {
           <p className="receipt-date">{new Date(saleResult.created_at + 'Z').toLocaleString('es-MX')}</p>
           <table className="receipt-items">
             <thead>
-              <tr><th>Producto</th><th>Cant</th><th>Precio</th><th>Subtotal</th></tr>
+              <tr><th>Código</th><th>Producto</th><th>Cant</th><th>Precio</th><th>Subtotal</th></tr>
             </thead>
             <tbody>
               {saleResult.items.map(item => (
                 <tr key={item.id}>
+                  <td>{item.product_code}</td>
                   <td>{item.product_name}</td>
                   <td>{item.quantity}</td>
                   <td>${formatPrice(item.unit_price)}</td>
@@ -317,11 +318,12 @@ export default function SaleCart() {
                 <p className="receipt-date">{new Date(selectedSale.created_at + 'Z').toLocaleString('es-MX')}</p>
                 <table className="receipt-items">
                   <thead>
-                    <tr><th>Producto</th><th>Cant</th><th>Precio</th><th>Subtotal</th></tr>
+                    <tr><th>Código</th><th>Producto</th><th>Cant</th><th>Precio</th><th>Subtotal</th></tr>
                   </thead>
                   <tbody>
                     {selectedSale.items.map(item => (
                       <tr key={item.id}>
+                        <td>{item.product_code}</td>
                         <td>{item.product_name}</td>
                         <td>{item.quantity}</td>
                         <td>${formatPrice(item.unit_price)}</td>
