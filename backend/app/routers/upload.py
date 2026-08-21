@@ -8,14 +8,14 @@ from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 
-from app.config import UPLOAD_DIR, MAX_SIZE, detect_image_type, GCS_BUCKET, get_forwarded_ip
+from app.config import UPLOAD_DIR, MAX_SIZE, detect_image_type, GCS_BUCKET, get_rate_limit_key
 from app.models import User
 from app.auth import require_permission
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-limiter = Limiter(key_func=get_forwarded_ip)
+limiter = Limiter(key_func=get_rate_limit_key)
 
 
 @router.post("", tags=["Upload"], summary="Upload image",

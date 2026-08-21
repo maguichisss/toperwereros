@@ -3,6 +3,7 @@
 import os
 
 from fastapi import HTTPException, Request
+from jose import JWTError, jwt
 
 UPLOAD_DIR: str = os.path.join(os.getcwd(), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -84,4 +85,29 @@ def get_forwarded_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
         return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+_JWT_SECRET = os.getenv("JWT_SECRET", "")
+_JWT_ALGORITHM = "HS256"
+
+
+def get_rate_limit_key(request: Request) -> str:
+    """Rate-limit key: user ID from JWT if authenticated, otherwise client IP.
+
+    For unauthenticated requests (login, register without token), falls back
+    to ``request.client.host`` so all users share the same rate-limit bucket.
+    For authenticated requests, extracts the user ID from the JWT and returns
+    ``user:{id}`` so each user gets their own bucket.
+    """
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer ") and _JWT_SECRET:
+        try:
+            payload = jwt.decode(auth[7:], _JWT_SECRET, algorithms=[_JWT_ALGORITHM])
+        except JWTError:
+            pass
+        else:
+            sub = payload.get("sub")
+            if sub is not None:
+                return f"user:{sub}"
     return request.client.host if request.client else "unknown"

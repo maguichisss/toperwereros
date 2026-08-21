@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from slowapi import Limiter
 
-from app.config import UPLOAD_DIR, MAX_SIZE, detect_image_type, safe_upload_path, GCS_BUCKET, get_forwarded_ip, LOCKOUT_MAX_ATTEMPTS, LOCKOUT_DURATION_MINUTES
+from app.config import UPLOAD_DIR, MAX_SIZE, detect_image_type, safe_upload_path, GCS_BUCKET, get_rate_limit_key, LOCKOUT_MAX_ATTEMPTS, LOCKOUT_DURATION_MINUTES
 from app.database import get_db
 from app.models import User, Role
 from app.schemas import (
@@ -35,7 +35,7 @@ from app.auth import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-limiter = Limiter(key_func=get_forwarded_ip)
+limiter = Limiter(key_func=get_rate_limit_key)
 
 
 @router.post("/login", response_model=TokenResponse, tags=["Auth"], summary="Login",

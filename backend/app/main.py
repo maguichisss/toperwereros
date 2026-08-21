@@ -18,14 +18,14 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.logging_config import setup_logging
-from app.config import UPLOAD_DIR, GCS_BUCKET, get_forwarded_ip
+from app.config import UPLOAD_DIR, GCS_BUCKET, get_rate_limit_key
 from app.routers.docs import REDOC_HTML
 from app.routers import categories, products, upload, colors, catalog, sales, customers, layaways, auth
 
 setup_logging()
 logger = logging.getLogger(__name__)
 
-limiter = Limiter(key_func=get_forwarded_ip)
+limiter = Limiter(key_func=get_rate_limit_key)
 
 app = FastAPI(
     title="Store Catalog API",
@@ -60,12 +60,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         JSONResponse with status 422 and the list of validation errors.
     """
 
-    body = await request.body()
     logger.warning(
-        "422 Validation Error on %s %s — body: %s — errors: %s",
+        "422 Validation Error on %s %s — errors: %s",
         request.method,
         request.url,
-        body.decode(),
         exc.errors(),
     )
     errors = json.loads(json.dumps(exc.errors(), default=str))
