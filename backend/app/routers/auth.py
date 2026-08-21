@@ -12,10 +12,12 @@ from slowapi import Limiter
 
 from app.config import UPLOAD_DIR, MAX_SIZE, detect_image_type, safe_upload_path, GCS_BUCKET, get_rate_limit_key, LOCKOUT_MAX_ATTEMPTS, LOCKOUT_DURATION_MINUTES
 from app.database import get_db
-from app.models import User, Role
+from app.models import User, Role, RefreshToken
 from app.schemas import (
     LoginRequest,
     TokenResponse,
+    RefreshRequest,
+    RefreshResponse,
     ChangePasswordRequest,
     ProfileUpdateRequest,
     RoleCreate,
@@ -28,6 +30,10 @@ from app.auth import (
     hash_password,
     verify_password,
     create_access_token,
+    create_refresh_token,
+    hash_token,
+    revoke_refresh_family,
+    revoke_all_user_refresh_tokens,
     get_current_user,
     require_permission,
 )
@@ -85,8 +91,70 @@ def login(
     user.locked_until = None
     db.commit()
 
-    token = create_access_token({"sub": user.id})
-    return TokenResponse(access_token=token)
+    access_token = create_access_token({"sub": user.id})
+    refresh_token_raw, _ = create_refresh_token(db, user.id)
+    db.commit()
+    return TokenResponse(access_token=access_token, refresh_token=refresh_token_raw)
+
+
+@router.post("/refresh", response_model=RefreshResponse, tags=["Auth"], summary="Refresh tokens",
+              description="Exchange a valid refresh token for a new access+refresh token pair. Old refresh token is revoked (rotation).")
+@limiter.limit("10/minute")
+def refresh_tokens(
+    request: Request,
+    data: RefreshRequest,
+    db: Session = Depends(get_db),
+) -> RefreshResponse:
+    """Rotate refresh tokens and issue a new access token.
+
+    Validates the refresh token, checks expiry and revocation, then issues
+    a new access+refresh pair with the same family_id.
+
+    Raises:
+        HTTPException: 401 if the token is invalid, expired, revoked, or user inactive.
+    """
+    token_hash = hash_token(data.refresh_token)
+    rt = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
+
+    if not rt:
+        raise HTTPException(401, "Token de refresco inválido")
+
+    if rt.revoked:
+        revoke_refresh_family(db, rt.family_id)
+        db.commit()
+        raise HTTPException(401, "Token de refresco revocado")
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if rt.expires_at < now:
+        db.delete(rt)
+        db.commit()
+        raise HTTPException(401, "Token de refresco expirado")
+
+    user = db.query(User).filter(User.id == rt.user_id).first()
+    if not user or not user.active:
+        rt.revoked = True
+        db.commit()
+        raise HTTPException(401, "Usuario inactivo")
+
+    rt.revoked = True
+    db.flush()
+
+    access_token = create_access_token({"sub": user.id})
+    refresh_token_raw, _ = create_refresh_token(db, user.id, family_id=rt.family_id)
+    db.commit()
+    return RefreshResponse(access_token=access_token, refresh_token=refresh_token_raw)
+
+
+@router.post("/logout", tags=["Auth"], summary="Logout",
+              description="Revoke all refresh tokens for the authenticated user.")
+def logout(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, bool]:
+    """Revoke all refresh tokens for the current user."""
+    revoke_all_user_refresh_tokens(db, current_user.id)
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/roles", response_model=list[RoleResponse], tags=["Auth"], summary="List roles",
@@ -205,6 +273,7 @@ def change_password(
     if len(data.new_password) < 4:
         raise HTTPException(400, "La nueva contraseña debe tener al menos 4 caracteres")
     current_user.hashed_password = hash_password(data.new_password)
+    revoke_all_user_refresh_tokens(db, current_user.id)
     try:
         db.commit()
     except Exception:

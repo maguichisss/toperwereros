@@ -4,6 +4,31 @@ function getToken() {
   return localStorage.getItem('store_token')
 }
 
+function getRefreshToken() {
+  return localStorage.getItem('store_refresh_token')
+}
+
+let refreshPromise = null
+
+async function tryRefresh() {
+  const rt = getRefreshToken()
+  if (!rt) return null
+  try {
+    const res = await fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: rt }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    localStorage.setItem('store_token', data.access_token)
+    localStorage.setItem('store_refresh_token', data.refresh_token)
+    return data.access_token
+  } catch {
+    return null
+  }
+}
+
 export async function request(url, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...options.headers }
   const token = getToken()
@@ -15,11 +40,35 @@ export async function request(url, options = {}) {
     ...options,
   })
   if (res.status === 204) return null
+
   if (res.status === 401) {
+    if (!refreshPromise) {
+      refreshPromise = tryRefresh()
+    }
+    const newToken = await refreshPromise
+    refreshPromise = null
+
+    if (newToken) {
+      const retryHeaders = { ...headers, Authorization: `Bearer ${newToken}` }
+      const retryRes = await fetch(`${API_BASE}${url}`, {
+        headers: retryHeaders,
+        ...options,
+      })
+      if (retryRes.status === 204) return null
+      const retryData = await retryRes.json()
+      if (!retryRes.ok) {
+        const msg = Array.isArray(retryData.detail) ? retryData.detail.map(e => e.msg).join('; ') : (retryData.detail || 'Request failed')
+        throw new Error(msg)
+      }
+      return retryData
+    }
+
     localStorage.removeItem('store_token')
+    localStorage.removeItem('store_refresh_token')
     window.location.reload()
     return
   }
+
   const data = await res.json()
   if (!res.ok) {
     const msg = Array.isArray(data.detail) ? data.detail.map(e => e.msg).join('; ') : (data.detail || 'Request failed')
@@ -66,6 +115,22 @@ export const uploadApi = {
     const token = getToken()
     if (token) headers['Authorization'] = `Bearer ${token}`
     const res = await fetch(`${API_BASE}/upload`, { method: 'POST', headers, body: form })
+    if (res.status === 401) {
+      if (!refreshPromise) refreshPromise = tryRefresh()
+      const newToken = await refreshPromise
+      refreshPromise = null
+      if (newToken) {
+        const retryHeaders = { Authorization: `Bearer ${newToken}` }
+        const retryRes = await fetch(`${API_BASE}/upload`, { method: 'POST', headers: retryHeaders, body: form })
+        const retryData = await retryRes.json()
+        if (!retryRes.ok) throw new Error(retryData.detail || 'Upload failed')
+        return retryData
+      }
+      localStorage.removeItem('store_token')
+      localStorage.removeItem('store_refresh_token')
+      window.location.reload()
+      return
+    }
     if (res.status === 204) return null
     const data = await res.json()
     if (!res.ok) {
@@ -127,6 +192,22 @@ export const authApi = {
     const token = getToken()
     if (token) headers['Authorization'] = `Bearer ${token}`
     const res = await fetch(`${API_BASE}/auth/avatar`, { method: 'POST', headers, body: form })
+    if (res.status === 401) {
+      if (!refreshPromise) refreshPromise = tryRefresh()
+      const newToken = await refreshPromise
+      refreshPromise = null
+      if (newToken) {
+        const retryHeaders = { Authorization: `Bearer ${newToken}` }
+        const retryRes = await fetch(`${API_BASE}/auth/avatar`, { method: 'POST', headers: retryHeaders, body: form })
+        const retryData = await retryRes.json()
+        if (!retryRes.ok) throw new Error(retryData.detail || 'Upload failed')
+        return retryData
+      }
+      localStorage.removeItem('store_token')
+      localStorage.removeItem('store_refresh_token')
+      window.location.reload()
+      return
+    }
     if (res.status === 204) return null
     const data = await res.json()
     if (!res.ok) {

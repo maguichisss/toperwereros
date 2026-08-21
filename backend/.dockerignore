@@ -1,6 +1,6 @@
 __pycache__
 
-.env
+.env*
 .git
 .gitignore
 .mypy_cache

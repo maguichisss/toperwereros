@@ -13,6 +13,7 @@ SIGNING_CREDENTIALS_LIFETIME: int = int(os.getenv("SIGNING_CREDENTIALS_LIFETIME"
 SIGNED_URL_EXPIRY_HOURS: int = int(os.getenv("SIGNED_URL_EXPIRY_HOURS", "1"))
 LOCKOUT_MAX_ATTEMPTS: int = int(os.getenv("LOCKOUT_MAX_ATTEMPTS", "5"))
 LOCKOUT_DURATION_MINUTES: int = int(os.getenv("LOCKOUT_DURATION_MINUTES", "15"))
+REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
 MAGIC_BYTES: dict[bytes, tuple[str, str]] = {
     b'\xff\xd8\xff': ('.jpg', 'image/jpeg'),

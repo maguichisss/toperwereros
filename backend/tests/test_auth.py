@@ -7,7 +7,8 @@ from unittest.mock import patch
 
 from fastapi import UploadFile
 
-from app.models import User, Role
+from app.models import User, Role, RefreshToken
+from app.auth import create_refresh_token
 
 
 class TestLogin:
@@ -457,3 +458,106 @@ class TestToggleUserActive:
                 headers=admin_headers,
             )
             assert resp.status_code == 500
+
+
+class TestRefreshTokens:
+    def test_login_returns_refresh_token(self, client, admin_user):
+        resp = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "refresh_token" in data
+        assert len(data["refresh_token"]) > 20
+
+    def test_refresh_success(self, client, admin_user):
+        login = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+        rt = login.json()["refresh_token"]
+        resp = client.post("/api/auth/refresh", json={"refresh_token": rt})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "access_token" in data
+        assert "refresh_token" in data
+        assert data["refresh_token"] != rt
+
+    def test_refresh_old_token_revoked(self, client, admin_user, db):
+        login = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+        rt = login.json()["refresh_token"]
+        client.post("/api/auth/refresh", json={"refresh_token": rt})
+        resp = client.post("/api/auth/refresh", json={"refresh_token": rt})
+        assert resp.status_code == 401
+
+    def test_refresh_invalid_token(self, client):
+        resp = client.post("/api/auth/refresh", json={"refresh_token": "invalid"})
+        assert resp.status_code == 401
+
+    def test_refresh_expired_token(self, client, admin_user, db):
+        from app.auth import hash_token
+        import uuid
+        from datetime import datetime, timedelta, timezone
+        token_hash = hash_token("expired_token")
+        rt = RefreshToken(
+            token_hash=token_hash,
+            user_id=admin_user.id,
+            family_id=str(uuid.uuid4()),
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1),
+        )
+        db.add(rt)
+        db.commit()
+        resp = client.post("/api/auth/refresh", json={"refresh_token": "expired_token"})
+        assert resp.status_code == 401
+
+    def test_refresh_inactive_user(self, client, admin_user, db):
+        from app.auth import create_refresh_token
+        rt_raw, _ = create_refresh_token(db, admin_user.id)
+        db.commit()
+        admin_user.active = False
+        db.commit()
+        resp = client.post("/api/auth/refresh", json={"refresh_token": rt_raw})
+        assert resp.status_code == 401
+
+    def test_refresh_replay_detection_revokes_family(self, client, admin_user, db):
+        from app.auth import hash_token
+        rt_raw, rt_orm = create_refresh_token(db, admin_user.id)
+        db.commit()
+        rt_orm.revoked = True
+        db.commit()
+        resp = client.post("/api/auth/refresh", json={"refresh_token": rt_raw})
+        assert resp.status_code == 401
+        db.expire_all()
+        remaining = db.query(RefreshToken).filter(
+            RefreshToken.family_id == rt_orm.family_id,
+            RefreshToken.revoked == False,
+        ).count()
+        assert remaining == 0
+
+    def test_logout_revokes_all_tokens(self, client, admin_user, admin_headers, db):
+        from app.auth import create_refresh_token
+        create_refresh_token(db, admin_user.id)
+        create_refresh_token(db, admin_user.id)
+        db.commit()
+        resp = client.post("/api/auth/logout", headers=admin_headers)
+        assert resp.status_code == 200
+        db.expire_all()
+        count = db.query(RefreshToken).filter(
+            RefreshToken.user_id == admin_user.id,
+            RefreshToken.revoked == False,
+        ).count()
+        assert count == 0
+
+
+class TestChangePasswordInvalidatesRefresh:
+    def test_change_password_revokes_refresh_tokens(self, client, admin_user, admin_headers, db):
+        from app.auth import create_refresh_token
+        create_refresh_token(db, admin_user.id)
+        db.commit()
+        resp = client.post(
+            "/api/auth/change-password",
+            json={"current_password": "admin123", "new_password": "newpass123456"},
+            headers=admin_headers,
+        )
+        assert resp.status_code == 200
+        db.expire_all()
+        count = db.query(RefreshToken).filter(
+            RefreshToken.user_id == admin_user.id,
+            RefreshToken.revoked == False,
+        ).count()
+        assert count == 0

@@ -104,6 +104,20 @@ class User(Base):
     role: Mapped[Optional["Role"]] = relationship("Role", back_populates="users")
 
 
+class RefreshToken(Base):
+    """Opaque refresh token with rotation support and family tracking."""
+
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    family_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
+
+
 class Sale(Base):
     """A completed sale transaction with line items and optional creator reference."""
 

@@ -19,7 +19,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
-from app.models import Role, User
+from app.models import Role, User, RefreshToken
 from app.auth import hash_password, create_access_token
 
 TEST_DB_URL = "sqlite:///:memory:"

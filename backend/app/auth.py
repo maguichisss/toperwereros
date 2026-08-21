@@ -5,7 +5,10 @@ role-based permission checking, and FastAPI dependencies for extracting the
 current authenticated user from requests.
 """
 
+import hashlib
 import os
+import secrets
+import uuid
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -17,7 +20,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User
+from app.models import User, RefreshToken
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 if not JWT_SECRET:
@@ -89,6 +92,47 @@ def create_access_token(data: dict[str, Any]) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
+
+
+def hash_token(token: str) -> str:
+    """Return SHA-256 hex digest of a token for safe storage."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def create_refresh_token(db: Session, user_id: int, family_id: str | None = None) -> tuple[str, RefreshToken]:
+    """Generate an opaque refresh token, store its hash, and return (raw_token, orm_object)."""
+    from app.config import REFRESH_TOKEN_EXPIRE_DAYS
+
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hash_token(raw_token)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    rt = RefreshToken(
+        token_hash=token_hash,
+        user_id=user_id,
+        family_id=family_id or str(uuid.uuid4()),
+        expires_at=now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+    )
+    db.add(rt)
+    db.flush()
+    return raw_token, rt
+
+
+def revoke_refresh_family(db: Session, family_id: str) -> None:
+    """Revoke all refresh tokens in a family."""
+    db.query(RefreshToken).filter(
+        RefreshToken.family_id == family_id,
+        RefreshToken.revoked == False,
+    ).update({"revoked": True})
+    db.flush()
+
+
+def revoke_all_user_refresh_tokens(db: Session, user_id: int) -> None:
+    """Revoke all refresh tokens for a user (e.g. on password change)."""
+    db.query(RefreshToken).filter(
+        RefreshToken.user_id == user_id,
+        RefreshToken.revoked == False,
+    ).update({"revoked": True})
+    db.flush()
 
 
 def get_current_user(

@@ -2,13 +2,39 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 
 const API_BASE = '/api'
 const STORAGE_KEY = 'store_token'
+const REFRESH_KEY = 'store_refresh_token'
 
 const AuthContext = createContext(null)
+
+function parseJwtExp(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp
+  } catch {
+    return null
+  }
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(() => localStorage.getItem(STORAGE_KEY))
+  const [refreshToken, setRefreshToken] = useState(() => localStorage.getItem(REFRESH_KEY))
   const [loading, setLoading] = useState(true)
+
+  const storeTokens = useCallback((accessToken, refreshTokenValue) => {
+    localStorage.setItem(STORAGE_KEY, accessToken)
+    localStorage.setItem(REFRESH_KEY, refreshTokenValue)
+    setToken(accessToken)
+    setRefreshToken(refreshTokenValue)
+  }, [])
+
+  const clearTokens = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(REFRESH_KEY)
+    setToken(null)
+    setRefreshToken(null)
+    setUser(null)
+  }, [])
 
   const fetchUser = useCallback(async (t) => {
     try {
@@ -19,21 +45,51 @@ export function AuthProvider({ children }) {
       const data = await res.json()
       setUser(data)
     } catch {
-      setUser(null)
-      setToken(null)
-      localStorage.removeItem(STORAGE_KEY)
+      clearTokens()
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [clearTokens])
+
+  const refreshAccessToken = useCallback(async () => {
+    const rt = localStorage.getItem(REFRESH_KEY)
+    if (!rt) return null
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: rt }),
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      storeTokens(data.access_token, data.refresh_token)
+      return data.access_token
+    } catch {
+      return null
+    }
+  }, [storeTokens])
 
   useEffect(() => {
-    if (token) {
-      fetchUser(token)
-    } else {
-      setLoading(false)
+    const init = async () => {
+      if (!token) {
+        setLoading(false)
+        return
+      }
+      const exp = parseJwtExp(token)
+      if (exp && exp * 1000 < Date.now()) {
+        const newToken = await refreshAccessToken()
+        if (newToken) {
+          await fetchUser(newToken)
+        } else {
+          clearTokens()
+          setLoading(false)
+        }
+      } else {
+        await fetchUser(token)
+      }
     }
-  }, [token, fetchUser])
+    init()
+  }, [])
 
   const login = async (username, password) => {
     const res = await fetch(`${API_BASE}/auth/login`, {
@@ -46,15 +102,21 @@ export function AuthProvider({ children }) {
       throw new Error(data.detail || 'Error al iniciar sesión')
     }
     const data = await res.json()
-    localStorage.setItem(STORAGE_KEY, data.access_token)
-    setToken(data.access_token)
+    storeTokens(data.access_token, data.refresh_token)
     await fetchUser(data.access_token)
   }
 
-  const logout = () => {
-    setUser(null)
-    setToken(null)
-    localStorage.removeItem(STORAGE_KEY)
+  const logout = async () => {
+    const t = localStorage.getItem(STORAGE_KEY)
+    if (t) {
+      try {
+        await fetch(`${API_BASE}/auth/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${t}` },
+        })
+      } catch { /* ignore */ }
+    }
+    clearTokens()
   }
 
   const refreshUser = useCallback(async () => {

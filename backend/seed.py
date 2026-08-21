@@ -49,7 +49,12 @@ def seed_roles_and_admin(db) -> None:
 
     admin_role = db.query(Role).filter(Role.name == "admin").first()
     if not db.query(User).filter(User.username == "admin").first():
-        default_pw = os.environ.get("DEFAULT_ADMIN_PASSWORD", "admin123")
+        default_pw = os.environ.get("DEFAULT_ADMIN_PASSWORD")
+        if not default_pw:
+            raise RuntimeError(
+                "DEFAULT_ADMIN_PASSWORD environment variable is required. "
+                "Set it before starting the server."
+            )
         db.add(User(
             username="admin",
             hashed_password=hash_password(default_pw),
