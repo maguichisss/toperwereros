@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { salesApi, productsApi } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useCart } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils.js';
 import ConfirmDialog from './ConfirmDialog.jsx';
 
 export default function SaleCart() {
   const { can } = useAuth();
+  const { items: cart, addItem, updateQty, removeItem, clearCart, total: cartTotal } = useCart();
   const [mode, setMode] = useState('cart');
-  const [cart, setCart] = useState([]);
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
@@ -50,33 +51,11 @@ export default function SaleCart() {
   }, []);
 
   function addToCart(product) {
-    setCart(prev => {
-      const existing = prev.find(c => c.product_id === product.id);
-      if (existing) {
-        if (existing.quantity >= existing.stock) return prev;
-        return prev.map(c => c.product_id === product.id ? { ...c, quantity: c.quantity + 1 } : c);
-      }
-      return [...prev, { product_id: product.id, name: product.name, code: product.code, image_url: product.image_url, price: parseFloat(product.price), quantity: 1, stock: product.stock }];
-    });
+    addItem(product);
     setSearch('');
     setResults([]);
     setShowResults(false);
   }
-
-  function updateQty(productId, delta) {
-    setCart(prev => prev.map(c => {
-      if (c.product_id !== productId) return c;
-      const newQty = delta > 0 && c.quantity >= c.stock ? c.quantity : c.quantity + delta;
-      if (newQty <= 0) return null;
-      return { ...c, quantity: newQty };
-    }).filter(Boolean));
-  }
-
-  function removeFromCart(productId) {
-    setCart(prev => prev.filter(c => c.product_id !== productId));
-  }
-
-  const cartTotal = cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
 
   async function handleCheckout() {
     if (cart.length === 0) return;
@@ -84,7 +63,7 @@ export default function SaleCart() {
     try {
       const result = await salesApi.create({ items: cart.map(c => ({ product_id: c.product_id, quantity: c.quantity })) });
       setSaleResult(result);
-      setCart([]);
+      clearCart();
     } catch (e) {
       setError(e.message);
     }
@@ -239,7 +218,7 @@ export default function SaleCart() {
                       <span className="cart-qty">{c.quantity}</span>
                       <button className="btn-qty" onClick={() => updateQty(c.product_id, 1)} disabled={c.quantity >= c.stock}>+</button>
                       <span className="cart-item-price">${formatPrice(c.price * c.quantity)}</span>
-                      <button className="btn-remove" onClick={() => removeFromCart(c.product_id)}>✕</button>
+                      <button className="btn-remove" onClick={() => removeItem(c.product_id)}>✕</button>
                     </div>
                   </div>
                 ))}

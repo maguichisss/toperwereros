@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { productsApi, categoriesApi } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useCart } from '../context/CartContext.jsx';
 import ProductForm from './ProductForm.jsx';
 import ProductCard from './ProductCard.jsx';
 import Toast from './Toast.jsx';
@@ -10,6 +11,7 @@ import { formatPrice } from '../utils.js';
 
 export default function ProductList() {
   const { can } = useAuth();
+  const { addItem } = useCart();
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState([]);
@@ -220,7 +222,11 @@ export default function ProductList() {
 
       <div className="product-grid">
         {products.map((p) => (
-          <ProductCard key={p.id} product={p} onEdit={handleEdit} onDelete={(id) => requestDelete(id, p.name)} onShowImage={setPreviewImage} canEdit={can('product.edit')} />
+          <ProductCard key={p.id} product={p} onEdit={handleEdit} onDelete={(id) => requestDelete(id, p.name)} onShowImage={setPreviewImage} canEdit={can('product.edit')} onAddToCart={(product) => {
+            if (!addItem(product)) {
+              showToast('No puedes agregar más productos', 'error')
+            }
+          }} />
         ))}
       </div>
 

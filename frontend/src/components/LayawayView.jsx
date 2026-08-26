@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { layawaysApi, customersApi, productsApi } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useCart } from '../context/CartContext.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import { formatPrice } from '../utils.js';
 
@@ -10,9 +11,9 @@ function daysElapsed(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr + 'Z')) / 86400000);
 }
 
-export default function LayawayView() {
+export default function LayawayView({ initialMode }) {
   const { can } = useAuth();
-  const [mode, setMode] = useState('active');
+  const [mode, setMode] = useState(initialMode || 'active');
   const [activeLayaways, setActiveLayaways] = useState([]);
   const [allLayaways, setAllLayaways] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -24,6 +25,10 @@ export default function LayawayView() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(20);
+
+  useEffect(() => {
+    if (initialMode) setMode(initialMode)
+  }, [initialMode])
 
   const loadActive = useCallback(async () => {
     try {
@@ -354,6 +359,7 @@ function AllList({ layaways, onSelect, onCancel, onRefresh, isEmpty, isFilterNoR
 
 function CreateView({ onBack, onCreated }) {
   const { can } = useAuth();
+  const { items: cart, addItem, updateQty, removeItem, clearCart, total: cartTotal } = useCart();
   const [step, setStep] = useState('customer');
   const [error, setError] = useState('');
 
@@ -364,7 +370,6 @@ function CreateView({ onBack, onCreated }) {
   const [showNewForm, setShowNewForm] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '' });
 
-  const [cart, setCart] = useState([]);
   const [productSearch, setProductSearch] = useState('');
   const [productResults, setProductResults] = useState([]);
   const [showProductResults, setShowProductResults] = useState(false);
@@ -434,33 +439,11 @@ function CreateView({ onBack, onCreated }) {
   }
 
   function addToCart(product) {
-    setCart(prev => {
-      const existing = prev.find(c => c.product_id === product.id);
-      if (existing) {
-        if (existing.quantity >= existing.stock) return prev;
-        return prev.map(c => c.product_id === product.id ? { ...c, quantity: c.quantity + 1 } : c);
-      }
-      return [{ product_id: product.id, name: product.name, code: product.code, image_url: product.image_url, price: parseFloat(product.price), quantity: 1, stock: product.stock }, ...prev];
-    });
+    addItem(product);
     setProductSearch('');
     setProductResults([]);
     setShowProductResults(false);
   }
-
-  function updateQty(productId, delta) {
-    setCart(prev => prev.map(c => {
-      if (c.product_id !== productId) return c;
-      const newQty = delta > 0 && c.quantity >= c.stock ? c.quantity : c.quantity + delta;
-      if (newQty <= 0) return null;
-      return { ...c, quantity: newQty };
-    }).filter(Boolean));
-  }
-
-  function removeFromCart(productId) {
-    setCart(prev => prev.filter(c => c.product_id !== productId));
-  }
-
-  const cartTotal = cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
 
   async function handleCreate() {
     setError('');
@@ -501,6 +484,7 @@ function CreateView({ onBack, onCreated }) {
 
     try {
       await layawaysApi.create(body);
+      clearCart();
       onCreated();
     } catch (e) {
       setError(e.message);
@@ -634,7 +618,7 @@ function CreateView({ onBack, onCreated }) {
                   <span className="cart-qty">{c.quantity}</span>
                   <button className="btn-qty" onClick={() => updateQty(c.product_id, 1)} disabled={c.quantity >= c.stock}>+</button>
                     <span className="cart-item-price">${formatPrice(c.price * c.quantity)}</span>
-                  <button className="btn-remove" onClick={() => removeFromCart(c.product_id)}>✕</button>
+                  <button className="btn-remove" onClick={() => removeItem(c.product_id)}>✕</button>
                 </div>
               </div>
             ))}

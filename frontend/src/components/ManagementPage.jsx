@@ -1,22 +1,35 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import CustomerManager from './CustomerManager.jsx'
 import ColorManager from './ColorManager.jsx'
 import CategoryManager from './CategoryManager.jsx'
 import UserManager from './UserManager.jsx'
+import SaleCart from './SaleCart.jsx'
 
 const SUB_TABS = [
   { key: 'customers', label: 'Clientes' },
+  { key: 'ventas', label: 'Ventas', permission: 'sale.create' },
   { key: 'colors', label: 'Colores', adminOnly: true },
   { key: 'categories', label: 'Categorías', adminOnly: true },
   { key: 'users', label: 'Usuarios', adminOnly: true },
 ]
 
-export default function ManagementPage() {
+export default function ManagementPage({ defaultSubTab, onSubTabHandled }) {
   const { can } = useAuth()
   const [subTab, setSubTab] = useState('customers')
 
-  const visibleTabs = SUB_TABS.filter(t => !t.adminOnly || can('user.manage'))
+  useEffect(() => {
+    if (defaultSubTab) {
+      setSubTab(defaultSubTab)
+      onSubTabHandled?.()
+    }
+  }, [defaultSubTab, onSubTabHandled])
+
+  const visibleTabs = SUB_TABS.filter(t => {
+    if (t.adminOnly) return can('user.manage')
+    if (t.permission) return can(t.permission)
+    return true
+  })
 
   return (
     <>
@@ -32,6 +45,7 @@ export default function ManagementPage() {
         ))}
       </div>
       {subTab === 'customers' && <CustomerManager />}
+      {subTab === 'ventas' && <SaleCart />}
       {subTab === 'colors' && <ColorManager />}
       {subTab === 'categories' && <CategoryManager />}
       {subTab === 'users' && <UserManager />}
