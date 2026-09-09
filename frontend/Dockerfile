@@ -24,3 +24,9 @@ COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 EXPOSE 8080
 CMD ["/docker-entrypoint.sh"]
+
+# ── standalone Pi QA target (static TLS nginx, no envsubst) ──
+FROM nginx:alpine AS frontend-pi
+COPY --from=frontend-build /app/dist /usr/share/nginx/html
+COPY nginx.pi.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80 443

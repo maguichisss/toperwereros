@@ -78,6 +78,8 @@ update products set ubicacion = 'Estante blanco' where ubicacion='estante blanco
 select sum(stock*price) from products;
 select ubicacion, sum(stock*price) from products group by ubicacion;
 
+select sum(total) from sales;
+
 
 WITH per_product AS (
     SELECT
