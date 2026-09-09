@@ -54,6 +54,7 @@ def serialize_layaway(layaway: Layaway) -> LayawayResponse:
         id=layaway.id,
         customer_id=layaway.customer_id,
         customer_name=layaway.customer.name if layaway.customer else None,
+        customer_phone=layaway.customer.phone if layaway.customer else None,
         total=layaway.total,
         deposit=layaway.deposit,
         balance=layaway.balance,

@@ -394,6 +394,7 @@ class LayawayResponse(BaseModel):
     id: int
     customer_id: int
     customer_name: str | None = None
+    customer_phone: str | None = None
     total: Decimal
     deposit: Decimal
     balance: Decimal
