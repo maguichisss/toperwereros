@@ -271,6 +271,15 @@ header nav button:hover,
   background: var(--danger-hover);
 }
 
+.btn-success {
+  background: var(--success);
+  color: var(--text-white);
+}
+
+.btn-success:hover {
+  background: var(--success-hover);
+}
+
 .btn-secondary {
   background: var(--text-secondary);
   color: var(--text-white);
@@ -685,10 +694,9 @@ header nav button:hover,
 
 .toast {
   position: fixed;
-  top: 1rem;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 9999;
+  z-index: 99999;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   color: var(--text-white);
@@ -728,7 +736,7 @@ header nav button:hover,
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(-1rem);
+    transform: translateX(-50%) translateY(-0.75rem);
   }
   to {
     opacity: 1;

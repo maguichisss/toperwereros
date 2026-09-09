@@ -3,6 +3,7 @@ import { layawaysApi, customersApi, productsApi } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
+import Toast from './Toast.jsx';
 import { formatPrice } from '../utils.js';
 
 const DAYS_OVERDUE = 21;
@@ -694,6 +695,7 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingQty, setEditingQty] = useState('');
   const [notesDraft, setNotesDraft] = useState('');
+  const [toast, setToast] = useState(null);
   const productTimer = useRef(null);
   const productResultsRef = useRef(null);
 
@@ -792,6 +794,7 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
     try {
       const updated = await layawaysApi.update(layaway.id, { notes: value || null });
       onUpdated(updated);
+      setToast({ message: 'Notas actualizadas', type: 'success' });
     } catch (e) {
       setDetailError(e.message);
     }
@@ -1046,7 +1049,7 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
             </button>
           </div>
           <div className="layaway-actions-detail">
-            <button className="btn btn-primary" onClick={handleComplete}>
+            <button className="btn btn-success" onClick={handleComplete}>
               Completar Apartado
             </button>
             <button className="btn btn-danger" onClick={handleCancel}>
@@ -1055,6 +1058,7 @@ function DetailView({ layaway, onBack, onPayment, onCancel, onComplete, onUpdate
           </div>
         </div>
       )}
+      <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
     </div>
   );
 }
