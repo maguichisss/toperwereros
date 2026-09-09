@@ -32,9 +32,15 @@ if [ -n "$CLOUD_SQL_CONNECTION_STRING" ]; then
 fi
 
 echo "Ensuring tables exist..."
-python -c "from app.database import Base, engine; Base.metadata.create_all(bind=engine)"
-echo "Running migrations..."
-alembic upgrade head
+python -c "import app.models; from app.database import Base, engine; Base.metadata.create_all(bind=engine)"
+
+if python -c "import app.database as appdb; from sqlalchemy import inspect; import sys; sys.exit(0 if inspect(appdb.engine).has_table('alembic_version') else 1)"; then
+    echo "Migration history present - running migrations..."
+    alembic upgrade head
+else
+    echo "Fresh database - schema created from models, stamping migration head..."
+    alembic stamp head
+fi
 
 echo "Seeding data..."
 python -m seed
