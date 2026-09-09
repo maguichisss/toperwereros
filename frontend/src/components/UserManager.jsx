@@ -10,13 +10,18 @@ export default function UserManager() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [email, setEmail] = useState('')
-  const [roleId, setRoleId] = useState(5)
+  const [roleId, setRoleId] = useState(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [busy, setBusy] = useState(false)
 
+  const defaultRoleId = (rs) => {
+    const def = rs.find((r) => r.name === 'employee') || rs[0]
+    return def ? def.id : null
+  }
+
   const [editUser, setEditUser] = useState(null)
-  const [editForm, setEditForm] = useState({ username: '', email: '', role_id: 5, password: '' })
+  const [editForm, setEditForm] = useState({ username: '', email: '', role_id: null, password: '' })
   const [editError, setEditError] = useState('')
   const [editBusy, setEditBusy] = useState(false)
 
@@ -24,7 +29,10 @@ export default function UserManager() {
 
   useEffect(() => {
     fetchUsers()
-    rolesApi.list().then(setRoles).catch(() => {})
+    rolesApi.list().then((rs) => {
+      setRoles(rs)
+      setRoleId(defaultRoleId(rs))
+    }).catch(() => {})
   }, [])
 
   async function fetchUsers() {
@@ -45,7 +53,7 @@ export default function UserManager() {
       setUsername('')
       setPassword('')
       setEmail('')
-      setRoleId(5)
+      setRoleId(defaultRoleId(roles))
       fetchUsers()
     } catch (err) {
       setError(err.message)
