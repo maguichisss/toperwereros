@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
+
 BACKUP_DIR="${1:-}"
 
 if [ -z "$BACKUP_DIR" ]; then
@@ -22,17 +24,17 @@ fi
 
 echo "Restoring from $BACKUP_DIR"
 
-docker compose -f docker-compose.yml stop backend
+docker compose -f "$COMPOSE_FILE" stop backend
 
 echo "Restoring database..."
-echo "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'store_catalog' AND pid <> pg_backend_pid(); DROP DATABASE IF EXISTS store_catalog; CREATE DATABASE store_catalog;" | docker compose -f docker-compose.yml exec -T db psql -U postgres
-gunzip -c "$BACKUP_DIR/store_catalog.sql.gz" | docker compose -f docker-compose.yml exec -T db psql -U postgres store_catalog
+echo "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'store_catalog' AND pid <> pg_backend_pid(); DROP DATABASE IF EXISTS store_catalog; CREATE DATABASE store_catalog;" | docker compose -f "$COMPOSE_FILE" exec -T db psql -U postgres
+gunzip -c "$BACKUP_DIR/store_catalog.sql.gz" | docker compose -f "$COMPOSE_FILE" exec -T db psql -U postgres store_catalog
 
 echo "Starting backend for upload restore..."
-docker compose -f docker-compose.yml start backend
+docker compose -f "$COMPOSE_FILE" start backend
 
 echo "Restoring uploads..."
-docker compose -f docker-compose.yml exec -T backend rm -rf /app/uploads/*
-docker compose -f docker-compose.yml cp "$BACKUP_DIR/uploads/." backend:/app/uploads/
+docker compose -f "$COMPOSE_FILE" exec -T backend rm -rf /app/uploads/*
+docker compose -f "$COMPOSE_FILE" cp "$BACKUP_DIR/uploads/." backend:/app/uploads/
 
 echo "Restore complete: $BACKUP_DIR"

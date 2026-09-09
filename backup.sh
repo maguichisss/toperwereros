@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-COMPOSE_FILE="docker-compose.yml"
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 BACKUP_DIR="backups/$(date +%Y-%m-%d_%H%M%S)"
 
 mkdir -p "$BACKUP_DIR"/uploads
