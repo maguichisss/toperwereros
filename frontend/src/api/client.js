@@ -8,71 +8,97 @@ function getRefreshToken() {
   return localStorage.getItem('store_refresh_token')
 }
 
+function authHeaders(extra = {}) {
+  const headers = { 'Content-Type': 'application/json', ...extra }
+  const token = getToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
+
+function forceLogout() {
+  localStorage.removeItem('store_token')
+  localStorage.removeItem('store_refresh_token')
+  window.location.reload()
+}
+
+export function apiErrorMessage(detail, fallback = 'Request failed') {
+  if (!detail) return fallback
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) return detail.map(e => e.msg).join('; ')
+  return fallback
+}
+
 let refreshPromise = null
 
-async function tryRefresh() {
-  const rt = getRefreshToken()
-  if (!rt) return null
-  try {
-    const res = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: rt }),
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    localStorage.setItem('store_token', data.access_token)
-    localStorage.setItem('store_refresh_token', data.refresh_token)
-    return data.access_token
-  } catch {
-    return null
+function refreshTokens() {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const rt = getRefreshToken()
+      if (!rt) return null
+      try {
+        const res = await fetch(`${API_BASE}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: rt }),
+        })
+        if (!res.ok) return null
+        const data = await res.json()
+        localStorage.setItem('store_token', data.access_token)
+        localStorage.setItem('store_refresh_token', data.refresh_token)
+        return data.access_token
+      } catch {
+        return null
+      }
+    })()
   }
+  return refreshPromise.finally(() => { refreshPromise = null })
+}
+
+async function uploadOne(path, form) {
+  let headers = {}
+  const token = getToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+  let res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers, body: form })
+  if (res.status === 401) {
+    const newToken = await refreshTokens()
+    if (newToken) {
+      headers = { Authorization: `Bearer ${newToken}` }
+      res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers, body: form })
+    } else {
+      forceLogout()
+      return null
+    }
+  }
+  if (res.status === 204) return null
+  const data = await res.json()
+  if (!res.ok) throw new Error(apiErrorMessage(data.detail, 'Upload failed'))
+  return data
 }
 
 export async function request(url, options = {}) {
-  const headers = { 'Content-Type': 'application/json', ...options.headers }
-  const token = getToken()
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-  const res = await fetch(`${API_BASE}${url}`, {
-    headers,
-    ...options,
-  })
+  const headers = authHeaders(options.headers)
+  let res = await fetch(`${API_BASE}${url}`, { headers, ...options })
   if (res.status === 204) return null
 
   if (res.status === 401) {
-    if (!refreshPromise) {
-      refreshPromise = tryRefresh()
-    }
-    const newToken = await refreshPromise
-    refreshPromise = null
-
+    const newToken = await refreshTokens()
     if (newToken) {
       const retryHeaders = { ...headers, Authorization: `Bearer ${newToken}` }
-      const retryRes = await fetch(`${API_BASE}${url}`, {
-        headers: retryHeaders,
-        ...options,
-      })
+      const retryRes = await fetch(`${API_BASE}${url}`, { headers: retryHeaders, ...options })
       if (retryRes.status === 204) return null
       const retryData = await retryRes.json()
       if (!retryRes.ok) {
-        const msg = Array.isArray(retryData.detail) ? retryData.detail.map(e => e.msg).join('; ') : (retryData.detail || 'Request failed')
-        throw new Error(msg)
+        throw new Error(apiErrorMessage(retryData.detail))
       }
       return retryData
     }
-
-    localStorage.removeItem('store_token')
-    localStorage.removeItem('store_refresh_token')
-    window.location.reload()
+    forceLogout()
     return
   }
 
   const data = await res.json()
   if (!res.ok) {
-    const msg = Array.isArray(data.detail) ? data.detail.map(e => e.msg).join('; ') : (data.detail || 'Request failed')
-    throw new Error(msg)
+    throw new Error(apiErrorMessage(data.detail))
   }
   return data
 }
@@ -108,36 +134,10 @@ export const productsApi = {
 }
 
 export const uploadApi = {
-  upload: async (file) => {
+  upload: (file) => {
     const form = new FormData()
     form.append('image', file)
-    const headers = {}
-    const token = getToken()
-    if (token) headers['Authorization'] = `Bearer ${token}`
-    const res = await fetch(`${API_BASE}/upload`, { method: 'POST', headers, body: form })
-    if (res.status === 401) {
-      if (!refreshPromise) refreshPromise = tryRefresh()
-      const newToken = await refreshPromise
-      refreshPromise = null
-      if (newToken) {
-        const retryHeaders = { Authorization: `Bearer ${newToken}` }
-        const retryRes = await fetch(`${API_BASE}/upload`, { method: 'POST', headers: retryHeaders, body: form })
-        const retryData = await retryRes.json()
-        if (!retryRes.ok) throw new Error(retryData.detail || 'Upload failed')
-        return retryData
-      }
-      localStorage.removeItem('store_token')
-      localStorage.removeItem('store_refresh_token')
-      window.location.reload()
-      return
-    }
-    if (res.status === 204) return null
-    const data = await res.json()
-    if (!res.ok) {
-      const msg = Array.isArray(data.detail) ? data.detail.map(e => e.msg).join('; ') : (data.detail || 'Upload failed')
-      throw new Error(msg)
-    }
-    return data
+    return uploadOne('/upload', form)
   },
 }
 
@@ -185,36 +185,10 @@ export const rolesApi = {
 export const authApi = {
   changePassword: (data) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
   updateProfile: (data) => request('/auth/profile', { method: 'PATCH', body: JSON.stringify(data) }),
-  uploadAvatar: async (file) => {
+  uploadAvatar: (file) => {
     const form = new FormData()
     form.append('image', file)
-    const headers = {}
-    const token = getToken()
-    if (token) headers['Authorization'] = `Bearer ${token}`
-    const res = await fetch(`${API_BASE}/auth/avatar`, { method: 'POST', headers, body: form })
-    if (res.status === 401) {
-      if (!refreshPromise) refreshPromise = tryRefresh()
-      const newToken = await refreshPromise
-      refreshPromise = null
-      if (newToken) {
-        const retryHeaders = { Authorization: `Bearer ${newToken}` }
-        const retryRes = await fetch(`${API_BASE}/auth/avatar`, { method: 'POST', headers: retryHeaders, body: form })
-        const retryData = await retryRes.json()
-        if (!retryRes.ok) throw new Error(retryData.detail || 'Upload failed')
-        return retryData
-      }
-      localStorage.removeItem('store_token')
-      localStorage.removeItem('store_refresh_token')
-      window.location.reload()
-      return
-    }
-    if (res.status === 204) return null
-    const data = await res.json()
-    if (!res.ok) {
-      const msg = Array.isArray(data.detail) ? data.detail.map(e => e.msg).join('; ') : (data.detail || 'Upload failed')
-      throw new Error(msg)
-    }
-    return data
+    return uploadOne('/auth/avatar', form)
   },
 }
 

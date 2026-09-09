@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext.jsx';
 import ProductForm from './ProductForm.jsx';
 import ProductCard from './ProductCard.jsx';
 import Toast from './Toast.jsx';
+import useToast from '../hooks/useToast.js';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import Lightbox from './Lightbox.jsx';
 import { formatPrice } from '../utils.js';
@@ -18,7 +19,7 @@ export default function ProductList() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
-  const [toast, setToast] = useState(null);
+  const { toast, notify, clear } = useToast();
   const [page, setPage] = useState(1);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [pendingSearch, setPendingSearch] = useState('');
@@ -69,17 +70,17 @@ export default function ProductList() {
     setConfirmDelete({ id, name });
   }
 
-  function showToast(message, type) { setToast({ message, type }) }
+
 
   async function confirmDeleteProduct() {
     if (!confirmDelete) return;
     try {
       await productsApi.remove(confirmDelete.id);
       setConfirmDelete(null);
-      showToast('Producto eliminado', 'success');
+      notify('Producto eliminado', 'success');
       load();
     } catch (e) {
-      showToast(e.message, 'error');
+      notify(e.message, 'error');
       setConfirmDelete(null);
     }
   }
@@ -137,7 +138,7 @@ export default function ProductList() {
 
   async function openPDF() {
     try {
-      showToast('Generando PDF…', 'info')
+      notify('Generando PDF…', 'info')
       let url = '/api/catalog/pdf'
       if (pendingSearch) url += `?q=${encodeURIComponent(pendingSearch)}`
       const token = localStorage.getItem('store_token')
@@ -158,9 +159,9 @@ export default function ProductList() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(blobUrl)
-      showToast('PDF descargado', 'success')
+      notify('PDF descargado', 'success')
     } catch (err) {
-      showToast(err.message || 'Error al generar PDF')
+      notify(err.message || 'Error al generar PDF')
     }
   }
 
@@ -180,15 +181,15 @@ export default function ProductList() {
           />
           {search && (
             <button
+              className="input-clear"
               onClick={() => { setSearch(''); setPendingSearch(''); setPage(1); }}
-              style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '1.1rem', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', lineHeight: 1 }}
             >
               ✕
             </button>
           )}
         </div>
         <div className="filter-actions">
-          <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }} style={{ padding: '0.35rem 0.4rem', border: '1px solid #ccc', borderRadius: 4, fontSize: '0.85rem' }}>
+          <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }} className="input-sm">
             <option value={20}>20</option>
             <option value={50}>50</option>
             <option value={100}>100</option>
@@ -224,7 +225,7 @@ export default function ProductList() {
         {products.map((p) => (
           <ProductCard key={p.id} product={p} onEdit={handleEdit} onDelete={(id) => requestDelete(id, p.name)} onShowImage={setPreviewImage} canEdit={can('product.edit')} onAddToCart={(product) => {
             if (!addItem(product)) {
-              showToast('No puedes agregar más productos', 'error')
+              notify('No puedes agregar más productos', 'error')
             }
           }} />
         ))}
@@ -271,7 +272,7 @@ export default function ProductList() {
         />
       )}
 
-      <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
+      <Toast message={toast?.message} type={toast?.type} onClose={clear} />
 
       {showForm && (
         <ProductForm

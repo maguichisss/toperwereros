@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils.js';
 import ConfirmDialog from './ConfirmDialog.jsx';
+import StockBadge from './StockBadge.jsx';
 
 export default function SaleCart() {
   const { can } = useAuth();
@@ -209,9 +210,7 @@ export default function SaleCart() {
                     <div className="cart-item-info">
                       <span className="cart-item-name">{c.name}</span>
                       <span className="cart-item-code">{c.code}</span>
-                      {c.stock !== undefined && <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Stock: {c.stock}</span>}
-{c.stock !== undefined && c.quantity >= c.stock && <span style={{ color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 600 }}>Stock máximo</span>}
-                    {c.stock !== undefined && c.quantity < c.stock && c.quantity >= c.stock * 0.8 && <span style={{ color: 'var(--warning)', fontSize: '0.75rem', fontWeight: 600 }}>Poco stock</span>}
+                      <StockBadge stock={c.stock} quantity={c.quantity} />
                     </div>
                     <div className="cart-item-controls">
                       <button className="btn-qty" onClick={() => updateQty(c.product_id, -1)} disabled={c.quantity <= 1}>−</button>

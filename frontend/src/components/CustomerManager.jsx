@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { customersApi } from '../api/client.js';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import Toast from './Toast.jsx';
+import useToast from '../hooks/useToast.js';
 
 export default function CustomerManager() {
   const [customers, setCustomers] = useState([]);
@@ -13,9 +14,7 @@ export default function CustomerManager() {
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(null); // { id, name }
-  const [toast, setToast] = useState(null);
-
-  function showToast(message, type) { setToast({ message, type }) }
+  const { toast, notify, clear } = useToast();
 
   useEffect(() => { load(); }, []);
 
@@ -30,7 +29,7 @@ export default function CustomerManager() {
     if (!newName.trim()) return;
     try {
       await customersApi.create({ name: newName.trim(), phone: newPhone.trim() || null, email: newEmail.trim() || null });
-      showToast('Cliente creado', 'success');
+      notify('Cliente creado', 'success');
       setNewName('');
       setNewPhone('');
       setNewEmail('');
@@ -42,7 +41,7 @@ export default function CustomerManager() {
     if (!editName.trim()) return;
     try {
       await customersApi.update(id, { name: editName.trim(), phone: editPhone.trim() || null, email: editEmail.trim() || null });
-      showToast('Cliente actualizado', 'success');
+      notify('Cliente actualizado', 'success');
       setEditingId(null);
       load();
     } catch {}
@@ -53,10 +52,10 @@ export default function CustomerManager() {
     try {
       await customersApi.remove(confirmDelete.id);
       setConfirmDelete(null);
-      showToast('Cliente eliminado', 'success');
+      notify('Cliente eliminado', 'success');
       load();
     } catch (e) {
-      showToast(e.message, 'error');
+      notify(e.message, 'error');
       setConfirmDelete(null);
     }
   }
@@ -99,7 +98,7 @@ export default function CustomerManager() {
         <button type="submit" className="btn btn-primary">Añadir</button>
       </form>
 
-      <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
+      <Toast message={toast?.message} type={toast?.type} onClose={clear} />
 
       {confirmDelete && (
         <ConfirmDialog
@@ -168,7 +167,7 @@ export default function CustomerManager() {
                       />
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <div className="row row-gap-sm">
                         <button className="btn btn-primary" onClick={() => handleUpdate(c.id)}>Guardar</button>
                         <button className="btn btn-secondary" onClick={() => setEditingId(null)}>Cancelar</button>
                       </div>
@@ -180,7 +179,7 @@ export default function CustomerManager() {
                     <td style={{ color: 'var(--text-secondary)' }}>{c.phone || ''}</td>
                     <td style={{ color: 'var(--text-secondary)' }}>{c.email || ''}</td>
                     <td>
-                      <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <div className="row row-gap-sm">
                         <button className="btn btn-primary" onClick={() => {
                           setEditingId(c.id);
                           setEditName(c.name);

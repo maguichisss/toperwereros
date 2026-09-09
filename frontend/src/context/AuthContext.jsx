@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { apiErrorMessage } from '../api/client.js'
+import { decodeJwtPayload } from '../utils.js'
 
 const API_BASE = '/api'
 const STORAGE_KEY = 'store_token'
@@ -7,12 +9,8 @@ const REFRESH_KEY = 'store_refresh_token'
 const AuthContext = createContext(null)
 
 function parseJwtExp(token) {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    return payload.exp
-  } catch {
-    return null
-  }
+  const payload = decodeJwtPayload(token)
+  return payload ? payload.exp : null
 }
 
 export function AuthProvider({ children }) {
@@ -99,7 +97,7 @@ export function AuthProvider({ children }) {
     })
     if (!res.ok) {
       const data = await res.json()
-      throw new Error(data.detail || 'Error al iniciar sesión')
+      throw new Error(apiErrorMessage(data.detail, 'Error al iniciar sesión'))
     }
     const data = await res.json()
     storeTokens(data.access_token, data.refresh_token)

@@ -7,6 +7,7 @@ import LayawayView from './components/LayawayView.jsx'
 import ProfilePage from './components/ProfilePage.jsx'
 import ManagementPage from './components/ManagementPage.jsx'
 import { formatPrice } from './utils.js'
+import { CartIcon, LogoutIcon, UserIcon } from './components/icons.jsx'
 
 const TABS = [
   { key: 'productos', label: 'Productos' },
@@ -195,20 +196,13 @@ function AppContent() {
                   user.image_url ? (
                     <img src={user.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
                   ) : (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
+                    <UserIcon />
                   )
                 ) : t.label}
               </button>
             ))}
             <button onClick={logout} title="Cerrar sesión" style={{ background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem 0.6rem' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
+              <LogoutIcon />
             </button>
           </nav>
           {(can('sale.create') || can('apartado.create')) && (
@@ -217,11 +211,7 @@ function AppContent() {
               onClick={() => setCartOpen(!cartOpen)}
               title="Carrito"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="9" cy="21" r="1" />
-                <circle cx="20" cy="21" r="1" />
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-              </svg>
+              <CartIcon />
               {itemCount > 0 && <span className="cart-badge">{itemCount}</span>}
             </button>
           )}

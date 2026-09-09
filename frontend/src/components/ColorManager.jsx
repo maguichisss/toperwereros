@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { colorsApi } from '../api/client.js';
 import Toast from './Toast.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
+import useToast from '../hooks/useToast.js';
 
 export default function ColorManager() {
   const [colors, setColors] = useState([]);
@@ -10,16 +11,12 @@ export default function ColorManager() {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
   const [editHex, setEditHex] = useState('#000000');
-  const [toast, setToast] = useState(null);
+  const { toast, notify, clear } = useToast();
   const [confirmDelete, setConfirmDelete] = useState(null); // { id, name }
 
   useEffect(() => {
     load();
   }, []);
-
-  function showToast(message, type = 'error') {
-    setToast({ message, type });
-  }
 
   async function load() {
     try {
@@ -32,12 +29,12 @@ export default function ColorManager() {
     if (!newName.trim()) return;
     try {
       await colorsApi.create({ name: newName.trim(), hex: newHex });
-      showToast('Color creado', 'success');
+      notify('Color creado', 'success');
       setNewName('');
       setNewHex('#000000');
       load();
     } catch (err) {
-      showToast(err.message);
+      notify(err.message);
     }
   }
 
@@ -45,11 +42,11 @@ export default function ColorManager() {
     if (!editName.trim()) return;
     try {
       await colorsApi.update(id, { name: editName.trim(), hex: editHex });
-      showToast('Color actualizado', 'success');
+      notify('Color actualizado', 'success');
       setEditingId(null);
       load();
     } catch (err) {
-      showToast(err.message);
+      notify(err.message);
     }
   }
 
@@ -58,10 +55,10 @@ export default function ColorManager() {
     try {
       await colorsApi.remove(confirmDelete.id);
       setConfirmDelete(null);
-      showToast('Color eliminado', 'success');
+      notify('Color eliminado', 'success');
       load();
     } catch (err) {
-      showToast(err.message, 'error');
+      notify(err.message, 'error');
       setConfirmDelete(null);
     }
   }
@@ -70,11 +67,7 @@ export default function ColorManager() {
     <div className="category-manager">
       <h2>Colores</h2>
 
-      <Toast
-        message={toast?.message}
-        type={toast?.type}
-        onClose={() => setToast(null)}
-      />
+      <Toast message={toast?.message} type={toast?.type} onClose={clear} />
 
       {confirmDelete && (
         <ConfirmDialog
@@ -138,7 +131,7 @@ export default function ColorManager() {
                 aria-label="Editar color hexadecimal"
                 style={{ width: 40, height: 36, padding: 0, border: 'none', cursor: 'pointer' }}
               />
-              <div style={{ display: 'flex', gap: '0.25rem' }}>
+              <div className="row row-gap-sm">
                 <button
                   className="btn btn-primary"
                   onClick={() => handleUpdate(c.id)}
@@ -168,7 +161,7 @@ export default function ColorManager() {
                 />
                 {c.name}
               </span>
-              <div style={{ display: 'flex', gap: '0.25rem' }}>
+              <div className="row row-gap-sm">
                 <button
                   className="btn btn-primary"
                   onClick={() => {

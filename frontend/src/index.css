@@ -289,6 +289,42 @@ header nav button:hover,
   background: var(--text-primary);
 }
 
+.input-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.input-sm {
+  padding: 0.35rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.wa-link {
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.row {
+  display: flex;
+}
+
+.row-gap-sm {
+  gap: 0.25rem;
+}
+
 .btn-add {
   background: var(--success);
   color: var(--text-white);

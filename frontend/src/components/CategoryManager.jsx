@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { categoriesApi } from '../api/client.js';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import Toast from './Toast.jsx';
+import useToast from '../hooks/useToast.js';
 
 export default function CategoryManager() {
   const [categories, setCategories] = useState([]);
@@ -9,7 +10,7 @@ export default function CategoryManager() {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(null); // { id, name }
-  const [toast, setToast] = useState(null);
+  const { toast, notify, clear } = useToast();
 
   useEffect(() => {
     load();
@@ -27,19 +28,17 @@ export default function CategoryManager() {
     try {
       await categoriesApi.create(newName.trim());
       setNewName('');
-      showToast('Categoría creada', 'success');
+      notify('Categoría creada', 'success');
       load();
     } catch {}
   }
-
-  function showToast(message, type) { setToast({ message, type }) }
 
   async function handleUpdate(id) {
     if (!editName.trim()) return;
     try {
       await categoriesApi.update(id, editName.trim());
       setEditingId(null);
-      showToast('Categoría actualizada', 'success');
+      notify('Categoría actualizada', 'success');
       load();
     } catch {}
   }
@@ -49,10 +48,10 @@ export default function CategoryManager() {
     try {
       await categoriesApi.remove(confirmDelete.id);
       setConfirmDelete(null);
-      showToast('Categoría eliminada', 'success');
+      notify('Categoría eliminada', 'success');
       load();
     } catch (e) {
-      showToast(e.message, 'error');
+      notify(e.message, 'error');
       setConfirmDelete(null);
     }
   }
@@ -76,7 +75,7 @@ export default function CategoryManager() {
         </button>
       </form>
 
-      <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
+      <Toast message={toast?.message} type={toast?.type} onClose={clear} />
 
       {confirmDelete && (
         <ConfirmDialog
@@ -108,7 +107,7 @@ export default function CategoryManager() {
                 autoCorrect="off"
                 spellCheck="false"
               />
-              <div style={{ display: 'flex', gap: '0.25rem' }}>
+              <div className="row row-gap-sm">
                 <button
                   className="btn btn-primary"
                   onClick={() => handleUpdate(c.id)}
@@ -126,7 +125,7 @@ export default function CategoryManager() {
           ) : (
             <>
               <span>{c.name}</span>
-              <div style={{ display: 'flex', gap: '0.25rem' }}>
+              <div className="row row-gap-sm">
                 <button
                   className="btn btn-primary"
                   onClick={() => {
