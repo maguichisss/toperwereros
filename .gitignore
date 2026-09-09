@@ -1,5 +1,6 @@
 backups/
 frontend/certs/
+frontend/dist/
 backend/uploads/
 backend/.env*
 .env*

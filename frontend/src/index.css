@@ -1248,6 +1248,19 @@ header nav button:hover,
   text-align: center;
 }
 
+.receipt-items.sticky-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.receipt-items.sticky-table .sticky-col {
+  position: sticky;
+  right: 0;
+  background: var(--bg-card);
+  box-shadow: -1px 0 4px rgba(0,0,0,0.1);
+  z-index: 1;
+}
+
 .receipt-total {
   font-size: 1.3rem;
   font-weight: 700;
