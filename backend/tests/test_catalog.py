@@ -4,12 +4,13 @@ import io
 import os
 import re
 import tempfile
+from datetime import datetime, timedelta
 
 import pytest
 from PIL import Image as PILImage
 from fpdf import FPDF
 
-from app.routers.catalog import PDFConfig, DEFAULT_PDF_CONFIG, THEMES, apply_theme, cover_image, css_color, draw_card, order_by_category_color_stock
+from app.routers.catalog import PDFConfig, DEFAULT_PDF_CONFIG, THEMES, apply_theme, cover_image, css_color, draw_card, order_by_category_color_stock, order_recent_first
 from app.patterns import pattern_jpeg
 from app.models import Product, Category, Color
 from decimal import Decimal
@@ -287,6 +288,39 @@ class TestOrderByCategoryColorStock:
         p.colors = [color_b, color_a]
         ordered = order_by_category_color_stock([p])
         assert [p.name for p in ordered] == ["Poli"]
+
+
+class TestOrderRecentFirst:
+    def test_first_64_are_newest(self):
+        prods = []
+        for i in range(70):
+            p = Product(name=f"P{i:02d}", code=f"C{i:02d}", price=Decimal("10"), stock=1)
+            p.created_at = datetime(2026, 1, 1) + timedelta(days=i)
+            prods.append(p)
+        ordered = order_recent_first(prods)
+        assert [p.name for p in ordered[:64]] == [f"P{i:02d}" for i in range(69, 5, -1)]
+        assert [p.name for p in ordered[64:]] == [f"P{i:02d}" for i in range(5, -1, -1)]
+
+    def test_rest_keeps_category_order(self):
+        prods = []
+        cats = {"Accesorios": "P01", "Calzado": "P03", "Ropa": "P02", "Zapatos": "P00"}
+        for i in range(70):
+            p = Product(name=f"P{i:02d}", code=f"C{i:02d}", price=Decimal("10"), stock=1)
+            p.created_at = datetime(2026, 1, 1) + timedelta(days=i)
+            if f"P{i:02d}" in cats.values():
+                p.categories = [Category(name=next(n for n, nm in cats.items() if nm == f"P{i:02d}"))]
+            prods.append(p)
+        ordered = order_recent_first(prods)
+        assert [p.name for p in ordered[:64]] == [f"P{i:02d}" for i in range(69, 5, -1)]
+        assert [p.name for p in ordered[64:]] == ["P01", "P03", "P02", "P00", "P05", "P04"]
+
+    def test_none_created_at_sorts_last(self):
+        old = Product(name="Old", code="O01", price=Decimal("10"), stock=1)
+        old.created_at = None
+        new = Product(name="New", code="N01", price=Decimal("10"), stock=1)
+        new.created_at = datetime(2026, 1, 1)
+        ordered = order_recent_first([old, new])
+        assert [p.name for p in ordered] == ["New", "Old"]
 
 
 class TestCustomPDFConfig:

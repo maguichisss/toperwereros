@@ -6,7 +6,7 @@ import logging
 import os
 from collections import Counter
 from dataclasses import dataclass, replace
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from html import escape
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -35,6 +35,9 @@ _FONT_FILES: dict[tuple[str, str], str] = {
     ("DejaVuSerif", "B"): "DejaVuSerif-Bold.ttf",
     ("DejaVuMono", ""): "DejaVuSansMono.ttf",
 }
+
+# How many of the most recently added products lead the catalog.
+RECENT_CATALOG_COUNT = 64
 
 
 def _register_fonts(pdf: FPDF) -> None:
@@ -894,6 +897,32 @@ def order_by_category_color_stock(products: list[Product]) -> list[Product]:
     return sorted(products, key=sort_key)
 
 
+def order_recent_first(products: list[Product], recent_count: int = RECENT_CATALOG_COUNT) -> list[Product]:
+    """Feature the newest products first, then keep the catalog order.
+
+    The first ``recent_count`` products are the most recently added ones
+    (newest first, by ``created_at``); products without a creation date sort
+    last.  The remainder keeps the usual display order
+    (``order_by_category_color_stock``).
+
+    Args:
+        products: Products in any input order.
+        recent_count: How many newest products to feature first.
+
+    Returns:
+        The products in display order.
+    """
+
+    newest = sorted(
+        products,
+        key=lambda p: p.created_at or datetime.min,
+        reverse=True,
+    )
+    recent = newest[:recent_count]
+    rest = order_by_category_color_stock(newest[recent_count:])
+    return recent + rest
+
+
 def cover_image(source: str | io.BytesIO, cfg: PDFConfig = DEFAULT_PDF_CONFIG) -> io.BytesIO:
     """Crop and resize an image to fill the PDF card dimensions at 72 DPI.
 
@@ -990,11 +1019,13 @@ def catalog_pdf(
 ) -> Response:
     """Generate a product catalog for in-stock products as PDF or HTML.
 
-    Products are ordered by descending category product count, then category
-    name, then color, then stock (uncategorized products last), and rendered
-    in a continuous 4-column card grid (16 per page).  Each card
-    contains a cropped product image, name, and a price band with the code.
-    A weekly header with the valid date range is added to every page.
+    The first ``RECENT_CATALOG_COUNT`` products are the most recently added
+    (newest first, by creation date); the rest follow by descending category
+    product count, then category name, then color, then stock
+    (uncategorized products last), rendered in a continuous 4-column card
+    grid (16 per page).  Each card contains a cropped product image, name,
+    and a price band with the code.  A weekly header with the valid date
+    range is added to every page.
 
     Args:
         ids: Optional comma-separated product IDs to include.  When empty, all
@@ -1055,7 +1086,7 @@ def catalog_pdf(
         week_end_str = f"{MONTHS_ES[sunday.month]} {sunday.day:02d}"
         week_num = monday.isocalendar()[1]
 
-        ordered_products = order_by_category_color_stock(products)
+        ordered_products = order_recent_first(products)
 
         if format == "html":
             html = cfg.render_html(ordered_products, week_start_str, week_end_str, week_num)

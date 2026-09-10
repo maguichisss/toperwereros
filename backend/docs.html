@@ -161,7 +161,7 @@
 <h3>Catalog &mdash; <code>/api/catalog</code></h3>
 <table>
 <tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/catalog/pdf</code></td><td class="perm">product.view</td><td>Generate PDF catalog. 4-column grid, 16 products/page. Only in-stock products. Optional <code>ids</code> query param.</td></tr>
+<tr><td><span class="method m-get">GET</span></td><td><code>/api/catalog/pdf</code></td><td class="perm">product.view</td><td>Generate PDF/HTML catalog. 4-column grid, 16 products/page. Only in-stock products. First 64 are the newest additions (by creation date); the rest follow in category/color/stock order. Optional <code>ids</code> and <code>q</code> query params.</td></tr>
 </table>
 
 <h3>Sales &mdash; <code>/api/sales</code></h3>
