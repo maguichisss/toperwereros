@@ -1,62 +1,25 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { salesApi, productsApi } from '../api/client.js';
+import { useState, useEffect, useCallback } from 'react';
+import { salesApi } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils.js';
 import ConfirmDialog from './ConfirmDialog.jsx';
-import StockBadge from './StockBadge.jsx';
+import ProductSearchBox from './ProductSearchBox.jsx';
+import CartItemRow from './CartItemRow.jsx';
 
 export default function SaleCart() {
   const { can } = useAuth();
-  const { items: cart, addItem, updateQty, removeItem, clearCart, total: cartTotal } = useCart();
+  const { items: cart, addItem, clearCart, total: cartTotal } = useCart();
   const [mode, setMode] = useState('cart');
-  const [search, setSearch] = useState('');
-  const [results, setResults] = useState([]);
-  const [showResults, setShowResults] = useState(false);
   const [saleResult, setSaleResult] = useState(null);
   const [error, setError] = useState('');
   const [sales, setSales] = useState([]);
-  const [salesTotal, setSalesTotal] = useState(0);
   const [salesPage, setSalesPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState(null);
   const [confirmCheckout, setConfirmCheckout] = useState(false);
   const [datePreset, setDatePreset] = useState('last30');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const searchTimer = useRef(null);
-  const resultsRef = useRef(null);
-
-  const searchProducts = useCallback(async (q) => {
-    if (!q.trim()) { setResults([]); return; }
-    try {
-      const res = await productsApi.list({ q, perPage: 10 });
-      setResults(res.products.filter(p => p.stock > 0));
-      setShowResults(true);
-    } catch {}
-  }, []);
-
-  function handleSearchChange(value) {
-    setSearch(value);
-    clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => searchProducts(value), 300);
-  }
-
-  useEffect(() => {
-    function handleClick(e) {
-      if (resultsRef.current && !resultsRef.current.contains(e.target)) {
-        setShowResults(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  function addToCart(product) {
-    addItem(product);
-    setSearch('');
-    setResults([]);
-    setShowResults(false);
-  }
 
   async function handleCheckout() {
     if (cart.length === 0) return;
@@ -107,7 +70,6 @@ export default function SaleCart() {
       const { startDate, endDate } = getDateRange();
       const res = await salesApi.list({ page: salesPage, perPage: 20, startDate, endDate });
       setSales(res);
-      setSalesTotal(res.total || res.length);
     } catch {}
   }, [salesPage, datePreset, dateFrom, dateTo]);
 
@@ -159,38 +121,7 @@ export default function SaleCart() {
       {mode === 'cart' && (
         <div className="cart-mode">
           {can('sale.create') && (
-          <>
-          <div className="cart-search" ref={resultsRef}>
-            <input
-              className="search-input"
-              placeholder="Buscar producto por nombre o código..."
-              value={search}
-              onChange={e => handleSearchChange(e.target.value)}
-              onFocus={() => results.length > 0 && setShowResults(true)}
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck="false"
-            />
-            {showResults && results.length > 0 && (
-              <div className="search-results">
-                {results.map(p => (
-                  <div key={p.id} className="search-result-item" onClick={() => addToCart(p)}>
-                    {p.image_url ? (
-                      <img className="result-thumb" src={p.image_url} alt="" />
-                    ) : (
-                      <div className="result-thumb result-thumb-empty" />
-                    )}
-                    <span className="result-name">{p.name}</span>
-                    <span className="result-code">{p.code}</span>
-                    {p.ubicacion && <span className="result-ubicacion">{p.ubicacion}</span>}
-                    <span className="result-price">${formatPrice(p.price)}</span>
-                    <span className="result-stock">Stock: {p.stock}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          </>
+            <ProductSearchBox placeholder="Buscar producto por nombre o código..." onSelect={addItem} />
           )}
 
           {cart.length === 0 && !error && (
@@ -201,25 +132,7 @@ export default function SaleCart() {
             <div className="cart-items">
               <div className="cart-items-scroll">
                 {cart.map(c => (
-                  <div key={c.product_id} className="cart-item">
-                    {c.image_url ? (
-                      <img className="cart-item-thumb" src={c.image_url} alt="" />
-                    ) : (
-                      <div className="cart-item-thumb cart-item-thumb-empty" />
-                    )}
-                    <div className="cart-item-info">
-                      <span className="cart-item-name">{c.name}</span>
-                      <span className="cart-item-code">{c.code}</span>
-                      <StockBadge stock={c.stock} quantity={c.quantity} />
-                    </div>
-                    <div className="cart-item-controls">
-                      <button className="btn-qty" onClick={() => updateQty(c.product_id, -1)} disabled={c.quantity <= 1}>−</button>
-                      <span className="cart-qty">{c.quantity}</span>
-                      <button className="btn-qty" onClick={() => updateQty(c.product_id, 1)} disabled={c.quantity >= c.stock}>+</button>
-                      <span className="cart-item-price">${formatPrice(c.price * c.quantity)}</span>
-                      <button className="btn-remove" onClick={() => removeItem(c.product_id)}>✕</button>
-                    </div>
-                  </div>
+                  <CartItemRow key={c.product_id} item={c} />
                 ))}
               </div>
               <div className="cart-total-row">

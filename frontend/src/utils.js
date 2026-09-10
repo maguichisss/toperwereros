@@ -12,3 +12,9 @@ export function decodeJwtPayload(token) {
     return null
   }
 }
+
+export const DAYS_OVERDUE = 21;
+
+export function daysElapsed(dateStr) {
+  return Math.floor((Date.now() - new Date(dateStr + 'Z')) / 86400000);
+}

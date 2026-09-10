@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import ProductForm from './ProductForm.jsx';
 import ProductCard from './ProductCard.jsx';
+import Pagination from './Pagination.jsx';
 import Toast from './Toast.jsx';
 import useToast from '../hooks/useToast.js';
 import ConfirmDialog from './ConfirmDialog.jsx';
@@ -101,18 +102,6 @@ export default function ProductList() {
   }
 
   const totalPages = Math.ceil(total / perPage);
-
-  function pageNumbers() {
-    const pages = [];
-    const maxVisible = 5;
-    let start = Math.max(1, page - Math.floor(maxVisible / 2));
-    let end = Math.min(totalPages, start + maxVisible - 1);
-    if (end - start + 1 < maxVisible) {
-      start = Math.max(1, end - maxVisible + 1);
-    }
-    for (let i = start; i <= end; i++) pages.push(i);
-    return pages;
-  }
 
   async function downloadCSV() {
     try {
@@ -231,33 +220,7 @@ export default function ProductList() {
         ))}
       </div>
 
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button
-            className="btn btn-pagination"
-            disabled={page <= 1}
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-          >
-            ‹
-          </button>
-          {pageNumbers().map(n => (
-            <button
-              key={n}
-              className={`btn btn-pagination${n === page ? ' active' : ''}`}
-              onClick={() => setPage(n)}
-            >
-              {n}
-            </button>
-          ))}
-          <button
-            className="btn btn-pagination"
-            disabled={page >= totalPages}
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-          >
-            ›
-          </button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
       {previewImage && (
         <Lightbox imageUrl={previewImage} name="Producto" onClose={() => setPreviewImage(null)} />
