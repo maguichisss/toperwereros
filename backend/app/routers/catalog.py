@@ -4,6 +4,7 @@ import base64
 import io
 import logging
 import os
+import time
 from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
@@ -265,6 +266,7 @@ class PDFConfig:
         pdf.set_auto_page_break(auto=False)
         _register_fonts(pdf)
         self.render_page_header(pdf, week_start_str, week_end_str, week_num)
+        t_cards = time.perf_counter()
         for idx, page_products in enumerate(paginate(products, self)):
             if idx > 0:
                 self.render_page_header(pdf, week_start_str, week_end_str, week_num)
@@ -274,6 +276,8 @@ class PDFConfig:
                 x = self.margin + col * (self.card_w + self.col_gap)
                 y = self.header_y + row * (self.card_h + self.row_gap)
                 self.render_card(pdf, x, y, product)
+        card_seconds = time.perf_counter() - t_cards
+        logger.debug("catalog_pdf: drew %d cards in %.2fs (avg %.3fs)", len(products), card_seconds, card_seconds / max(len(products), 1))
         return bytes(pdf.output())
 
     def _card_html(self, product: Product) -> str:
@@ -1074,7 +1078,9 @@ def catalog_pdf(
                 Product.colors.any(Color.name.ilike(pattern, escape="\\")),
             )
         )
+    t0 = time.perf_counter()
     products = products.all()
+    logger.debug("catalog_pdf: loaded %d products in %.2fs", len(products), time.perf_counter() - t0)
 
     try:
         cfg = apply_theme(DEFAULT_PDF_CONFIG, theme)
@@ -1086,17 +1092,25 @@ def catalog_pdf(
         week_end_str = f"{MONTHS_ES[sunday.month]} {sunday.day:02d}"
         week_num = monday.isocalendar()[1]
 
+        t_order = time.perf_counter()
         ordered_products = order_recent_first(products)
+        logger.debug("catalog_pdf: ordered %d products in %.2fs", len(ordered_products), time.perf_counter() - t_order)
 
         if format == "html":
+            t_render = time.perf_counter()
             html = cfg.render_html(ordered_products, week_start_str, week_end_str, week_num)
+            logger.debug("catalog_pdf: rendered format=html in %.2fs (%d bytes)", time.perf_counter() - t_render, len(html))
+            logger.info("catalog_pdf: done in %.2fs total", time.perf_counter() - t0)
             return Response(
                 content=html,
                 media_type="text/html; charset=utf-8",
                 headers={"Content-Disposition": f"inline; filename={cfg.filename_prefix}.html"},
             )
 
+        t_render = time.perf_counter()
         content = cfg.render_pdf(ordered_products, week_start_str, week_end_str, week_num)
+        logger.debug("catalog_pdf: rendered format=pdf in %.2fs (%d bytes)", time.perf_counter() - t_render, len(content))
+        logger.info("catalog_pdf: done in %.2fs total", time.perf_counter() - t0)
         return Response(
             content=content,
             media_type="application/pdf",
@@ -1105,5 +1119,5 @@ def catalog_pdf(
     except HTTPException:
         raise
     except Exception:
-        logger.exception("Failed to generate catalog (%d products)", len(products))
+        logger.exception("Failed to generate catalog (%d products) after %.2fs", len(products), time.perf_counter() - t0)
         raise HTTPException(500, "Error al generar el catálogo PDF")

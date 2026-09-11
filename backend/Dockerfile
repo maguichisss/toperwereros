@@ -25,10 +25,10 @@ RUN apt-get update \
     && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 EXPOSE 8080
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["sh", "-c", "gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8080}"]
+CMD ["sh", "-c", "gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8080} --timeout 300"]
 
 # ── standalone Pi QA target (no Cloud SQL proxy) ──
 FROM base AS backend-pi
 EXPOSE 8080
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["sh", "-c", "gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8080}"]
+CMD ["sh", "-c", "gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8080} --timeout 300"]
