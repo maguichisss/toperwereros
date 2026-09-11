@@ -104,8 +104,8 @@ export default function SaleCart() {
             </tbody>
           </table>
           <div className="receipt-total">Total: ${formatPrice(saleResult.total)}</div>
-            {saleResult.created_by_name && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>Atendido por: {saleResult.created_by_name}</p>}
-          <button className="btn btn-primary" onClick={resetSale}>Nueva Venta</button>
+            {saleResult.created_by_name && <p className="receipt-meta">Atendido por: {saleResult.created_by_name}</p>}
+          <button type="button" className="btn btn--primary" onClick={resetSale}>Nueva Venta</button>
         </div>
       </div>
     );
@@ -114,8 +114,8 @@ export default function SaleCart() {
   return (
     <div className="sales-view">
       <div className="sales-tabs">
-        <button className={mode === 'cart' ? 'active' : ''} onClick={() => { setMode('cart'); setSelectedSale(null); }}>Nueva Venta</button>
-        <button className={mode === 'history' ? 'active' : ''} onClick={() => setMode('history')}>Historial</button>
+        <button type="button" className={mode === 'cart' ? 'active' : ''} onClick={() => { setMode('cart'); setSelectedSale(null); }}>Nueva Venta</button>
+        <button type="button" className={mode === 'history' ? 'active' : ''} onClick={() => setMode('history')}>Historial</button>
       </div>
 
       {mode === 'cart' && (
@@ -140,7 +140,7 @@ export default function SaleCart() {
                 <span className="cart-total-amount">${formatPrice(cartTotal)}</span>
               </div>
               {can('sale.create') && (
-              <button className="btn btn-primary btn-checkout" onClick={() => setConfirmCheckout(true)}>
+              <button type="button" className="btn btn--primary btn--checkout" onClick={() => setConfirmCheckout(true)}>
                 Cobrar ${formatPrice(cartTotal)}
               </button>
               )}
@@ -161,7 +161,7 @@ export default function SaleCart() {
       )}
 
       {mode === 'history' && !selectedSale && (
-        <div className="filter-bar" style={{ marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+        <div className="filter-bar filter-bar--compact">
           {[
             { key: 'today', label: 'Hoy' },
             { key: 'week', label: 'Esta semana' },
@@ -172,8 +172,8 @@ export default function SaleCart() {
           ].map(p => (
             <button
               key={p.key}
-              className={`btn ${datePreset === p.key ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }}
+              type="button"
+              className={`btn btn--small btn--${datePreset === p.key ? 'primary' : 'secondary'}`}
               onClick={() => setDatePreset(p.key)}
             >
               {p.label}
@@ -183,16 +183,16 @@ export default function SaleCart() {
             <>
               <input
                 type="date"
+                className="input-sm"
                 value={dateFrom}
                 onChange={e => setDateFrom(e.target.value)}
-                style={{ padding: '0.3rem 0.4rem', border: '1px solid var(--border)', borderRadius: 4, fontSize: '0.8rem' }}
               />
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>a</span>
+              <span className="filter-bar__sep">a</span>
               <input
                 type="date"
+                className="input-sm"
                 value={dateTo}
                 onChange={e => setDateTo(e.target.value)}
-                style={{ padding: '0.3rem 0.4rem', border: '1px solid var(--border)', borderRadius: 4, fontSize: '0.8rem' }}
               />
             </>
           )}
@@ -203,7 +203,7 @@ export default function SaleCart() {
         <div className="history-mode">
           {selectedSale ? (
             <div className="sale-detail">
-              <button className="btn btn-secondary" onClick={() => setSelectedSale(null)}>← Volver</button>
+              <button type="button" className="btn btn--secondary btn--back" onClick={() => setSelectedSale(null)}>← Volver</button>
               <div className="receipt-card">
                 <h2>Venta #{selectedSale.id}</h2>
                 <p className="receipt-date">{new Date(selectedSale.created_at + 'Z').toLocaleString('es-MX')}</p>
@@ -224,7 +224,7 @@ export default function SaleCart() {
                   </tbody>
                 </table>
                 <div className="receipt-total">Total: ${formatPrice(selectedSale.total)}</div>
-                {selectedSale.created_by_name && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Atendido por: {selectedSale.created_by_name}</p>}
+                {selectedSale.created_by_name && <p className="receipt-meta">Atendido por: {selectedSale.created_by_name}</p>}
               </div>
             </div>
           ) : (
@@ -236,12 +236,12 @@ export default function SaleCart() {
               ) : (
                 <div className="sale-list">
                   {sales.map(s => (
-                    <div key={s.id} className="sale-list-item" onClick={() => setSelectedSale(s)}>
-                      <span className="sale-list-id">#{s.id}</span>
-                      <span className="sale-list-date">{new Date(s.created_at + 'Z').toLocaleString('es-MX')}</span>
-                      <span className="sale-list-count">{s.items?.length || 0} artículos</span>
-                      <span className="sale-list-total">${formatPrice(s.total)}</span>
-                    </div>
+                    <button key={s.id} type="button" className="sale-list-item" onClick={() => setSelectedSale(s)} aria-label={`Venta ${s.id}, ${s.items?.length || 0} artículos, total ${formatPrice(s.total)}`}>
+                      <span className="sale-list-item__id">#{s.id}</span>
+                      <span className="sale-list-item__date">{new Date(s.created_at + 'Z').toLocaleString('es-MX')}</span>
+                      <span className="sale-list-item__count">{s.items?.length || 0} artículos</span>
+                      <span className="sale-list-item__total">${formatPrice(s.total)}</span>
+                    </button>
                   ))}
                 </div>
               )}

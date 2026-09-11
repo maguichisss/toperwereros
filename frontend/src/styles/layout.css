@@ -1,0 +1,208 @@
+/* ── Layout ─────────────────────────────────────────────────────── */
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+}
+
+header {
+  background: var(--header-bg);
+  color: var(--header-text);
+  padding: 1rem 0;
+  margin-bottom: 2rem;
+  position: relative; /* anchors the mobile dropdown nav */
+}
+
+header .container {
+  display: flex;
+  align-items: center;
+}
+
+header h1 {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* The brand title is a button (it navigates to products) kept inside
+   <h1> so the page keeps a single accessible top-level heading. */
+.brand-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+header nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+header nav button,
+.cart-nav-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--header-text);
+  border: none;
+  padding: 0.4rem 1rem;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+header nav button.active,
+header nav button:hover,
+.cart-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* Icon-only nav buttons (profile, logout) share the same compact style. */
+.nav-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.6rem;
+}
+
+/* Cart trigger in the header holds a count badge. */
+.cart-nav-btn {
+  position: relative;
+  justify-content: center;
+  margin-left: 0.75rem;
+}
+
+.cart-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: var(--danger);
+  color: var(--text-white);
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.nav-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.hamburger span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: #fff;
+  border-radius: 2px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.hamburger.open span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.hamburger.open span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.open span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+/* ── Header responsive ── */
+
+@media (max-width: 640px) {
+  header .container {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+  }
+
+  header .container > h1 {
+    order: 1;
+    text-align: center;
+    justify-self: center;
+  }
+
+  .hamburger {
+    display: flex;
+    order: 0;
+  }
+
+  .cart-nav-btn {
+    order: 2;
+  }
+
+  header nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--header-bg);
+    flex-direction: column;
+    z-index: 50;
+    box-shadow: 0 4px 8px var(--shadow);
+  }
+
+  header nav.nav-open {
+    display: flex;
+  }
+
+  header nav button {
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    border-radius: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  header nav button:last-child {
+    border-bottom: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    padding: 1rem 2rem;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+}

@@ -70,8 +70,7 @@ export default function CustomerManager() {
           value={newName}
           onChange={e => setNewName(e.target.value)}
           aria-label="Nombre del cliente"
-          style={{ flex: 1 }}
-          autoComplete="off"
+          autoComplete="name"
           autoCorrect="off"
           spellCheck="false"
         />
@@ -80,8 +79,7 @@ export default function CustomerManager() {
           value={newPhone}
           onChange={e => setNewPhone(e.target.value)}
           aria-label="Teléfono del cliente"
-          style={{ flex: 0.7 }}
-          autoComplete="off"
+          autoComplete="tel"
           autoCorrect="off"
           spellCheck="false"
         />
@@ -90,12 +88,11 @@ export default function CustomerManager() {
           value={newEmail}
           onChange={e => setNewEmail(e.target.value)}
           aria-label="Email del cliente"
-          style={{ flex: 0.7 }}
-          autoComplete="off"
+          autoComplete="email"
           autoCorrect="off"
           spellCheck="false"
         />
-        <button type="submit" className="btn btn-primary">Añadir</button>
+        <button type="submit" className="btn btn--primary">Añadir</button>
       </form>
 
       <Toast message={toast?.message} type={toast?.type} onClose={clear} />
@@ -114,14 +111,14 @@ export default function CustomerManager() {
           <p>No hay clientes aún. Crea uno usando el formulario de arriba.</p>
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-scroll">
         <table className="receipt-items">
           <thead>
             <tr>
               <th>Nombre</th>
               <th>Teléfono</th>
               <th>Email</th>
-              <th style={{ width: 140 }}>Acciones</th>
+              <th className="actions-col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -131,12 +128,12 @@ export default function CustomerManager() {
                   <>
                     <td>
                       <input
+                        className="input-cell"
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleUpdate(c.id)}
                         autoFocus
                         aria-label="Editar nombre"
-                        style={{ width: '100%', padding: '0.3rem 0.4rem' }}
                         autoComplete="off"
                         autoCorrect="off"
                         spellCheck="false"
@@ -144,11 +141,11 @@ export default function CustomerManager() {
                     </td>
                     <td>
                       <input
+                        className="input-cell"
                         value={editPhone}
                         onChange={e => setEditPhone(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleUpdate(c.id)}
                         aria-label="Editar teléfono"
-                        style={{ width: '100%', padding: '0.3rem 0.4rem' }}
                         autoComplete="off"
                         autoCorrect="off"
                         spellCheck="false"
@@ -156,11 +153,11 @@ export default function CustomerManager() {
                     </td>
                     <td>
                       <input
+                        className="input-cell"
                         value={editEmail}
                         onChange={e => setEditEmail(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleUpdate(c.id)}
                         aria-label="Editar email"
-                        style={{ width: '100%', padding: '0.3rem 0.4rem' }}
                         autoComplete="off"
                         autoCorrect="off"
                         spellCheck="false"
@@ -168,25 +165,25 @@ export default function CustomerManager() {
                     </td>
                     <td>
                       <div className="row row-gap-sm">
-                        <button className="btn btn-primary" onClick={() => handleUpdate(c.id)}>Guardar</button>
-                        <button className="btn btn-secondary" onClick={() => setEditingId(null)}>Cancelar</button>
+                        <button type="button" className="btn btn--primary" onClick={() => handleUpdate(c.id)}>Guardar</button>
+                        <button type="button" className="btn btn--secondary" onClick={() => setEditingId(null)}>Cancelar</button>
                       </div>
                     </td>
                   </>
                 ) : (
                   <>
                     <td><strong>{c.name}</strong></td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{c.phone || ''}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{c.email || ''}</td>
+                    <td className="cell-muted">{c.phone || ''}</td>
+                    <td className="cell-muted">{c.email || ''}</td>
                     <td>
                       <div className="row row-gap-sm">
-                        <button className="btn btn-primary" onClick={() => {
+                        <button type="button" className="btn btn--primary" onClick={() => {
                           setEditingId(c.id);
                           setEditName(c.name);
                           setEditPhone(c.phone || '');
                           setEditEmail(c.email || '');
                         }}>Editar</button>
-                        <button className="btn btn-danger" onClick={() => setConfirmDelete({ id: c.id, name: c.name })}>Eliminar</button>
+                        <button type="button" className="btn btn--danger" onClick={() => setConfirmDelete({ id: c.id, name: c.name })}>Eliminar</button>
                       </div>
                     </td>
                   </>

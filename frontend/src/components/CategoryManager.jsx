@@ -70,7 +70,7 @@ export default function CategoryManager() {
           autoCorrect="off"
           spellCheck="false"
         />
-        <button type="submit" className="btn btn-primary">
+        <button type="submit" className="btn btn--primary">
           Añadir
         </button>
       </form>
@@ -102,20 +102,21 @@ export default function CategoryManager() {
                 onKeyDown={(e) => e.key === 'Enter' && handleUpdate(c.id)}
                 autoFocus
                 aria-label="Editar nombre de categoría"
-                style={{ flex: 1, padding: '0.3rem 0.5rem' }}
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck="false"
               />
               <div className="row row-gap-sm">
                 <button
-                  className="btn btn-primary"
+                  type="button"
+                  className="btn btn--primary"
                   onClick={() => handleUpdate(c.id)}
                 >
                   Guardar
                 </button>
                 <button
-                  className="btn btn-secondary"
+                  type="button"
+                  className="btn btn--secondary"
                   onClick={() => setEditingId(null)}
                 >
                   Cancelar
@@ -127,7 +128,8 @@ export default function CategoryManager() {
               <span>{c.name}</span>
               <div className="row row-gap-sm">
                 <button
-                  className="btn btn-primary"
+                  type="button"
+                  className="btn btn--primary"
                   onClick={() => {
                     setEditingId(c.id);
                     setEditName(c.name);
@@ -136,7 +138,8 @@ export default function CategoryManager() {
                   Editar
                 </button>
                 <button
-                  className="btn btn-danger"
+                  type="button"
+                  className="btn btn--danger"
                   onClick={() => setConfirmDelete({ id: c.id, name: c.name })}
                 >
                   Eliminar

@@ -121,30 +121,31 @@ export default function LayawayView({ initialMode }) {
   return (
     <div className="layaway-view">
       <div className="sales-tabs">
-        <button className={mode === 'active' ? 'active' : ''} onClick={() => setMode('active')}>Apartados Activos</button>
-        <button className={mode === 'all' ? 'active' : ''} onClick={() => setMode('all')}>Todos</button>
+        <button type="button" className={mode === 'active' ? 'active' : ''} onClick={() => setMode('active')}>Apartados Activos</button>
+        <button type="button" className={mode === 'all' ? 'active' : ''} onClick={() => setMode('all')}>Todos</button>
         {can('apartado.create') && (
-          <button className={mode === 'create' ? 'active' : ''} onClick={() => { setMode('create'); setError(''); }}>Nuevo Apartado</button>
+          <button type="button" className={mode === 'create' ? 'active' : ''} onClick={() => { setMode('create'); setError(''); }}>Nuevo Apartado</button>
         )}
       </div>
 
       {(mode === 'active' || mode === 'all') && (
-        <div className="filter-bar" style={{ marginBottom: '0.75rem' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: 200, width: '100%' }}>
+        <div className="filter-bar filter-bar--tight">
+          <div className="filter-bar__search">
             <input
-              className="search-input"
+              className={`search-input${search ? ' has-clear' : ''}`}
               placeholder="Buscar por nombre o #ID..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               autoComplete="off"
               autoCorrect="off"
               spellCheck="false"
-              style={{ paddingRight: search ? '2rem' : undefined }}
             />
             {search && (
               <button
+                type="button"
                 className="input-clear"
                 onClick={() => setSearch('')}
+                aria-label="Limpiar búsqueda"
               >
                 ✕
               </button>
@@ -221,7 +222,7 @@ export default function LayawayView({ initialMode }) {
       {(mode === 'active' || mode === 'all') && currentTotalPages > 1 && (
         <>
           <Pagination page={page} totalPages={currentTotalPages} onChange={setPage} />
-          <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.3rem 0 0' }}>Página {page} de {currentTotalPages}</p>
+          <p className="layaway-view__page-count">Página {page} de {currentTotalPages}</p>
         </>
       )}
     </div>

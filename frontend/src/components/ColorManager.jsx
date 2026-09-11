@@ -84,20 +84,19 @@ export default function ColorManager() {
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           aria-label="Nombre del color"
-          style={{ flex: 1 }}
           autoComplete="off"
           autoCorrect="off"
           spellCheck="false"
         />
         <input
           type="color"
+          className="color-jump"
           value={newHex}
           onChange={(e) => setNewHex(e.target.value)}
           title="Color hexadecimal"
           aria-label="Color hexadecimal"
-          style={{ width: 40, height: 36, padding: 0, border: 'none', cursor: 'pointer' }}
         />
-        <button type="submit" className="btn btn-primary">
+        <button type="submit" className="btn btn--primary">
           Añadir
         </button>
       </form>
@@ -118,28 +117,29 @@ export default function ColorManager() {
                 onKeyDown={(e) => e.key === 'Enter' && handleUpdate(c.id)}
                 autoFocus
                 aria-label="Editar nombre de color"
-                style={{ flex: 1, padding: '0.3rem 0.5rem' }}
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck="false"
               />
               <input
                 type="color"
+                className="color-jump"
                 value={editHex}
                 onChange={(e) => setEditHex(e.target.value)}
                 title="Color hexadecimal"
                 aria-label="Editar color hexadecimal"
-                style={{ width: 40, height: 36, padding: 0, border: 'none', cursor: 'pointer' }}
               />
               <div className="row row-gap-sm">
                 <button
-                  className="btn btn-primary"
+                  type="button"
+                  className="btn btn--primary"
                   onClick={() => handleUpdate(c.id)}
                 >
                   Guardar
                 </button>
                 <button
-                  className="btn btn-secondary"
+                  type="button"
+                  className="btn btn--secondary"
                   onClick={() => setEditingId(null)}
                 >
                   Cancelar
@@ -148,22 +148,18 @@ export default function ColorManager() {
             </>
           ) : (
             <>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="color-item-name">
                 <span
-                  style={{
-                    display: 'inline-block',
-                    width: 20,
-                    height: 20,
-                    borderRadius: 4,
-                    background: c.hex,
-                    border: '1px solid #ccc',
-                  }}
+                  className="color-preview"
+                  style={{ background: c.hex }}
+                  aria-hidden="true"
                 />
                 {c.name}
               </span>
               <div className="row row-gap-sm">
                 <button
-                  className="btn btn-primary"
+                  type="button"
+                  className="btn btn--primary"
                   onClick={() => {
                     setEditingId(c.id);
                     setEditName(c.name);
@@ -173,7 +169,8 @@ export default function ColorManager() {
                   Editar
                 </button>
                 <button
-                  className="btn btn-danger"
+                  type="button"
+                  className="btn btn--danger"
                   onClick={() => setConfirmDelete({ id: c.id, name: c.name })}
                 >
                   Eliminar

@@ -25,9 +25,11 @@ export default function Toast({ message, type = 'error', duration = 4000, onClos
   if (!message) return null;
 
   return createPortal(
-    <div className={`toast toast-${type}`} role="alert" style={{ top }} onClick={onClose}>
+    <div className={`toast toast--${type}`} role="alert" style={{ top }} onClick={onClose}>
       <span>{message}</span>
-      <span className="toast-close">&times;</span>
+      <button type="button" className="toast__close" onClick={onClose} aria-label="Cerrar notificación">
+        &times;
+      </button>
     </div>,
     document.body
   );

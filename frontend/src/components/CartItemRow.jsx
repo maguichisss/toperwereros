@@ -8,21 +8,21 @@ export default function CartItemRow({ item }) {
   return (
     <div className="cart-item">
       {item.image_url ? (
-        <img className="cart-item-thumb" src={item.image_url} alt="" />
+        <img className="cart-item__thumb" src={item.image_url} alt={item.name} />
       ) : (
-        <div className="cart-item-thumb cart-item-thumb-empty" />
+        <span className="cart-item__thumb cart-item__thumb--empty" />
       )}
-      <div className="cart-item-info">
-        <span className="cart-item-name">{item.name}</span>
-        <span className="cart-item-code">{item.code}</span>
+      <div className="cart-item__info">
+        <span className="cart-item__name">{item.name}</span>
+        <span className="cart-item__code">{item.code}</span>
         <StockBadge stock={item.stock} quantity={item.quantity} />
       </div>
-      <div className="cart-item-controls">
-        <button className="btn-qty" onClick={() => updateQty(item.product_id, -1)} disabled={item.quantity <= 1}>−</button>
-        <span className="cart-qty">{item.quantity}</span>
-        <button className="btn-qty" onClick={() => updateQty(item.product_id, 1)} disabled={item.quantity >= item.stock}>+</button>
-        <span className="cart-item-price">${formatPrice(item.price * item.quantity)}</span>
-        <button className="btn-remove" onClick={() => removeItem(item.product_id)}>✕</button>
+      <div className="cart-item__controls">
+        <button type="button" className="cart-item__qty-btn" onClick={() => updateQty(item.product_id, -1)} disabled={item.quantity <= 1} aria-label={`Disminuir cantidad de ${item.name}`}>−</button>
+        <span className="cart-item__qty">{item.quantity}</span>
+        <button type="button" className="cart-item__qty-btn" onClick={() => updateQty(item.product_id, 1)} disabled={item.quantity >= item.stock} aria-label={`Aumentar cantidad de ${item.name}`}>+</button>
+        <span className="cart-item__price">${formatPrice(item.price * item.quantity)}</span>
+        <button type="button" className="cart-item__remove-btn" onClick={() => removeItem(item.product_id)} aria-label={`Quitar ${item.name}`}>✕</button>
       </div>
     </div>
   );

@@ -46,6 +46,8 @@ export default function ProductSearchBox({ placeholder, onSelect, excludeIds = [
       <input
         className="search-input"
         placeholder={placeholder}
+        role="combobox"
+        aria-expanded={showResults && results.length > 0}
         value={query}
         onChange={e => handleChange(e.target.value)}
         onFocus={() => results.length > 0 && setShowResults(true)}
@@ -54,20 +56,27 @@ export default function ProductSearchBox({ placeholder, onSelect, excludeIds = [
         spellCheck="false"
       />
       {showResults && results.length > 0 && (
-        <div className="search-results">
+        <div className="search-results" role="listbox">
           {results.map(p => (
-            <div key={p.id} className="search-result-item" onClick={() => select(p)}>
+            <button
+              key={p.id}
+              type="button"
+              role="option"
+              className="search-result-item"
+              onClick={() => select(p)}
+              aria-label={`${p.name} ${p.code} Stock: ${p.stock}`}
+            >
               {p.image_url ? (
-                <img className="result-thumb" src={p.image_url} alt="" />
+                <img className="search-result-item__thumb" src={p.image_url} alt="" />
               ) : (
-                <div className="result-thumb result-thumb-empty" />
+                <span className="search-result-item__thumb search-result-item__thumb--empty" />
               )}
-              <span className="result-name">{p.name}</span>
-              <span className="result-code">{p.code}</span>
-              {p.ubicacion && <span className="result-ubicacion">{p.ubicacion}</span>}
-              <span className="result-price">${formatPrice(p.price)}</span>
-              <span className="result-stock">Stock: {p.stock}</span>
-            </div>
+              <span className="search-result-item__name">{p.name}</span>
+              <span className="search-result-item__code">{p.code}</span>
+              {p.ubicacion && <span className="search-result-item__ubicacion">{p.ubicacion}</span>}
+              <span className="search-result-item__price">${formatPrice(p.price)}</span>
+              <span className="search-result-item__stock">Stock: {p.stock}</span>
+            </button>
           ))}
         </div>
       )}

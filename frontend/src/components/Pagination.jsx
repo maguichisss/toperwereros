@@ -12,11 +12,11 @@ export default function Pagination({ page, totalPages, onChange }) {
 
   return (
     <div className="pagination">
-      <button className="btn btn-pagination" disabled={page <= 1} onClick={() => onChange(Math.max(1, page - 1))}>‹</button>
+      <button type="button" className="btn btn--pagination" disabled={page <= 1} onClick={() => onChange(Math.max(1, page - 1))} aria-label="Página anterior">‹</button>
       {pages.map(n => (
-        <button key={n} className={`btn btn-pagination${n === page ? ' active' : ''}`} onClick={() => onChange(n)}>{n}</button>
+        <button key={n} type="button" className={`btn btn--pagination${n === page ? ' is-active' : ''}`} onClick={() => onChange(n)} aria-label={`Página ${n}`} aria-current={n === page ? 'page' : undefined}>{n}</button>
       ))}
-      <button className="btn btn-pagination" disabled={page >= totalPages} onClick={() => onChange(Math.min(totalPages, page + 1))}>›</button>
+      <button type="button" className="btn btn--pagination" disabled={page >= totalPages} onClick={() => onChange(Math.min(totalPages, page + 1))} aria-label="Página siguiente">›</button>
     </div>
   );
 }

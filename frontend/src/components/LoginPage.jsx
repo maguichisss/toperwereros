@@ -23,62 +23,42 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      background: 'var(--bg)',
-    }}>
-      <form onSubmit={handleSubmit} style={{
-        background: 'var(--bg-card)',
-        borderRadius: 8,
-        padding: '2rem',
-        width: '100%',
-        maxWidth: 360,
-        boxShadow: '0 2px 12px var(--shadow)',
-      }}>
-        <h1 style={{ fontSize: '1.4rem', textAlign: 'center', marginBottom: '1.5rem' }}>
+    <div className="login-page">
+      <form onSubmit={handleSubmit} className="login-card">
+        <h1 className="login-card__title">
           Iniciar Sesión
         </h1>
         <div className="form-group">
-          <label>Usuario</label>
+          <label htmlFor="login-username">Usuario</label>
           <input
+            id="login-username"
             type="text"
+            name="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            autoComplete="off"
+            autoComplete="username"
             autoCorrect="off"
             spellCheck="false"
             required
           />
         </div>
-        <div className="form-group" style={{ position: 'relative' }}>
-          <label>Contraseña</label>
+        <div className="form-group password-wrap">
+          <label htmlFor="login-password">Contraseña</label>
           <input
+            id="login-password"
             type={showPassword ? 'text' : 'password'}
+            name="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            autoComplete="off"
+            autoComplete="current-password"
             autoCorrect="off"
             spellCheck="false"
             required
-            style={{ paddingRight: '2.5rem' }}
           />
           <button
             type="button"
+            className="password-toggle"
             onClick={() => setShowPassword(!showPassword)}
-            style={{
-              position: 'absolute',
-              right: '0.5rem',
-              bottom: '0.4rem',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              color: 'var(--text-muted)',
-              padding: '0.2rem',
-            }}
             aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
           >
             {showPassword ? '🙈' : '👁'}
@@ -87,9 +67,8 @@ export default function LoginPage() {
         {error && <p className="error-text">{error}</p>}
         <button
           type="submit"
-          className="btn btn-primary"
+          className="btn btn--primary login-card__submit"
           disabled={busy}
-          style={{ width: '100%', padding: '0.7rem', fontSize: '1rem', marginTop: '0.5rem' }}
         >
           {busy ? 'Entrando...' : 'Entrar'}
         </button>

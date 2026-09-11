@@ -16,18 +16,17 @@ export default function ConfirmDialog({ title, message, onConfirm, onCancel }) {
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div
-        className="modal"
+        className="modal modal--narrow"
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         onClick={e => e.stopPropagation()}
-        style={{ maxWidth: 400 }}
       >
         <h2 id="confirm-dialog-title">{title}</h2>
-        <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>{message}</p>
+        <p className="confirm-dialog__message">{message}</p>
         <div className="form-actions">
-          <button className="btn btn-secondary" onClick={onCancel}>Cancelar</button>
-          <button className="btn btn-danger" ref={confirmRef} onClick={onConfirm}>Confirmar</button>
+          <button type="button" className="btn btn--secondary" onClick={onCancel}>Cancelar</button>
+          <button type="button" className="btn btn--danger" ref={confirmRef} onClick={onConfirm}>Confirmar</button>
         </div>
       </div>
     </div>

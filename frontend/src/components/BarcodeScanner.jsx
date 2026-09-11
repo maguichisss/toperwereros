@@ -132,8 +132,8 @@ export default function BarcodeScanner({ onDetected, onCancel }) {
         <h2>Escanear código de barras</h2>
 
         {noCamera ? (
-          <div style={{ padding: '1rem 0', textAlign: 'center' }}>
-            <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+          <div className="scanner-fallback">
+            <p className="scanner-fallback__text">
               Cámara no disponible. Selecciona una imagen que contenga un código de barras:
             </p>
             <input
@@ -144,7 +144,7 @@ export default function BarcodeScanner({ onDetected, onCancel }) {
               disabled={loading}
             />
             {loading && (
-              <p style={{ marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
+              <p className="scanner-status">
                 Leyendo código de barras...
               </p>
             )}
@@ -153,41 +153,39 @@ export default function BarcodeScanner({ onDetected, onCancel }) {
           <>
             <div
               className="scanner-viewfinder"
-              style={{
-                border: borderColor ? `3px solid ${borderColor}` : 'none',
-                transition: 'border-color 0.2s'
-              }}
+              style={{ border: borderColor ? `3px solid ${borderColor}` : 'none' }}
             >
               {!cameraReady && !error && (
                 <div className="scanner-loading">Iniciando cámara...</div>
               )}
-              <video ref={videoRef} playsInline muted style={!cameraReady ? { display: 'none' } : {}} />
-              <canvas ref={canvasRef} style={{ display: 'none' }} />
+              <video ref={videoRef} playsInline muted hidden={!cameraReady} />
+              <canvas ref={canvasRef} hidden />
             </div>
             {loading && (
-              <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+              <p className="scanner-status">
                 Leyendo código de barras...
               </p>
             )}
-            <div className="camera-controls" style={{ marginTop: '0.5rem' }}>
+            <div className="camera-controls">
               <button
                 type="button"
                 className="shutter-btn"
                 disabled={loading || !cameraReady}
                 onClick={handleCapture}
+                aria-label="Escaneo de código de barras"
               />
             </div>
           </>
         )}
 
         {error && (
-          <p className="error-text" style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+          <p className="error-text scanner-error">
             {error}
           </p>
         )}
 
-        <div className="form-actions" style={{ marginTop: '0.5rem' }}>
-          <button type="button" className="btn btn-secondary" onClick={onCancel}>
+        <div className="form-actions">
+          <button type="button" className="btn btn--secondary" onClick={onCancel}>
             Cancelar
           </button>
         </div>

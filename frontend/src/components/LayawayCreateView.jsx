@@ -113,7 +113,7 @@ export default function LayawayCreateView({ onBack, onCreated }) {
 
   return (
     <div className="layaway-create">
-      <button className="btn btn-secondary" onClick={onBack} style={{ marginBottom: '0.75rem' }}>← Volver</button>
+      <button type="button" className="btn btn--secondary btn--back" onClick={onBack}>← Volver</button>
       {error && <p className="error-text">{error}</p>}
 
       <div className="customer-section">
@@ -121,10 +121,10 @@ export default function LayawayCreateView({ onBack, onCreated }) {
         {selectedCustomer ? (
           <div className="customer-selected">
             <span><strong>{selectedCustomer.name}</strong>{selectedCustomer.phone ? ` — ${selectedCustomer.phone}` : ''}</span>
-            <button className="btn btn-secondary" onClick={clearCustomer}>Cambiar</button>
+            <button type="button" className="btn btn--secondary" onClick={clearCustomer}>Cambiar</button>
           </div>
         ) : (
-          <div ref={customerResultsRef} className="cart-search">
+          <div ref={customerResultsRef} className="cart-search customer-search">
             <input
               className="search-input"
               placeholder="Buscar cliente por nombre o teléfono..."
@@ -138,41 +138,44 @@ export default function LayawayCreateView({ onBack, onCreated }) {
             {showCustomerResults && customerResults.length > 0 && (
               <div className="customer-search-results">
                 {customerResults.map(c => (
-                  <div key={c.id} className="customer-result-item" onClick={() => selectCustomer(c)}>
-                    <span className="result-name">{c.name}</span>
-                    <span className="result-code">{c.phone || ''}</span>
-                  </div>
+                  <button key={c.id} type="button" className="customer-result-item" onClick={() => selectCustomer(c)} aria-label={`${c.name} ${c.phone || ''}`}>
+                    <span className="customer-result-item__name">{c.name}</span>
+                    <span className="customer-result-item__phone">{c.phone || ''}</span>
+                  </button>
                 ))}
               </div>
             )}
-            <button className="btn btn-secondary" style={{ marginTop: '0.5rem' }} onClick={() => setShowNewForm(!showNewForm)}>
+            <button type="button" className="btn btn--secondary customer-toggle" onClick={() => setShowNewForm(!showNewForm)}>
               {showNewForm ? 'Cancelar' : '+ Cliente Nuevo'}
             </button>
             {showNewForm && (
               <div className="customer-new-form">
                 <input
+                  aria-label="Nombre del cliente"
                   placeholder="Nombre *"
+                  autoComplete="name"
+                  autoCorrect="off"
+                  spellCheck="false"
                   value={newCustomer.name}
                   onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck="false"
                 />
                 <input
+                  aria-label="Teléfono del cliente"
                   placeholder="Teléfono"
+                  autoComplete="tel"
+                  autoCorrect="off"
+                  spellCheck="false"
                   value={newCustomer.phone}
                   onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck="false"
                 />
                 <input
+                  aria-label="Email del cliente"
                   placeholder="Email"
-                  value={newCustomer.email}
-                  onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                  autoComplete="off"
+                  autoComplete="email"
                   autoCorrect="off"
                   spellCheck="false"
+                  value={newCustomer.email}
+                  onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })}
                 />
               </div>
             )}
@@ -201,8 +204,9 @@ export default function LayawayCreateView({ onBack, onCreated }) {
         {cart.length > 0 && (
           <div className="layaway-deposit-section">
             <div className="form-group">
-              <label>Depósito</label>
+              <label htmlFor="layaway-deposit">Depósito</label>
               <input
+                id="layaway-deposit"
                 type="number"
                 step="0.01"
                 min="0.01"
@@ -219,8 +223,9 @@ export default function LayawayCreateView({ onBack, onCreated }) {
               Balance restante: <strong>${formatPrice(cartTotal - parseFloat(deposit || 0))}</strong>
             </p>
             <div className="form-group">
-              <label>Notas</label>
+              <label htmlFor="layaway-notes">Notas</label>
               <textarea
+                id="layaway-notes"
                 className="notes-textarea"
                 placeholder="Notas opcionales del apartado..."
                 value={notes}
@@ -230,7 +235,7 @@ export default function LayawayCreateView({ onBack, onCreated }) {
                 autoCorrect="off"
               />
             </div>
-            <button className="btn btn-primary btn-checkout" onClick={() => setConfirmCreate(true)}>
+            <button type="button" className="btn btn--primary btn--checkout" onClick={() => setConfirmCreate(true)}>
               Crear Apartado — Depósito ${formatPrice(deposit || 0)}
             </button>
           </div>

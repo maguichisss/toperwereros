@@ -30,21 +30,34 @@ const ProductCard = memo(({ product, onEdit, onDelete, onShowImage, canEdit, onA
   return (
     <div className="product-card">
       {product.image_url ? (
-        <img
-          className="card-image"
-          src={product.image_url}
-          alt={product.name}
-          loading="lazy"
+        <button
+          type="button"
+          className="product-card__image-btn"
           onClick={handleClick}
-        />
+          aria-label={`Ver ${product.name}`}
+        >
+          <img
+            className="product-card__image"
+            src={product.image_url}
+            alt={product.name}
+            loading="lazy"
+          />
+        </button>
       ) : (
-        <div className="no-image" onClick={() => onEdit(product)}>—</div>
+        <button
+          type="button"
+          className="product-card__no-image"
+          onClick={() => onEdit(product)}
+          aria-label={`Editar ${product.name}`}
+        >
+          —
+        </button>
       )}
-      <div className="card-body">
+      <div className="product-card__body">
         <h3>{product.name}</h3>
-        <div className="product-code">{product.code}</div>
-        <div className="price">${formatPrice(product.price)}</div>
-        <div className="product-stock">Stock: {product.stock ?? 1}{product.ubicacion ? ` | ${product.ubicacion}` : ''}</div>
+        <div className="product-card__code">{product.code}</div>
+        <div className="product-card__price">${formatPrice(product.price)}</div>
+        <div className="product-card__stock">Stock: {product.stock ?? 1}{product.ubicacion ? ` | ${product.ubicacion}` : ''}</div>
         {product.colors?.length > 0 && (
           <div className="color-indicators">
             {product.colors.map((c) => (
@@ -58,12 +71,14 @@ const ProductCard = memo(({ product, onEdit, onDelete, onShowImage, canEdit, onA
           </div>
         )}
       </div>
-      <div className="card-actions">
+      <div className="product-card__actions">
         {(product.stock ?? 1) > 0 && onAddToCart && (
           <button
-            className={`card-action-btn card-action-cart ${added ? 'added' : ''}`}
+            type="button"
+            className={`product-card__action-btn product-card__action-btn--cart ${added ? 'is-added' : ''}`}
             onClick={handleAddToCart}
             title="Agregar al carrito"
+            aria-label={`Agregar ${product.name} al carrito`}
           >
             {added ? (
               <CheckIcon />
@@ -74,10 +89,10 @@ const ProductCard = memo(({ product, onEdit, onDelete, onShowImage, canEdit, onA
         )}
         {canEdit && (
           <>
-            <button className="card-action-btn card-action-edit" onClick={() => onEdit(product)} title="Editar">
+            <button type="button" className="product-card__action-btn product-card__action-btn--edit" onClick={() => onEdit(product)} title="Editar" aria-label={`Editar ${product.name}`}>
               <EditIcon />
             </button>
-            <button className="card-action-btn card-action-delete" onClick={() => onDelete(product.id)} title="Eliminar">
+            <button type="button" className="product-card__action-btn product-card__action-btn--delete" onClick={() => onDelete(product.id)} title="Eliminar" aria-label={`Eliminar ${product.name}`}>
               <TrashIcon />
             </button>
           </>

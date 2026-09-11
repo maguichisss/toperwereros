@@ -37,11 +37,11 @@ function CartPanel({ onClose, onVenta, onApartado }) {
 
   return (
     <>
-      <div className="cart-backdrop" onClick={onClose} />
-      <aside className="cart-panel" ref={panelRef}>
-        <div className="cart-panel-header">
+      <div className="cart-drawer-backdrop" onClick={onClose} />
+      <aside className="cart-drawer" ref={panelRef}>
+        <div className="cart-drawer__header">
           <h3>Carrito ({itemCount})</h3>
-          <button className="cart-close-btn" onClick={onClose} aria-label="Cerrar carrito">
+          <button type="button" className="cart-drawer__close" onClick={onClose} aria-label="Cerrar carrito">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
@@ -49,29 +49,29 @@ function CartPanel({ onClose, onVenta, onApartado }) {
           </button>
         </div>
 
-        <div className="cart-panel-items">
+        <div className="cart-drawer__items">
           {items.length === 0 ? (
-            <div className="cart-empty">El carrito esta vacio</div>
+            <div className="cart-drawer__empty">El carrito esta vacio</div>
           ) : (
             items.map(item => (
-              <div key={item.product_id} className="cart-item-row">
+              <div key={item.product_id} className="cart-drawer__item">
                 {item.image_url ? (
-                  <img className="cart-item-thumb" src={item.image_url} alt={item.name} />
+                  <img className="cart-drawer__thumb" src={item.image_url} alt={item.name} />
                 ) : (
-                  <div className="cart-item-thumb-empty">—</div>
+                  <div className="cart-drawer__thumb cart-drawer__thumb--empty">—</div>
                 )}
-                <div className="cart-item-info">
-                  <div className="cart-item-name">{item.name}</div>
-                  <div className="cart-item-code">{item.code}</div>
-                  <div className="cart-item-price">${formatPrice(item.price)}</div>
+                <div className="cart-drawer__info">
+                  <div className="cart-drawer__name">{item.name}</div>
+                  <div className="cart-drawer__code">{item.code}</div>
+                  <div className="cart-drawer__price">${formatPrice(item.price)}</div>
                 </div>
-                <div className="cart-item-controls">
-                  <div className="cart-qty-group">
-                    <button className="cart-qty-btn" onClick={() => updateQty(item.product_id, -1)}>−</button>
-                    <span className="cart-qty">{item.quantity}</span>
-                    <button className="cart-qty-btn" onClick={() => updateQty(item.product_id, 1)}>+</button>
+                <div className="cart-drawer__controls">
+                  <div className="cart-drawer__qty">
+                    <button type="button" className="cart-drawer__qty-btn" onClick={() => updateQty(item.product_id, -1)}>−</button>
+                    <span className="cart-drawer__qty-value">{item.quantity}</span>
+                    <button type="button" className="cart-drawer__qty-btn" onClick={() => updateQty(item.product_id, 1)}>+</button>
                   </div>
-                  <button className="cart-remove-btn" onClick={() => removeItem(item.product_id)} title="Quitar">
+                  <button type="button" className="cart-drawer__remove" onClick={() => removeItem(item.product_id)} title="Quitar">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18" />
                       <line x1="6" y1="6" x2="18" y2="18" />
@@ -84,14 +84,14 @@ function CartPanel({ onClose, onVenta, onApartado }) {
         </div>
 
         {items.length > 0 && (
-          <div className="cart-panel-footer">
-            <div className="cart-total-row">
-              <span className="cart-total-label">Total</span>
-              <span className="cart-total-amount">${formatPrice(total)}</span>
+          <div className="cart-drawer__footer">
+            <div className="cart-drawer__total-row">
+              <span className="cart-drawer__total-label">Total</span>
+              <span className="cart-drawer__total-amount">${formatPrice(total)}</span>
             </div>
-            <div className="cart-panel-actions">
-              <button className="btn btn-primary" style={{ fontSize: '1rem' }} onClick={onVenta}>Venta</button>
-              <button className="btn btn-add" onClick={onApartado}>Apartado</button>
+            <div className="cart-drawer__actions">
+              <button type="button" className="btn btn--primary" onClick={onVenta}>Venta</button>
+              <button type="button" className="btn btn--add" onClick={onApartado}>Apartado</button>
             </div>
           </div>
         )}
@@ -136,7 +136,7 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--text-muted)' }}>
+      <div className="app-loading">
         <p>Cargando...</p>
       </div>
     )
@@ -175,8 +175,13 @@ function AppContent() {
     <>
       <header ref={headerRef}>
         <div className="container">
-          <h1 onClick={() => handleTabClick('productos')} style={{ cursor: 'pointer' }}>Toperwereros</h1>
+          <h1>
+            <button type="button" className="brand-btn" onClick={() => handleTabClick('productos')}>
+              Toperwereros
+            </button>
+          </h1>
           <button
+            type="button"
             className={`hamburger ${menuOpen ? 'open' : ''}`}
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label="Menú"
@@ -187,29 +192,31 @@ function AppContent() {
             {visibleTabs.map((t) => (
               <button
                 key={t.key}
-                className={tab === t.key ? 'active' : ''}
+                type="button"
+                className={`${tab === t.key ? 'active' : ''} ${t.key === 'perfil' ? 'nav-icon-btn' : ''}`}
                 onClick={() => handleTabClick(t.key)}
                 title={t.key === 'perfil' ? 'Perfil' : undefined}
-                style={t.key === 'perfil' ? { display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem 0.6rem', background: 'rgba(255,255,255,0.1)' } : undefined}
               >
                 {t.key === 'perfil' ? (
                   user.image_url ? (
-                    <img src={user.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
+                    <img src={user.image_url} alt="Perfil" className="nav-avatar" />
                   ) : (
                     <UserIcon />
                   )
                 ) : t.label}
               </button>
             ))}
-            <button onClick={logout} title="Cerrar sesión" style={{ background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem 0.6rem' }}>
+            <button type="button" className="nav-icon-btn" onClick={logout} title="Cerrar sesión" aria-label="Cerrar sesión">
               <LogoutIcon />
             </button>
           </nav>
           {(can('sale.create') || can('apartado.create')) && (
             <button
+              type="button"
               className="cart-nav-btn"
               onClick={() => setCartOpen(!cartOpen)}
               title="Carrito"
+              aria-label="Abrir carrito"
             >
               <CartIcon />
               {itemCount > 0 && <span className="cart-badge">{itemCount}</span>}

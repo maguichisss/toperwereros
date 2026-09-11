@@ -13,12 +13,15 @@ export default function ColorSwatches({ colors, selectedIds, onChange }) {
       {colors.map((c) => {
         const isSelected = selectedIds.includes(c.id)
         return (
-          <div
+          <button
             key={c.id}
-            className={`swatch ${isSelected ? 'selected' : ''}`}
+            type="button"
+            className={`swatch ${isSelected ? 'is-selected' : ''}`}
             style={{ backgroundColor: c.hex, color: contrastColor(c.hex) }}
             title={c.name}
             data-name={c.name}
+            aria-label={c.name}
+            aria-pressed={isSelected}
             onClick={() =>
               onChange(
                 isSelected ? selectedIds.filter((id) => id !== c.id) : [...selectedIds, c.id]

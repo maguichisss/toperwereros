@@ -104,63 +104,63 @@ export default function UserManager() {
   const isSelf = (u) => u.id === currentUser?.id
 
   return (
-    <div style={{ maxWidth: 600 }}>
-      <form onSubmit={handleSubmit} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '1.5rem', boxShadow: '0 1px 4px var(--shadow)', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Nuevo Usuario</h2>
+    <div className="user-manager">
+      <form onSubmit={handleSubmit} className="user-form">
+        <h2 className="user-form__title">Nuevo Usuario</h2>
         <div className="form-row">
           <div className="form-group">
-            <label>Usuario</label>
-            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)}
+            <label htmlFor="new-user-username">Usuario</label>
+            <input id="new-user-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)}
               autoComplete="off" autoCorrect="off" spellCheck="false" required />
           </div>
           <div className="form-group">
-            <label>Contraseña</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-              autoComplete="off" autoCorrect="off" spellCheck="false" required />
+            <label htmlFor="new-user-password">Contraseña</label>
+            <input id="new-user-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password" autoCorrect="off" spellCheck="false" required />
           </div>
         </div>
         <div className="form-row">
           <div className="form-group">
-            <label>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-              autoComplete="off" autoCorrect="off" spellCheck="false" />
+            <label htmlFor="new-user-email">Email</label>
+            <input id="new-user-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email" autoCorrect="off" spellCheck="false" />
           </div>
           <div className="form-group">
-            <label>Rol</label>
-            <select value={roleId} onChange={(e) => setRoleId(Number(e.target.value))}>
+            <label htmlFor="new-user-role">Rol</label>
+            <select id="new-user-role" value={roleId} onChange={(e) => setRoleId(Number(e.target.value))}>
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
         </div>
         {error && <p className="error-text">{error}</p>}
-        {success && <p style={{ color: 'var(--success)', fontWeight: 600, marginTop: '0.5rem' }}>{success}</p>}
+        {success && <p className="form-message--success">{success}</p>}
         <div className="form-actions">
-          <button type="submit" className="btn btn-primary" disabled={busy}>
+          <button type="submit" className="btn btn--primary" disabled={busy}>
             {busy ? 'Creando...' : 'Crear Usuario'}
           </button>
         </div>
       </form>
 
-      <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>Usuarios existentes</h2>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px var(--shadow)' }}>
+      <div className="user-list">
+        <h2 className="user-list__title">Usuarios existentes</h2>
         {users.map((u) => (
-          <div key={u.id} style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 0.75rem', borderBottom: '1px solid #eee', gap: '0.5rem', opacity: u.active ? 1 : 0.55 }}>
-            <span style={{ fontWeight: 600, flex: 1, textDecoration: u.active ? 'none' : 'line-through' }}>
+          <div key={u.id} className={`user-row ${u.active ? '' : 'user-row--inactive'}`}>
+            <span className={`user-row__name ${u.active ? '' : 'user-row__name--inactive'}`}>
               {u.username}
-              {isSelf(u) && <span style={{ color: 'var(--primary)', fontSize: '0.8rem', marginLeft: '0.3rem' }}>(tú)</span>}
+              {isSelf(u) && <span className="user-row__self">(tú)</span>}
             </span>
-            {!u.active && <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontStyle: 'italic' }}>desactivado</span>}
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{u.email || '—'}</span>
-            <span className={`chip ${u.role_name === 'admin' ? 'chip-active' : ''}`} style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}>
+            {!u.active && <span className="user-row__disabled">desactivado</span>}
+            <span className="user-row__email">{u.email || '—'}</span>
+            <span className={`chip user-row__role ${u.role_name === 'admin' ? 'chip--active' : ''}`}>
               {u.role_name}
             </span>
-            <button className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }} onClick={() => openEdit(u)}>
+            <button type="button" className="btn btn--secondary btn--small" onClick={() => openEdit(u)}>
               Editar
             </button>
             {!isSelf(u) && (
               <button
-                className={`btn ${u.active ? 'btn-danger' : 'btn-primary'}`}
-                style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                type="button"
+                className={`btn btn--small ${u.active ? 'btn--danger' : 'btn--primary'}`}
                 onClick={() => setConfirmToggle(u)}
               >
                 {u.active ? 'Desactivar' : 'Activar'}
@@ -173,36 +173,36 @@ export default function UserManager() {
 
       {editUser && (
         <div className="modal-overlay" onClick={() => setEditUser(null)}>
-          <div className="modal" role="dialog" onClick={e => e.stopPropagation()} style={{ maxWidth: 450 }}>
-            <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Editar usuario</h2>
+          <div className="modal modal--fixed" role="dialog" aria-modal="true" aria-labelledby="edit-user-title" onClick={e => e.stopPropagation()}>
+            <h2 id="edit-user-title" className="user-form__title">Editar usuario</h2>
             <form onSubmit={handleEditSubmit}>
-              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                <label>Usuario</label>
-                <input type="text" value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+              <div className="form-group">
+                <label htmlFor="edit-user-username">Usuario</label>
+                <input id="edit-user-username" type="text" value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
                   autoComplete="off" autoCorrect="off" spellCheck="false" required />
               </div>
-              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                <label>Email</label>
-                <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+              <div className="form-group">
+                <label htmlFor="edit-user-email">Email</label>
+                <input id="edit-user-email" type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                   autoComplete="off" autoCorrect="off" spellCheck="false" />
               </div>
               {!isSelf(editUser) && (
-                <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                  <label>Rol</label>
-                  <select value={editForm.role_id} onChange={(e) => setEditForm({ ...editForm, role_id: Number(e.target.value) })}>
+                <div className="form-group">
+                  <label htmlFor="edit-user-role">Rol</label>
+                  <select id="edit-user-role" value={editForm.role_id} onChange={(e) => setEditForm({ ...editForm, role_id: Number(e.target.value) })}>
                     {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
                   </select>
                 </div>
               )}
-              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                <label>Nueva contraseña (opcional)</label>
-                <input type="password" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
-                  autoComplete="off" autoCorrect="off" spellCheck="false" placeholder="Dejar vacío para no cambiar" />
+              <div className="form-group">
+                <label htmlFor="edit-user-password">Nueva contraseña (opcional)</label>
+                <input id="edit-user-password" type="password" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                  autoComplete="new-password" autoCorrect="off" spellCheck="false" placeholder="Dejar vacío para no cambiar" />
               </div>
               {editError && <p className="error-text">{editError}</p>}
               <div className="form-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setEditUser(null)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={editBusy}>
+                <button type="button" className="btn btn--secondary" onClick={() => setEditUser(null)}>Cancelar</button>
+                <button type="submit" className="btn btn--primary" disabled={editBusy}>
                   {editBusy ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>

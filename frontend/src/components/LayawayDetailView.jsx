@@ -132,18 +132,18 @@ export default function LayawayDetailView({ layaway, onBack, onCancel, onComplet
 
   return (
     <div className="layaway-detail">
-      <button className="btn btn-secondary" onClick={onBack}>← Volver</button>
+      <button type="button" className="btn btn--secondary btn--back" onClick={onBack}>← Volver</button>
 
       {detailError && <p className="error-text">{detailError}</p>}
 
-      <div className={`detail-section ${overdue && isActive ? 'layaway-overdue' : ''}`}>
+      <div className={`detail-section ${overdue && isActive ? 'detail-section--overdue' : ''}`}>
         <h3>Cliente: {layaway.customer_name}</h3>
-        <p className="layaway-days">
+        <p className="layaway-detail__meta">
           Apartado: #{layaway.id} registrado por {layaway.created_by_name || '—'} el {new Date(layaway.created_at + 'Z').toLocaleDateString('es-MX')} - {days} día(s)
           {overdue && isActive && <span className="overdue-warning"> — VENCIDO</span>}
         </p>
         {phoneDigits && (
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.4rem' }}>
+          <div className="wa-actions">
             <a
               href={`https://wa.me/${waNumber}?text=${waCreated}`}
               target="_blank"
@@ -168,7 +168,7 @@ export default function LayawayDetailView({ layaway, onBack, onCancel, onComplet
 
       <div className="detail-section">
         <h3>Productos</h3>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-scroll">
           <table className="receipt-items sticky-table">
             <thead>
               <tr>
@@ -178,7 +178,7 @@ export default function LayawayDetailView({ layaway, onBack, onCancel, onComplet
                 <th>Precio</th>
                 <th>Subtotal</th>
                 {isActive && (
-                  <th className="sticky-col" style={{ width: '40px', textAlign: 'center' }}>
+                  <th className="sticky-col receipt-items__cell--center">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M3 6h18" />
                       <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
@@ -194,40 +194,42 @@ export default function LayawayDetailView({ layaway, onBack, onCancel, onComplet
               {layaway.items.map(item => (
                 <tr key={item.id}>
                   <td>{item.product_name}</td>
-                  <td style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{item.product_code}</td>
-                  <td style={{ textAlign: 'center' }}>
+                  <td className="receipt-items__code">{item.product_code}</td>
+                  <td className="receipt-items__cell--center">
                     {editingItemId === item.id ? (
                       <input
                         type="number"
                         min="1"
+                        className="qty-input"
                         value={editingQty}
                         onChange={e => setEditingQty(e.target.value)}
                         onBlur={() => handleSaveQty(item)}
                         onKeyDown={e => { if (e.key === 'Enter') handleSaveQty(item); if (e.key === 'Escape') setEditingItemId(null); }}
                         autoFocus
-                        style={{ width: '50px', textAlign: 'center' }}
                       />
                     ) : isActive ? (
                       <span className="qty-controls">
-                        <button className="qty-btn" onClick={() => handleChangeQty(item, -1)} disabled={item.quantity <= 1}>−</button>
-                        <span
+                        <button type="button" className="qty-btn" onClick={() => handleChangeQty(item, -1)} disabled={item.quantity <= 1} aria-label="Disminuir cantidad">−</button>
+                        <button
+                          type="button"
                           className="qty-value layaway-editable"
                           onClick={() => { setEditingItemId(item.id); setEditingQty(String(item.quantity)); }}
                           title="Clic para editar cantidad"
+                          aria-label={`Cantidad ${item.quantity}, clic para editar`}
                         >
                           {item.quantity}
-                        </span>
-                        <button className="qty-btn" onClick={() => handleChangeQty(item, 1)}>+</button>
+                        </button>
+                        <button type="button" className="qty-btn" onClick={() => handleChangeQty(item, 1)} aria-label="Aumentar cantidad">+</button>
                       </span>
                     ) : (
                       item.quantity
                     )}
                   </td>
-                  <td style={{ textAlign: 'center' }}>${formatPrice(item.unit_price)}</td>
-                  <td style={{ textAlign: 'right' }}>${formatPrice(parseFloat(item.unit_price) * item.quantity)}</td>
+                  <td className="receipt-items__cell--center">${formatPrice(item.unit_price)}</td>
+                  <td className="receipt-items__cell--right">${formatPrice(parseFloat(item.unit_price) * item.quantity)}</td>
                   {isActive && (
-                    <td className="sticky-col" style={{ textAlign: 'center' }}>
-                      <button className="edit-icon layaway-remove-item" onClick={() => handleRemoveItem(item)} title="Quitar producto">✕</button>
+                    <td className="sticky-col receipt-items__cell--center">
+                      <button type="button" className="layaway-remove-btn" onClick={() => handleRemoveItem(item)} title="Quitar producto" aria-label={`Quitar ${item.product_name}`}>✕</button>
                     </td>
                   )}
                 </tr>
@@ -235,7 +237,7 @@ export default function LayawayDetailView({ layaway, onBack, onCancel, onComplet
             </tbody>
           </table>
         </div>
-        <div className="receipt-total" style={{ textAlign: 'right' }}>Total: ${formatPrice(layaway.total)}</div>
+        <div className="receipt-total receipt-total--right">Total: ${formatPrice(layaway.total)}</div>
 
         {isActive && can('apartado.edit') && (
           <ProductSearchBox
@@ -259,7 +261,7 @@ export default function LayawayDetailView({ layaway, onBack, onCancel, onComplet
         />
         {isActive && can('apartado.edit') && (
           <div className="layaway-notes-actions">
-            <button className="btn btn-primary" onClick={handleSaveNotes}>Actualizar notas</button>
+            <button type="button" className="btn btn--primary" onClick={handleSaveNotes}>Actualizar notas</button>
           </div>
         )}
       </div>
@@ -277,7 +279,7 @@ export default function LayawayDetailView({ layaway, onBack, onCancel, onComplet
               {layaway.payments.map(p => (
                 <tr key={p.id}>
                   <td>{new Date(p.created_at + 'Z').toLocaleString('es-MX')}</td>
-                  <td style={{ textAlign: 'right' }}>${formatPrice(p.amount)}</td>
+                  <td className="receipt-items__cell--right">${formatPrice(p.amount)}</td>
                 </tr>
               ))}
             </tbody>
@@ -312,15 +314,15 @@ export default function LayawayDetailView({ layaway, onBack, onCancel, onComplet
               autoCorrect="off"
               spellCheck="false"
             />
-            <button className="btn btn-primary" onClick={handleAddPayment} disabled={!paymentAmount || parseFloat(paymentAmount) <= 0}>
+            <button type="button" className="btn btn--primary" onClick={handleAddPayment} disabled={!paymentAmount || parseFloat(paymentAmount) <= 0}>
               Abonar
             </button>
           </div>
           <div className="layaway-actions-detail">
-            <button className="btn btn-success" onClick={handleComplete}>
+            <button type="button" className="btn btn--success" onClick={handleComplete}>
               Completar Apartado
             </button>
-            <button className="btn btn-danger" onClick={handleCancel}>
+            <button type="button" className="btn btn--danger" onClick={handleCancel}>
               Cancelar Apartado
             </button>
           </div>

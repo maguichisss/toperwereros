@@ -55,9 +55,9 @@ export default function CameraCapture({ onCapture }) {
   return (
     <div className="camera-container">
       {noCamera ? (
-        <div style={{ padding: '0.5rem 0' }}>
+        <div className="camera-fallback">
           <p className="error-text">{error}</p>
-          <p style={{ marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p className="camera-hint">
             Selecciona una imagen desde tu dispositivo:
           </p>
           <input
@@ -75,6 +75,7 @@ export default function CameraCapture({ onCapture }) {
               type="button"
               className="shutter-btn"
               onClick={capture}
+              aria-label="Tomar foto"
             />
           </div>
         </>

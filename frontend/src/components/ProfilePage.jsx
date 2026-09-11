@@ -80,60 +80,52 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{ maxWidth: 500 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
-        <div
+    <div className="profile-page">
+      <div className="profile-header">
+        <button
+          type="button"
+          className="profile-avatar-btn"
           onClick={() => fileRef.current?.click()}
-          style={{
-            width: 120,
-            height: 120,
-            borderRadius: '50%',
-            overflow: 'hidden',
-            background: 'var(--border-light)',
-            cursor: 'pointer',
-            flexShrink: 0,
-            position: 'relative',
-            border: '3px solid var(--border-dark)',
-          }}
+          aria-label="Cambiar foto de perfil"
         >
           {imageUrl ? (
-            <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={imageUrl} alt="" className="profile-avatar-img" />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-light)', fontSize: '0.8rem', textAlign: 'center', padding: '0.5rem' }}>
+            <span className="profile-avatar-placeholder">
               {uploading ? 'Subiendo...' : 'Click para foto'}
-            </div>
+            </span>
           )}
-        </div>
-        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleFileSelect} />
+        </button>
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="visually-hidden" onChange={handleFileSelect} />
         <div>
-          <h2 style={{ fontSize: '1.3rem', marginBottom: '0.25rem' }}>{user?.username}</h2>
-          <span className="chip chip-active" style={{ fontSize: '0.8rem' }}>{user?.role_name}</span>
+          <h2 className="profile-name">{user?.username}</h2>
+          <span className="chip chip--active">{user?.role_name}</span>
         </div>
       </div>
 
       <div className="profile-card">
-        <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>Información</h3>
+        <h3 className="profile-card__title">Información</h3>
         <div className="form-group">
-          <label>Email</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-            autoComplete="off" autoCorrect="off" spellCheck="false" />
+          <label htmlFor="profile-email">Email</label>
+          <input id="profile-email" type="email" name="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email" autoCorrect="off" spellCheck="false" />
         </div>
         {profileError && <p className="error-text">{profileError}</p>}
-        {profileSuccess && <p style={{ color: 'var(--success)', fontWeight: 600, marginTop: '0.5rem' }}>{profileSuccess}</p>}
+        {profileSuccess && <p className="form-message--success">{profileSuccess}</p>}
         <div className="form-actions">
-          <button className="btn btn-primary" onClick={handleSaveProfile} disabled={profileBusy}>
+          <button type="button" className="btn btn--primary" onClick={handleSaveProfile} disabled={profileBusy}>
             {profileBusy ? 'Guardando...' : 'Guardar Cambios'}
           </button>
         </div>
       </div>
 
       <div className="profile-card">
-        <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h3 className="profile-card__title profile-card__title--with-action">
           Cambiar Contraseña
           <button
             type="button"
+            className="password-toggle"
             onClick={() => setShowPassword(!showPassword)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', color: 'var(--text-muted)' }}
             aria-label={showPassword ? 'Ocultar contraseñas' : 'Mostrar contraseñas'}
           >
             {showPassword ? '🙈' : '👁'}
@@ -141,26 +133,26 @@ export default function ProfilePage() {
         </h3>
         <form onSubmit={handleChangePassword}>
           <div className="form-group">
-            <label>Contraseña actual</label>
-            <input type={showPassword ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
-              autoComplete="off" autoCorrect="off" spellCheck="false" required />
+            <label htmlFor="profile-current-password">Contraseña actual</label>
+            <input id="profile-current-password" type={showPassword ? 'text' : 'password'} name="current_password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
+              autoComplete="current-password" autoCorrect="off" spellCheck="false" required />
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Nueva contraseña</label>
-              <input type={showPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                autoComplete="off" autoCorrect="off" spellCheck="false" required />
+              <label htmlFor="profile-new-password">Nueva contraseña</label>
+              <input id="profile-new-password" type={showPassword ? 'text' : 'password'} name="new_password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password" autoCorrect="off" spellCheck="false" required minLength="12" />
             </div>
             <div className="form-group">
-              <label>Confirmar</label>
-              <input type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                autoComplete="off" autoCorrect="off" spellCheck="false" required />
+              <label htmlFor="profile-confirm-password">Confirmar</label>
+              <input id="profile-confirm-password" type={showPassword ? 'text' : 'password'} name="confirm_password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password" autoCorrect="off" spellCheck="false" required />
             </div>
           </div>
           {passwordError && <p className="error-text">{passwordError}</p>}
-          {passwordSuccess && <p style={{ color: 'var(--success)', fontWeight: 600, marginTop: '0.5rem' }}>{passwordSuccess}</p>}
+          {passwordSuccess && <p className="form-message--success">{passwordSuccess}</p>}
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary" disabled={passwordBusy}>
+            <button type="submit" className="btn btn--primary" disabled={passwordBusy}>
               {passwordBusy ? 'Cambiando...' : 'Cambiar Contraseña'}
             </button>
           </div>

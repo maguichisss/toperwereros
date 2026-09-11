@@ -127,15 +127,16 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
     <>
       <div className="modal-overlay" onClick={onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 1 }}>
-          <h2 style={{ margin: 0 }}>{product ? 'Editar Producto' : 'Añadir Producto'}</h2>
-          <button type="button" onClick={onCancel} aria-label="Cerrar" style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)', lineHeight: 1, padding: '0.25rem', flexShrink: 0 }}>✕</button>
+        <div className="modal__header">
+          <h2>{product ? 'Editar Producto' : 'Añadir Producto'}</h2>
+          <button type="button" className="modal__close" onClick={onCancel} aria-label="Cerrar">✕</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Código</label>
+            <label htmlFor="product-code">Código</label>
             <div className="code-input-wrap">
               <input
+                id="product-code"
                 ref={codeRef}
                 type="text"
                 required
@@ -145,7 +146,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
                 autoCorrect="off"
                 spellCheck="false"
               />
-              <button type="button" className="btn-scan" onClick={() => setShowScanner(true)} title="Escanear código de barras">
+              <button type="button" className="btn btn--scan" onClick={() => setShowScanner(true)} title="Escanear código de barras" aria-label="Escanear código de barras">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                   <circle cx="12" cy="13" r="4"/>
@@ -154,8 +155,9 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
             </div>
           </div>
           <div className="form-group">
-            <label>Nombre</label>
+            <label htmlFor="product-name">Nombre</label>
               <input
+                id="product-name"
                 ref={nameRef}
                 required
                 value={name}
@@ -167,8 +169,9 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Precio ($)</label>
+              <label htmlFor="product-price">Precio ($)</label>
               <input
+                id="product-price"
                 ref={priceRef}
                 type="number"
                 step="0.01"
@@ -180,8 +183,9 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
               />
             </div>
             <div className="form-group">
-              <label>Cantidad</label>
+              <label htmlFor="product-stock">Cantidad</label>
               <input
+                id="product-stock"
                 type="number"
                 min="0"
                 value={stock}
@@ -197,7 +201,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
                 <button
                   key={c.id}
                   type="button"
-                  className={`chip ${categoryIds.includes(c.id) ? 'chip-active' : ''}`}
+                  className={`chip ${categoryIds.includes(c.id) ? 'chip--active' : ''}`}
                   onClick={() => {
                     setCategoryIds(prev =>
                       prev.includes(c.id)
@@ -206,6 +210,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
                     );
                     setCategoryError(false);
                   }}
+                  aria-pressed={categoryIds.includes(c.id)}
                 >
                   {c.name}
                 </button>
@@ -216,19 +221,19 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
           <div className="form-group">
             <label>Imagen</label>
             {(imageUrl || imageFile) && (
-              <div className="image-preview" style={{ marginBottom: '0.5rem' }}>
+              <div className="image-preview">
                 <img src={previewUrl || imageUrl} alt="Preview" />
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                <div className="image-preview__actions">
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn--secondary"
                     onClick={rotateImage}
                   >
                     Rotar
                   </button>
                   <button
                     type="button"
-                    className="btn btn-danger"
+                    className="btn btn--danger"
                     onClick={() => { setImageUrl(null); setImageFile(null); }}
                   >
                     Eliminar
@@ -236,10 +241,10 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
                 </div>
               </div>
             )}
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div className="image-toggle">
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn--secondary"
                 onClick={() => setShowCamera(!showCamera)}
               >
                 {showCamera ? 'Cancelar cámara' : 'Tomar foto'}
@@ -258,8 +263,9 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
             />
           </div>
           <div className="form-group">
-            <label>Descripción</label>
+            <label htmlFor="product-description">Descripción</label>
             <textarea
+              id="product-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               autoComplete="off"
@@ -268,8 +274,9 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
             />
           </div>
           <div className="form-group">
-            <label>Ubicación</label>
+            <label htmlFor="product-ubicacion">Ubicación</label>
             <input
+              id="product-ubicacion"
               value={ubicacion}
               onChange={(e) => setUbicacion(e.target.value)}
               placeholder="Ej: Bodega A, estante 3"
@@ -280,10 +287,10 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
           </div>
           <Toast message={error} type="error" onClose={() => setError('')} />
           <div className="form-actions">
-            <button type="button" className="btn btn-secondary" onClick={onCancel}>
+            <button type="button" className="btn btn--secondary" onClick={onCancel}>
               Cancelar
             </button>
-            <button type="submit" className="btn btn-primary">
+            <button type="submit" className="btn btn--primary">
               {product ? 'Guardar' : 'Crear'}
             </button>
           </div>

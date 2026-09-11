@@ -157,21 +157,22 @@ export default function ProductList() {
   return (
     <div>
       <div className="filter-bar">
-        <div style={{ position: 'relative', flex: 1, minWidth: 200, width: '100%' }}>
+        <div className="filter-bar__search">
           <input
-            className="search-input"
+            className={`search-input${search ? ' has-clear' : ''}`}
             placeholder="Buscar por código, nombre, categoría, ubicación, precio o color"
             value={search}
             onChange={e => handleSearchChange(e.target.value)}
             autoComplete="off"
             autoCorrect="off"
             spellCheck="false"
-            style={{ paddingRight: search ? '2rem' : undefined }}
           />
           {search && (
             <button
+              type="button"
               className="input-clear"
               onClick={() => { setSearch(''); setPendingSearch(''); setPage(1); }}
+              aria-label="Limpiar búsqueda"
             >
               ✕
             </button>
@@ -185,20 +186,20 @@ export default function ProductList() {
           </select>
           {can('product.view') && (
             <>
-              <button className="btn btn-secondary" onClick={downloadCSV}>CSV</button>
-              <button className="btn btn-secondary" onClick={openPDF}>PDF</button>
+              <button type="button" className="btn btn--secondary" onClick={downloadCSV}>CSV</button>
+              <button type="button" className="btn btn--secondary" onClick={openPDF}>PDF</button>
             </>
           )}
         </div>
         {can('product.create') && (
-        <button className="btn btn-add" onClick={() => setShowForm(true)}>
+        <button type="button" className="btn btn-add" onClick={() => setShowForm(true)}>
           + Añadir Producto
         </button>
         )}
       </div>
 
       {total > 0 && (
-        <p style={{ marginBottom: '0.75rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+        <p className="filter-bar__count">
           Mostrando {products.length} de {total} resultado{total !== 1 ? 's' : ''}
           {totalPages > 1 && ` — Página ${page} de ${totalPages}`}
         </p>

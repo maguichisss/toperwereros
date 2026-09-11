@@ -37,6 +37,7 @@ export default function ManagementPage({ defaultSubTab, onSubTabHandled }) {
         {visibleTabs.map(t => (
           <button
             key={t.key}
+            type="button"
             className={subTab === t.key ? 'active' : ''}
             onClick={() => setSubTab(t.key)}
           >
