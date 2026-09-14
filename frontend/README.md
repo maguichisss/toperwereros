@@ -57,8 +57,12 @@ frontend/
 └── src/
     ├── main.jsx                # Entry point (React StrictMode)
     ├── App.jsx                 # Root: tab routing + auth gate
-    ├── index.css               # Estilos globales (1600+ líneas)
-    ├── utils.js                # formatPrice() helper
+    ├── styles/                 # Estilos globales (CSS plano)
+    │   ├── variables.css       # Variables de diseño (colores, radios…)
+    │   ├── base.css            # Reset y estilos base
+    │   ├── layout.css          # Layout global (tabs, grids, barras)
+    │   └── components.css      # Estilos por componente
+    ├── utils.js                # formatPrice() helper, decodeJwtPayload()
     ├── api/
     │   └── client.js           # Cliente API centralizado
     ├── context/

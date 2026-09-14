@@ -5,47 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Store Catalog API — Documentation</title>
 <style>
-  :root {
-    --bg: #0f172a; --surface: #1e293b; --border: #334155;
-    --text: #e2e8f0; --muted: #94a3b8; --accent: #38bdf8;
-    --green: #4ade80; --yellow: #fbbf24; --red: #f87171;
-    --purple: #a78bfa; --orange: #fb923c;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
-  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
-  h1 { font-size: 2rem; margin-bottom: 0.5rem; }
-  h1 span { color: var(--accent); }
-  h2 { font-size: 1.3rem; color: var(--accent); margin: 2.5rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
-  h3 { font-size: 1.05rem; margin: 1.5rem 0 0.5rem; color: var(--green); }
-  p, li { color: var(--muted); font-size: 0.92rem; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .subtitle { color: var(--muted); margin-bottom: 2rem; font-size: 0.95rem; }
-  .links { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
-  .links a { background: var(--surface); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; }
-  .links a:hover { border-color: var(--accent); text-decoration: none; }
-  table { width: 100%; border-collapse: collapse; margin: 0.75rem 0 1.5rem; font-size: 0.85rem; }
-  th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
-  th { color: var(--accent); font-weight: 600; background: var(--surface); }
-  td { color: var(--text); }
-  .method { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 3px; text-transform: uppercase; min-width: 3.5rem; text-align: center; }
-  .m-get { background: #164e63; color: var(--accent); }
-  .m-post { background: #14532d; color: var(--green); }
-  .m-put { background: #713f12; color: var(--yellow); }
-  .m-patch { background: #4c1d95; color: var(--purple); }
-  .m-delete { background: #7f1d1d; color: var(--red); }
-  .perm { font-family: 'Courier New', monospace; font-size: 0.78rem; color: var(--orange); }
-  .tag { display: inline-block; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 3px; background: #1e293b; border: 1px solid var(--border); color: var(--muted); margin-right: 0.25rem; }
-  code { font-family: 'Courier New', monospace; background: var(--surface); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.82rem; color: var(--accent); }
-  ul { padding-left: 1.5rem; margin: 0.5rem 0; }
-  li { margin: 0.25rem 0; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0; }
-  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; }
-  .stat .num { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
-  .stat .label { font-size: 0.8rem; color: var(--muted); }
-  .note { background: #1e293b; border-left: 3px solid var(--yellow); padding: 0.75rem 1rem; margin: 1rem 0; border-radius: 0 6px 6px 0; font-size: 0.85rem; }
-  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.8rem; color: var(--muted); }
+    :root {
+      --bg: #0f172a; --surface: #1e293b; --border: #334155;
+      --text: #e2e8f0; --muted: #94a3b8; --accent: #38bdf8;
+      --green: #4ade80; --yellow: #fbbf24; --red: #f87171;
+      --purple: #a78bfa; --orange: #fb923c;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    h1 span { color: var(--accent); }
+    h2 { font-size: 1.3rem; color: var(--accent); margin: 2.5rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+    h3 { font-size: 1.05rem; margin: 1.5rem 0 0.5rem; color: var(--green); }
+    p, li { color: var(--muted); font-size: 0.92rem; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .subtitle { color: var(--muted); margin-bottom: 2rem; font-size: 0.95rem; }
+    .links { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+    .links a { background: var(--surface); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; }
+    .links a:hover { border-color: var(--accent); text-decoration: none; }
+    table { width: 100%; border-collapse: collapse; margin: 0.75rem 0 1.5rem; font-size: 0.85rem; }
+    th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--accent); font-weight: 600; background: var(--surface); }
+    td { color: var(--text); }
+    .perm { font-family: 'Courier New', monospace; font-size: 0.78rem; color: var(--orange); }
+    code { font-family: 'Courier New', monospace; background: var(--surface); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.82rem; color: var(--accent); }
+    pre { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem 1rem; margin: 0.75rem 0 1.5rem; overflow-x: auto; }
+    pre code { background: transparent; padding: 0; color: var(--muted); }
+    ul { padding-left: 1.5rem; margin: 0.5rem 0; }
+    li { margin: 0.25rem 0; }
+    blockquote { border-left: 3px solid var(--border); margin: 1rem 0; padding: 0.25rem 1rem; color: var(--muted); font-size: 0.9rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; }
+    .stat .num { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+    .stat .label { font-size: 0.8rem; color: var(--muted); }
+    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.8rem; color: var(--muted); }
+
 </style>
 </head>
 <body>
@@ -61,230 +57,835 @@
 </div>
 
 <div class="grid">
-  <div class="stat"><div class="num">41</div><div class="label">Endpoints</div></div>
-  <div class="stat"><div class="num">9</div><div class="label">Modules</div></div>
-  <div class="stat"><div class="num">3</div><div class="label">Roles</div></div>
-  <div class="stat"><div class="num">15</div><div class="label">Permissions</div></div>
+<div class="stat"><div class="num">46</div><div class="label">Endpoints</div></div>
+<div class="stat"><div class="num">9</div><div class="label">Modules</div></div>
+<div class="stat"><div class="num">3</div><div class="label">Roles</div></div>
+<div class="stat"><div class="num">15</div><div class="label">Permissions</div></div>
 </div>
-
+<h1>Store Catalog API Reference</h1>
+<blockquote>
+<p>This document is the <strong>single source of truth</strong> for the public API contract.
+It is rendered into <a href="../backend/docs.html"><code>backend/docs.html</code></a> by <a href="../backend/scripts/gen_api_docs.py"><code>backend/scripts/gen_api_docs.py</code></a>
+and served at <code>/docs</code>. Two pytest guards (<a href="../backend/tests/test_docs_permissions.py"><code>test_docs_permissions.py</code></a>,
+<a href="../backend/tests/test_docs_generated.py"><code>test_docs_generated.py</code></a>) keep it in sync with the code.
+Interactive schemas: <code>/swagger</code> (OpenAPI) · <code>/redoc</code> · <code>/openapi.json</code>.</p>
+</blockquote>
+<h2>Overview</h2>
+<p>FastAPI backend for Toperwereros: authentication (JWT), product catalog,
+categories, colors, image upload, PDF catalog generation, sales (POS),
+customers, and layaways (apartados). Every endpoint except <code>POST /api/auth/login</code>
+requires a JWT Bearer token. Response/error messages are in Spanish.</p>
+<p><strong>Stats</strong> — Endpoints: <strong>46</strong> · Modules: <strong>9</strong> · Roles: <strong>3</strong> ·
+Employee permissions: <strong>15</strong></p>
 <h2>Authentication</h2>
-<p>All endpoints except <code>POST /api/auth/login</code> require a JWT Bearer token in the <code>Authorization</code> header.</p>
+<p>All endpoints except <code>POST /api/auth/login</code> require:</p>
+<pre><code>Authorization: Bearer &lt;access_token&gt;
+</code></pre>
 <table>
-<tr><th>Setting</th><th>Value</th></tr>
-<tr><td>Token format</td><td>JWT (HS256)</td><tr>
-<tr><td>Expiry</td><td>24 hours (configurable via <code>JWT_EXPIRE_MINUTES</code>)</td></tr>
-<tr><td>Secret</td><td><code>JWT_SECRET</code> env var (default: <code>dev-secret-change-in-production</code>)</td></tr>
-<tr><td>Header</td><td><code>Authorization: Bearer &lt;token&gt;</code></td></tr>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Token format</td>
+<td>JWT, algorithm HS256</td>
+</tr>
+<tr>
+<td>Access-token expiry</td>
+<td><code>JWT_EXPIRE_MINUTES</code> (default <code>1440</code> = 24 h)</td>
+</tr>
+<tr>
+<td>Refresh-token expiry</td>
+<td><code>REFRESH_TOKEN_EXPIRE_DAYS</code> (default <code>7</code>)</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>JWT_SECRET</code> env var (<strong>required</strong> at startup; sample in <code>.env.example</code>)</td>
+</tr>
+<tr>
+<td>Password hashing</td>
+<td>bcrypt (<code>passlib</code>)</td>
+</tr>
+<tr>
+<td>Login lockout</td>
+<td>5 failed attempts → locked for <code>LOCKOUT_DURATION_MINUTES</code> (15)</td>
+</tr>
+</tbody>
 </table>
-
+<p>Refresh tokens are opaque, stored by SHA-256 hash with family tracking
+(rotation + family revoke on reuse). <code>POST /api/auth/refresh</code> exchanges a valid
+refresh token for a new access+refresh pair (the old one is revoked).</p>
 <h2>Roles &amp; Permissions</h2>
 <table>
-<tr><th>Role</th><th>Access Level</th><th>Description</th></tr>
-<tr><td><strong>admin</strong></td><td><code>*</code> (wildcard)</td><td>Full access to all endpoints including user management</td></tr>
-<tr><td><strong>employee</strong></td><td>15 permissions</td><td>Products, sales, layaways, customers, categories (view), colors (view)</td></tr>
-<tr><td><strong>viewer</strong></td><td>6 permissions</td><td>Read-only access to products, sales, layaways, customers, categories, colors</td></tr>
+<thead>
+<tr>
+<th>Role</th>
+<th>Level</th>
+<th>Capabilities</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>admin</code></td>
+<td><code>*</code> (wildcard)</td>
+<td>Full access to all endpoints, including user/role management</td>
+</tr>
+<tr>
+<td><code>employee</code></td>
+<td>15 permissions</td>
+<td>Products (CRUD), sales (view/create), layaways (view/create/edit), customers (CRUD), categories (view), colors (view)</td>
+</tr>
+<tr>
+<td><code>viewer</code></td>
+<td>6 permissions</td>
+<td>Read-only: products, sales, layaways, customers, categories, colors</td>
+</tr>
+</tbody>
 </table>
+<h3>Permission matrix (machine-readable source)</h3>
+<p>This block is authoritative for the permission drift test — it must equal
+<code>app.auth.ROLE_PERMISSIONS</code>.</p>
+<!-- ROLES:START -->
 
-<h3>Permission Matrix</h3>
+<pre><code class="language-json">{&quot;admin&quot;: [&quot;*&quot;], &quot;employee&quot;: [&quot;product.view&quot;, &quot;product.create&quot;, &quot;product.edit&quot;, &quot;product.delete&quot;, &quot;sale.view&quot;, &quot;sale.create&quot;, &quot;apartado.view&quot;, &quot;apartado.create&quot;, &quot;apartado.edit&quot;, &quot;customer.view&quot;, &quot;customer.create&quot;, &quot;customer.edit&quot;, &quot;customer.delete&quot;, &quot;category.view&quot;, &quot;color.view&quot;], &quot;viewer&quot;: [&quot;product.view&quot;, &quot;sale.view&quot;, &quot;apartado.view&quot;, &quot;customer.view&quot;, &quot;category.view&quot;, &quot;color.view&quot;]}
+</code></pre>
+<!-- ROLES:END -->
+
+<h3>Permission matrix (human-readable)</h3>
 <table>
-<tr><th>Permission</th><th>admin</th><th>employee</th><th>viewer</th></tr>
-<tr><td><code>product.view</code></td><td>&#x2714;</td><td>&#x2714;</td><td>&#x2714;</td></tr>
-<tr><td><code>product.create</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
-<tr><td><code>product.edit</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
-<tr><td><code>product.delete</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
-<tr><td><code>sale.view</code></td><td>&#x2714;</td><td>&#x2714;</td><td>&#x2714;</td></tr>
-<tr><td><code>sale.create</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
-<tr><td><code>apartado.view</code></td><td>&#x2714;</td><td>&#x2714;</td><td>&#x2714;</td></tr>
-<tr><td><code>apartado.create</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
-<tr><td><code>apartado.edit</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
-<tr><td><code>customer.view</code></td><td>&#x2714;</td><td>&#x2714;</td><td>&#x2714;</td></tr>
-<tr><td><code>customer.create</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
-<tr><td><code>customer.edit</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
-<tr><td><code>customer.delete</code></td><td>&#x2714;</td><td>&#x2714;</td><td></td></tr>
-<tr><td><code>category.view</code></td><td>&#x2714;</td><td>&#x2714;</td><td>&#x2714;</td></tr>
-<tr><td><code>category.create/edit/delete</code></td><td>&#x2714;</td><td></td><td></td></tr>
-<tr><td><code>color.view</code></td><td>&#x2714;</td><td>&#x2714;</td><td>&#x2714;</td></tr>
-<tr><td><code>color.create/edit/delete</code></td><td>&#x2714;</td><td></td><td></td></tr>
-<tr><td><code>user.manage</code></td><td>&#x2714;</td><td></td><td></td></tr>
+<thead>
+<tr>
+<th>Permission</th>
+<th style="text-align: center;">admin</th>
+<th style="text-align: center;">employee</th>
+<th style="text-align: center;">viewer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>product.view</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+<tr>
+<td><code>product.create</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>product.edit</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>product.delete</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>sale.view</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+<tr>
+<td><code>sale.create</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>apartado.view</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+<tr>
+<td><code>apartado.create</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>apartado.edit</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>customer.view</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+<tr>
+<td><code>customer.create</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>customer.edit</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>customer.delete</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>category.view</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+<tr>
+<td><code>category.create</code> / <code>category.edit</code> / <code>category.delete</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>color.view</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+<tr>
+<td><code>color.create</code> / <code>color.edit</code> / <code>color.delete</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>user.manage</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+</tr>
+</tbody>
 </table>
-
+<p>Admin bypasses all checks via the <code>*</code> wildcard; permission strings may also be
+matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> satisfies
+<code>product.view</code>).</p>
 <h2>Endpoint Reference</h2>
-
-<h3>Auth &mdash; <code>/api/auth</code></h3>
+<h3>Auth — <code>/api/auth</code></h3>
 <table>
-<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
-<tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/login</code></td><td>public</td><td>Authenticate and receive JWT. Rate-limited to 5 attempts/min per IP.</td></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/auth/me</code></td><td>authenticated</td><td>Return current user profile (id, username, email, role, avatar).</td></tr>
-<tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/change-password</code></td><td>authenticated</td><td>Change own password. New password must be &ge; 4 characters.</td></tr>
-<tr><td><span class="method m-patch">PATCH</span></td><td><code>/api/auth/profile</code></td><td>authenticated</td><td>Update own email and/or avatar URL. Email uniqueness enforced.</td></tr>
-<tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/avatar</code></td><td>authenticated</td><td>Upload avatar image. Magic bytes validated (JPEG/PNG/WebP, 5MB max).</td></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/auth/users</code></td><td class="perm">user.manage</td><td>List all users ordered by username.</td></tr>
-<tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/register</code></td><td class="perm">user.manage</td><td>Create new user account. Username and email must be unique.</td></tr>
-<tr><td><span class="method m-put">PUT</span></td><td><code>/api/auth/users/{id}</code></td><td class="perm">user.manage</td><td>Update user fields (username, email, role, password, active). Admin only. Cannot change own role or deactivate self.</td></tr>
-<tr><td><span class="method m-patch">PATCH</span></td><td><code>/api/auth/users/{id}/active</code></td><td class="perm">user.manage</td><td>Toggle user active/disabled status. Admin only. Cannot deactivate self.</td></tr>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Permission</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/login</code></td>
+<td>public</td>
+<td>Authenticate; returns <code>access_token</code> + <code>refresh_token</code>. Rate-limited 5/min/IP.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/refresh</code></td>
+<td>refresh token</td>
+<td>Rotate tokens. Rate-limited 10/min/IP.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/logout</code></td>
+<td>authenticated</td>
+<td>Revoke all refresh tokens for the user.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/auth/me</code></td>
+<td>authenticated</td>
+<td>Current user profile (id, username, email, role, avatar).</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/auth/roles</code></td>
+<td><code>user.manage</code></td>
+<td>List roles ordered by id.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/roles</code></td>
+<td><code>user.manage</code></td>
+<td>Create role (name lowered, unique). Rate-limited via register bucket.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/change-password</code></td>
+<td>authenticated</td>
+<td>Change own password (min 4 chars); revokes all sessions. Rate-limited 1/min/IP.</td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/api/auth/profile</code></td>
+<td>authenticated</td>
+<td>Update own <code>email</code> and/or <code>image_url</code> (email uniqueness enforced).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/avatar</code></td>
+<td>authenticated</td>
+<td>Upload avatar (JPEG/PNG/WebP, ≤ 5 MB); deletes previous. Rate-limited 3/min/IP.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/auth/users</code></td>
+<td><code>user.manage</code></td>
+<td>List all users ordered by username.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/register</code></td>
+<td><code>user.manage</code></td>
+<td>Create user (unique username/email lowercased). Rate-limited 5/min/IP.</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/auth/users/{user_id}</code></td>
+<td><code>user.manage</code></td>
+<td>Update user fields; cannot change own role or deactivate self.</td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/api/auth/users/{user_id}/active</code></td>
+<td><code>user.manage</code></td>
+<td>Toggle active/disabled; cannot deactivate self.</td>
+</tr>
+</tbody>
 </table>
-
-<h3>Products &mdash; <code>/api/products</code></h3>
+<h3>Products — <code>/api/products</code></h3>
 <table>
-<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/products</code></td><td class="perm">product.view</td><td>Paginated list with search (<code>q</code>), category filter (<code>category_ids</code>), and export mode. Search matches code, name, ubicacion, price, category name, color name.</td></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/products/{id}</code></td><td class="perm">product.view</td><td>Single product with categories and colors loaded.</td></tr>
-<tr><td><span class="method m-post">POST</span></td><td><code>/api/products</code></td><td class="perm">product.create</td><td>Create product. Requires unique code, valid price, existing categories/colors.</td></tr>
-<tr><td><span class="method m-put">PUT</span></td><td><code>/api/products/{id}</code></td><td class="perm">product.edit</td><td>Full update. Old image is deleted from disk when image_url changes.</td></tr>
-<tr><td><span class="method m-delete">DELETE</span></td><td><code>/api/products/{id}</code></td><td class="perm">product.delete</td><td>Delete product and remove image file from disk.</td></tr>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Permission</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/products</code></td>
+<td><code>product.view</code></td>
+<td>Paginated list (only <code>stock &gt; 0</code>). Query: <code>q</code> (search), <code>category_ids</code>, <code>page</code> (≥1), <code>per_page</code> (1–200, default 20), <code>export</code> (skip pagination). Search matches code, name, ubicacion, price, category name, color name (ILIKE, escaped).</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/products/{product_id}</code></td>
+<td><code>product.view</code></td>
+<td>Single product with categories and colors.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/products</code></td>
+<td><code>product.create</code></td>
+<td>Create product: unique code, name/code required, price ≥ 0, referenced categories/colors must exist.</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/products/{product_id}</code></td>
+<td><code>product.edit</code></td>
+<td>Full update; replaces categories/colors; deletes the old image file when <code>image_url</code> changes.</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/products/{product_id}</code></td>
+<td><code>product.delete</code></td>
+<td>Delete product and its image file (204).</td>
+</tr>
+</tbody>
 </table>
-
-<h3>Categories &mdash; <code>/api/categories</code></h3>
+<h3>Categories — <code>/api/categories</code></h3>
 <table>
-<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/categories</code></td><td class="perm">category.view</td><td>List all categories ordered alphabetically.</td></tr>
-<tr><td><span class="method m-post">POST</span></td><td><code>/api/categories</code></td><td class="perm">category.create</td><td>Create category. Name must be unique.</td></tr>
-<tr><td><span class="method m-put">PUT</span></td><td><code>/api/categories/{id}</code></td><td class="perm">category.edit</td><td>Update category name.</td></tr>
-<tr><td><span class="method m-delete">DELETE</span></td><td><code>/api/categories/{id}</code></td><td class="perm">category.delete</td><td>Delete category. Blocked (409) if assigned to any product.</td></tr>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Permission</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/categories</code></td>
+<td><code>category.view</code></td>
+<td>List all categories (alphabetical).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/categories</code></td>
+<td><code>category.create</code></td>
+<td>Create category (name unique, lowered).</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/categories/{category_id}</code></td>
+<td><code>category.edit</code></td>
+<td>Update category name.</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/categories/{category_id}</code></td>
+<td><code>category.delete</code></td>
+<td>Delete; <strong>409</strong> if assigned to any product.</td>
+</tr>
+</tbody>
 </table>
-
-<h3>Colors &mdash; <code>/api/colors</code></h3>
+<h3>Colors — <code>/api/colors</code></h3>
 <table>
-<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/colors</code></td><td class="perm">color.view</td><td>List all colors ordered alphabetically.</td></tr>
-<tr><td><span class="method m-post">POST</span></td><td><code>/api/colors</code></td><td class="perm">color.create</td><td>Create color. Hex must match <code>#RRGGBB</code> format.</td></tr>
-<tr><td><span class="method m-put">PUT</span></td><td><code>/api/colors/{id}</code></td><td class="perm">color.edit</td><td>Update color name and hex code.</td></tr>
-<tr><td><span class="method m-delete">DELETE</span></td><td><code>/api/colors/{id}</code></td><td class="perm">color.delete</td><td>Delete color. Blocked (409) if assigned to any product.</td></tr>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Permission</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/colors</code></td>
+<td><code>color.view</code></td>
+<td>List all colors (alphabetical).</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/colors</code></td>
+<td><code>color.create</code></td>
+<td>Create color; <code>hex</code> must match <code>#RRGGBB</code>, name unique and lowered.</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/colors/{color_id}</code></td>
+<td><code>color.edit</code></td>
+<td>Update name and/or hex.</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/colors/{color_id}</code></td>
+<td><code>color.delete</code></td>
+<td>Delete; <strong>409</strong> if assigned to any product.</td>
+</tr>
+</tbody>
 </table>
-
-<h3>Upload &mdash; <code>/api/upload</code></h3>
+<h3>Upload — <code>/api/upload</code></h3>
 <table>
-<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
-<tr><td><span class="method m-post">POST</span></td><td><code>/api/upload</code></td><td class="perm">product.edit</td><td>Upload product image. Magic bytes validated (JPEG/PNG/WebP). 5MB max. Returns <code>{"image_url": "/uploads/&lt;uuid&gt;.&lt;ext&gt;"}</code>.</td></tr>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Permission</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/api/upload</code></td>
+<td><code>product.edit</code></td>
+<td>Upload product image. Magic bytes (JPEG/PNG/WebP), ≤ 5 MB, ≥ 8 bytes. Returns <code>{"image_url": "/uploads/&lt;uuid&gt;.&lt;ext&gt;"}</code>. Rate-limited 5/min/IP.</td>
+</tr>
+</tbody>
 </table>
-
-<h3>Catalog &mdash; <code>/api/catalog</code></h3>
+<h3>Catalog — <code>/api/catalog</code></h3>
 <table>
-<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/catalog/pdf</code></td><td class="perm">product.view</td><td>Generate PDF/HTML catalog. 4-column grid, 16 products/page. Only in-stock products. First 64 are the newest additions (by creation date); the rest follow in category/color/stock order. Optional <code>ids</code> and <code>q</code> query params.</td></tr>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Permission</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/catalog/pdf</code></td>
+<td><code>product.view</code></td>
+<td>Generate PDF (default) or HTML catalog. Only in-stock products. Query: <code>ids</code> (comma ints), <code>q</code> (search), <code>format</code> (<code>pdf</code>|<code>html</code>), <code>theme</code>. Ordering and themes documented under Business Rules.</td>
+</tr>
+</tbody>
 </table>
-
-<h3>Sales &mdash; <code>/api/sales</code></h3>
+<h3>Sales — <code>/api/sales</code></h3>
 <table>
-<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/sales</code></td><td class="perm">sale.view</td><td>Paginated list, newest first. Includes line items and creator name.</td></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/sales/{id}</code></td><td class="perm">sale.view</td><td>Single sale with all line items and product details.</td></tr>
-<tr><td><span class="method m-post">POST</span></td><td><code>/api/sales</code></td><td class="perm">sale.create</td><td>Create sale. Atomic stock decrement via savepoint. Unit price captured from product at sale time.</td></tr>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Permission</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/sales</code></td>
+<td><code>sale.view</code></td>
+<td>Paginated list, newest first, with line items and creator name. Query: <code>page</code> (≥1), <code>per_page</code> (1–100, default 20), <code>start_date</code>, <code>end_date</code> (<code>YYYY-MM-DD</code>, inclusive).</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/sales/{sale_id}</code></td>
+<td><code>sale.view</code></td>
+<td>Single sale with all line items.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/sales</code></td>
+<td><code>sale.create</code></td>
+<td>Create sale. At least one item, atomic stock decrement via savepoint, unit price captured from product at sale time, <code>created_by</code> = authenticated user.</td>
+</tr>
+</tbody>
 </table>
-
-<h3>Customers &mdash; <code>/api/customers</code></h3>
+<h3>Customers — <code>/api/customers</code></h3>
 <table>
-<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/customers</code></td><td class="perm">customer.view</td><td>List customers. Optional <code>q</code> search by name or phone.</td></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/customers/{id}</code></td><td class="perm">customer.view</td><td>Single customer by ID.</td></tr>
-<tr><td><span class="method m-post">POST</span></td><td><code>/api/customers</code></td><td class="perm">customer.create</td><td>Create customer record.</td></tr>
-<tr><td><span class="method m-put">PUT</span></td><td><code>/api/customers/{id}</code></td><td class="perm">customer.edit</td><td>Update customer profile.</td></tr>
-<tr><td><span class="method m-delete">DELETE</span></td><td><code>/api/customers/{id}</code></td><td class="perm">customer.delete</td><td>Delete customer record.</td></tr>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Permission</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/customers</code></td>
+<td><code>customer.view</code></td>
+<td>List customers; <code>q</code> matches <code>name</code> or <code>phone</code> (ILIKE); ordered by name.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/customers/{customer_id}</code></td>
+<td><code>customer.view</code></td>
+<td>Single customer.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/customers</code></td>
+<td><code>customer.create</code></td>
+<td>Create customer (name required; phone/email/notes optional).</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/customers/{customer_id}</code></td>
+<td><code>customer.edit</code></td>
+<td>Update customer fields.</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/customers/{customer_id}</code></td>
+<td><code>customer.delete</code></td>
+<td>Delete customer (204).</td>
+</tr>
+</tbody>
 </table>
-
-<h3>Layaways &mdash; <code>/api/layaways</code></h3>
+<h3>Layaways (apartados) — <code>/api/layaways</code></h3>
 <table>
-<tr><th>Method</th><th>Path</th><th>Permission</th><th>Description</th></tr>
-<tr><td><span class="method m-post">POST</span></td><td><code>/api/layaways</code></td><td class="perm">apartado.create</td><td>Create layaway. Provide <code>customer_id</code> or inline <code>customer</code>. Deposit locks in prices and decrements stock.</td></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/layaways</code></td><td class="perm">apartado.view</td><td>Paginated list. Filter by <code>status</code> and <code>customer_id</code>.</td></tr>
-<tr><td><span class="method m-get">GET</span></td><td><code>/api/layaways/{id}</code></td><td class="perm">apartado.view</td><td>Single layaway with items, payments, and customer info.</td></tr>
-<tr><td><span class="method m-post">POST</span></td><td><code>/api/layaways/{id}/payments</code></td><td class="perm">apartado.edit</td><td>Add payment. Auto-completes when balance reaches $0. Amount cannot exceed balance.</td></tr>
-<tr><td><span class="method m-post">POST</span></td><td><code>/api/layaways/{id}/items</code></td><td class="perm">apartado.edit</td><td>Add a product to an active layaway. Locks current price, decrements stock, recalculates total/balance.</td></tr>
-<tr><td><span class="method m-delete">DELETE</span></td><td><code>/api/layaways/{id}/items/{item_id}</code></td><td class="perm">apartado.edit</td><td>Remove an item from an active layaway. Restores stock. Must keep at least 1 item.</td></tr>
-<tr><td><span class="method m-put">PUT</span></td><td><code>/api/layaways/{id}/items/{item_id}</code></td><td class="perm">apartado.edit</td><td>Change item quantity in an active layaway. Delta-adjusts stock and recalculates total/balance.</td></tr>
-<tr><td><span class="method m-patch">PATCH</span></td><td><code>/api/layaways/{id}/cancel</code></td><td class="perm">apartado.edit</td><td>Cancel active layaway. All product stock is restored.</td></tr>
-<tr><td><span class="method m-patch">PATCH</span></td><td><code>/api/layaways/{id}/complete</code></td><td class="perm">apartado.edit</td><td>Manually complete layaway. Creates a linked Sale record.</td></tr>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Permission</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/api/layaways</code></td>
+<td><code>apartado.create</code></td>
+<td>Create layaway. Provide <code>customer_id</code> <strong>or</strong> inline <code>customer</code> (not both/neither). Deposit &gt; 0 and ≤ total; locks in prices, decrements stock; deposit recorded as first payment.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/layaways</code></td>
+<td><code>apartado.view</code></td>
+<td>Paginated list, newest first. Query: <code>status</code> (<code>active</code>|<code>completed</code>|<code>cancelled</code>), <code>customer_id</code>, <code>page</code>, <code>per_page</code> (1–100).</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/layaways/{layaway_id}</code></td>
+<td><code>apartado.view</code></td>
+<td>Single layaway with items, payments, customer, creator, linked <code>sale_id</code>.</td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/api/layaways/{layaway_id}</code></td>
+<td><code>apartado.edit</code></td>
+<td>Update <code>notes</code> on an active layaway.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/layaways/{layaway_id}/payments</code></td>
+<td><code>apartado.edit</code></td>
+<td>Add payment: positive and ≤ balance; auto-completes (creates linked Sale) when balance hits $0.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/layaways/{layaway_id}/items</code></td>
+<td><code>apartado.edit</code></td>
+<td>Add item to active layaway; locks current price, decrements stock, recalculates total/balance.</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/layaways/{layaway_id}/items/{item_id}</code></td>
+<td><code>apartado.edit</code></td>
+<td>Remove item from active layaway; restores stock; must keep ≥ 1 item; new total must not drop below payments made.</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/layaways/{layaway_id}/items/{item_id}</code></td>
+<td><code>apartado.edit</code></td>
+<td>Change item quantity (≥ 1); delta-adjusts stock; same payments floor rule.</td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/api/layaways/{layaway_id}/cancel</code></td>
+<td><code>apartado.edit</code></td>
+<td>Cancel active layaway; restores all stock; payments history retained.</td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/api/layaways/{layaway_id}/complete</code></td>
+<td><code>apartado.edit</code></td>
+<td>Manually complete active layaway; creates linked Sale (idempotent).</td>
+</tr>
+</tbody>
 </table>
-
 <h2>Business Rules</h2>
-
 <h3>Products</h3>
 <ul>
-  <li>Product <code>code</code> must be globally unique (enforced on create and update).</li>
-  <li><code>name</code>, <code>code</code>, and <code>price</code> are required. Price &ge; 0.</li>
-  <li>All referenced <code>category_ids</code> and <code>color_ids</code> must exist; count must match.</li>
-  <li>Image files are deleted from disk on product update (old URL) and delete.</li>
-  <li>Search uses case-insensitive ILIKE across 6 fields simultaneously.</li>
+<li><code>code</code> is globally unique (enforced on create <strong>and</strong> update; error names the conflicting product).</li>
+<li><code>name</code>, <code>code</code>, and <code>price</code> required; <code>price ≥ 0</code>.</li>
+<li>All referenced <code>category_ids</code> / <code>color_ids</code> must exist (count validated).</li>
+<li>List endpoint always filters <code>stock &gt; 0</code>; stock can still dip to 0 via sell-through.</li>
+<li>Old image file is deleted on image change (update) and on delete.</li>
+<li>Search = case-insensitive ILIKE across code, name, ubicacion, price (<code>cast</code> to text), category name, and color name; <code>%</code>, <code>_</code>, <code>\</code> are escaped.</li>
 </ul>
-
 <h3>Sales</h3>
 <ul>
-  <li>At least one item required.</li>
-  <li>Each product must exist and have sufficient stock.</li>
-  <li><code>unit_price</code> is captured from the product at sale time (not from the request).</li>
-  <li>Stock decrement and sale creation are wrapped in a SQLAlchemy <strong>savepoint</strong> (<code>db.begin_nested()</code>).</li>
-  <li><code>created_by</code> tracks which user made the sale.</li>
+<li>At least one item required: <code>"La venta debe tener al menos un artículo"</code>.</li>
+<li>Each product must exist (404) and have sufficient stock (400).</li>
+<li><code>unit_price</code> comes from the product <strong>at sale time</strong>, never from the request; <code>total</code> is computed server-side.</li>
+<li>Stock decrement + sale creation wrap in a SQLAlchemy <strong>savepoint</strong> (<code>db.begin_nested()</code>): any failure → no partial sale, no stock change.</li>
+<li>Sales are immutable: no delete/update endpoints.</li>
 </ul>
-
-<h3>Layaways (Apartados)</h3>
+<h3>Layaways (apartados)</h3>
 <ul>
-  <li>Must provide exactly one of <code>customer_id</code> or inline <code>customer</code> object.</li>
-  <li>Deposit must be &gt; 0 and must not exceed the total.</li>
-  <li>Each item locks in the current <code>unit_price</code> and decrements stock.</li>
-  <li>The initial deposit is recorded as the first <code>LayawayPayment</code>.</li>
-  <li>When a payment brings the balance to $0, the layaway is <strong>automatically completed</strong> and a Sale is created.</li>
-  <li>Cancellation restores all product stock.</li>
-  <li>Completion is idempotent — if <code>sale_id</code> is already set, it's a no-op.</li>
-  <li>Items can be added, removed, or have their quantity changed while the layaway is active.</li>
-  <li>Adding an item locks the current product price and decrements stock.</li>
-  <li>Removing an item restores stock. At least one item must remain.</li>
-  <li>Changing quantity delta-adjusts stock (increase decrements, decrease restores).</li>
-  <li>Removal or quantity decrease is blocked if the new total would fall below payments made.</li>
+<li>Exactly one of <code>customer_id</code> / inline <code>customer</code>.</li>
+<li><code>deposit &gt; 0</code> and <code>deposit ≤ total</code>; initial deposit recorded as first <code>LayawayPayment</code>.</li>
+<li>Each item locks the current <code>unit_price</code> and <strong>decrements stock</strong> at creation.</li>
+<li>Payments only on <code>active</code> layaways; <code>amount &gt; 0</code> and <code>amount ≤ balance</code>.</li>
+<li>Payment that brings <code>balance</code> to $0 <strong>auto-completes</strong>: creates a linked <code>Sale</code> with the locked prices (no second stock decrement).</li>
+<li>Manual <code>complete</code> is idempotent (no-op if <code>sale_id</code> already set); any remaining positive balance is recorded as a final payment and zeroed.</li>
+<li>Edit notes / add / remove / quantity-change / cancel only on <code>active</code> layaways.</li>
+<li>Remove item → restores stock, must keep ≥ 1 item.</li>
+<li>Quantity change → delta stock adjustment (increase decrements, decrease restores).</li>
+<li>Remove/quantity-decrease blocked when the new total would fall below total payments.</li>
+<li>Cancel → restores all stock, status <code>cancelled</code>, payments history retained.</li>
 </ul>
-
-<h3>Image Uploads</h3>
+<h3>Image uploads</h3>
 <ul>
-  <li>Two upload endpoints: <code>POST /api/upload</code> (products) and <code>POST /api/auth/avatar</code> (profiles).</li>
-  <li>Validation is by <strong>magic bytes</strong>, not Content-Type header.</li>
-  <li>Supported formats: JPEG (<code>FF D8 FF</code>), PNG (<code>89 50 4E 47</code>), WebP (<code>52 49 46 46</code>).</li>
-  <li>Max file size: 5 MB. Min: 8 bytes.</li>
-  <li>Filenames are random UUIDs to prevent collisions.</li>
+<li>Endpoints: <code>POST /api/upload</code> (products) and <code>POST /api/auth/avatar</code> (profiles).</li>
+<li>Validation by <strong>magic bytes</strong>, not Content-Type/extension.</li>
+<li>Formats: JPEG (<code>FF D8 FF</code>), PNG (<code>89 50 4E 47</code>), WebP (<code>52 49 46 46</code>).</li>
+<li>Max 5 MB, min 8 bytes; random UUID filenames; extension derived from detected type.</li>
+<li>Stored to local <code>uploads/</code> or GCS (<code>GCS_BUCKET</code>); <code>safe_upload_path</code> blocks traversal.</li>
 </ul>
-
-<h3>PDF Catalog</h3>
+<h3>PDF catalog</h3>
 <ul>
-  <li>Only in-stock products (<code>stock &gt; 0</code>).</li>
-  <li>4-column card grid, 16 products per page.</li>
-  <li>Each card: cropped product image, name, price (blue), code (gray).</li>
-  <li>Weekly header: "Catalogo Toperwereros" with valid date range in Spanish.</li>
-  <li>Images are center-cropped to fill 44&times;48mm at 72 DPI, converted to JPEG 85%.</li>
+<li>Only in-stock products (<code>stock &gt; 0</code>); optional <code>ids</code> and <code>q</code> filters.</li>
+<li>Ordering: the first <strong>64</strong> products are the newest (by <code>created_at</code>, descending); the rest sort by category product-count (desc), category name, color name, then stock (uncategorized last).</li>
+<li>4-column × 4-row card grid = <strong>16 products/page</strong> (A4).</li>
+<li>Each card: center-cropped image (40×48 mm @ 72 DPI, JPEG q85) or an initial-letter placeholder, name (truncated to ~2 lines), and a price band with the code.</li>
+<li>Weekly header on every page: <code>Válido de {lunes} a {domingo} | semana {N}</code> (Spanish month names, ISO week number, based on today).</li>
+<li>Themes: <code>classic</code>, <code>nocturno</code>, <code>kraft</code>, <code>elegante</code>, <code>marino</code>, <code>sol</code>, <code>cyber</code>, <code>vino</code>, <code>rosa</code>, <code>arcoiris</code>, <code>nebulosa</code>, <code>triangulos</code>, <code>olas</code>, <code>mandala</code>, <code>aurora</code>, <code>confeti</code>, <code>galaxia</code>, <code>marco</code>, <code>flores</code>.</li>
+<li>Output: PDF (attachment) or HTML (inline); <code>format</code>/<code>theme</code>/<code>ids</code> validation errors are 400.</li>
+<li>Layout mirrors <a href="card-mockup.html"><code>docs/card-mockup.html</code></a>.</li>
 </ul>
-
 <h2>Environment Variables</h2>
 <table>
-<tr><th>Variable</th><th>Default</th><th>Description</th></tr>
-<tr><td><code>DATABASE_URL</code></td><td><code>postgresql://postgres:postgres@localhost:5432/store_catalog</code></td><td>PostgreSQL connection string</td></tr>
-<tr><td><code>JWT_SECRET</code></td><td><code>dev-secret-change-in-production</code></td><td>JWT signing secret</td></tr>
-<tr><td><code>JWT_EXPIRE_MINUTES</code></td><td><code>1440</code> (24h)</td><td>Token expiry in minutes</td></tr>
-<tr><td><code>LOG_LEVEL</code></td><td><code>INFO</code></td><td>Python log level (<code>DEBUG</code> enables SQL queries)</td></tr>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DATABASE_URL</code></td>
+<td><code>postgresql://postgres:postgres@localhost:5432/store_catalog</code></td>
+<td>SQLAlchemy connection string</td>
+</tr>
+<tr>
+<td><code>JWT_SECRET</code></td>
+<td><em>(required)</em></td>
+<td>HS256 signing key (sample in <code>.env.example</code>)</td>
+</tr>
+<tr>
+<td><code>JWT_EXPIRE_MINUTES</code></td>
+<td><code>1440</code></td>
+<td>Access-token lifetime (minutes)</td>
+</tr>
+<tr>
+<td><code>REFRESH_TOKEN_EXPIRE_DAYS</code></td>
+<td><code>7</code></td>
+<td>Refresh-token lifetime (days)</td>
+</tr>
+<tr>
+<td><code>LOCKOUT_MAX_ATTEMPTS</code></td>
+<td><code>5</code></td>
+<td>Failed logins before lockout</td>
+</tr>
+<tr>
+<td><code>LOCKOUT_DURATION_MINUTES</code></td>
+<td><code>15</code></td>
+<td>Lockout window</td>
+</tr>
+<tr>
+<td><code>CORS_ORIGINS</code></td>
+<td><code>*</code></td>
+<td>Comma-separated allowed origins</td>
+</tr>
+<tr>
+<td><code>LOG_LEVEL</code></td>
+<td><code>INFO</code></td>
+<td>Python logging level</td>
+</tr>
+<tr>
+<td><code>DEFAULT_ADMIN_PASSWORD</code></td>
+<td><code>admin123</code></td>
+<td>Seed password for default admin (<a href="../backend/seed.py"><code>seed.py</code></a>)</td>
+</tr>
+<tr>
+<td><code>GCS_BUCKET</code></td>
+<td><em>(empty)</em></td>
+<td>Set to store uploads in Google Cloud Storage</td>
+</tr>
+<tr>
+<td><code>GCP_PROJECT</code></td>
+<td><em>(empty)</em></td>
+<td>GCP project id (GCS / Cloud SQL only)</td>
+</tr>
+<tr>
+<td><code>CLOUD_SQL_CONNECTION_STRING</code></td>
+<td><em>(empty)</em></td>
+<td>Starts the embedded Cloud SQL Auth Proxy</td>
+</tr>
+</tbody>
 </table>
-
+<p>Full deployment context: <a href="technical/deployment.md"><code>docs/technical/deployment.md</code></a>.</p>
 <h2>Rate Limits</h2>
-<p>The following endpoints are rate-limited via slowapi:</p>
+<p>Applied via slowapi, keyed per authenticated user (<code>user:{id}</code>) or client IP:</p>
 <table>
-<tr><th>Endpoint</th><th>Limit</th></tr>
-<tr><td><code>POST /api/auth/login</code></td><td>5 requests/minute</td></tr>
-<tr><td><code>POST /api/auth/change-password</code></td><td>1 request/minute</td></tr>
-<tr><td><code>POST /api/auth/avatar</code></td><td>3 requests/minute</td></tr>
-<tr><td><code>POST /api/auth/register</code></td><td>5 requests/minute</td></tr>
-<tr><td><code>POST /api/upload</code></td><td>5 requests/minute</td></tr>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST /api/auth/login</code></td>
+<td>5 / minute</td>
+</tr>
+<tr>
+<td><code>POST /api/auth/refresh</code></td>
+<td>10 / minute</td>
+</tr>
+<tr>
+<td><code>POST /api/auth/change-password</code></td>
+<td>1 / minute</td>
+</tr>
+<tr>
+<td><code>POST /api/auth/avatar</code></td>
+<td>3 / minute</td>
+</tr>
+<tr>
+<td><code>POST /api/auth/register</code></td>
+<td>5 / minute</td>
+</tr>
+<tr>
+<td><code>POST /api/upload</code></td>
+<td>5 / minute</td>
+</tr>
+</tbody>
 </table>
-<p>When a rate limit is exceeded, the API returns <code>429 Too Many Requests</code>.</p>
-
+<p>Exceeding a limit returns <code>429 Too Many Requests</code>.</p>
 <h2>Error Responses</h2>
-<p>All errors return JSON with a <code>detail</code> field:</p>
+<p>All errors return JSON with a <code>detail</code> field (array for 422).</p>
 <table>
-<tr><th>Status</th><th>Meaning</th></tr>
-<tr><td><code>400</code></td><td>Validation error (bad input, duplicate code, insufficient stock)</td></tr>
-<tr><td><code>401</code></td><td>Not authenticated or invalid token</td></tr>
-<tr><td><code>403</code></td><td>Authenticated but lacking required permission</td></tr>
-<tr><td><code>404</code></td><td>Resource not found</td></tr>
-<tr><td><code>409</code></td><td>Conflict (duplicate name, resource in use)</td></tr>
-<tr><td><code>422</code></td><td>Request validation error (malformed body)</td></tr>
-<tr><td><code>429</code></td><td>Rate limit exceeded</td></tr>
-<tr><td><code>500</code></td><td>Internal server error</td></tr>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>400</code></td>
+<td>Validation error (bad input, duplicate code, insufficient stock, etc.)</td>
+</tr>
+<tr>
+<td><code>401</code></td>
+<td>Not authenticated / invalid or expired token</td>
+</tr>
+<tr>
+<td><code>403</code></td>
+<td>Authenticated but lacking the required permission</td>
+</tr>
+<tr>
+<td><code>404</code></td>
+<td>Resource not found</td>
+</tr>
+<tr>
+<td><code>409</code></td>
+<td>Conflict (duplicate name, category/color in use)</td>
+</tr>
+<tr>
+<td><code>422</code></td>
+<td>Request validation (malformed body)</td>
+</tr>
+<tr>
+<td><code>429</code></td>
+<td>Rate limit exceeded</td>
+</tr>
+<tr>
+<td><code>500</code></td>
+<td>Internal server error</td>
+</tr>
+</tbody>
 </table>
-
+<h2>Service endpoints (not in OpenAPI)</h2>
+<ul>
+<li><code>GET /docs</code> — this reference as HTML (rendered from this Markdown).</li>
+<li><code>GET /redoc</code> — ReDoc UI (pinned v2.1.5).</li>
+<li><code>GET /api/health</code> — <code>{"status": "ok", "db": "connected"}</code>; <strong>503</strong> when the database is unreachable (used by Cloud Run probes).</li>
+</ul>
+<hr />
+<p><em>Maintenance: edit this file, then run <code>python scripts/gen_api_docs.py</code> from
+<a href="../backend"><code>backend/</code></a> and commit the regenerated <a href="../backend/docs.html"><code>backend/docs.html</code></a>.</em></p>
 <footer>Store Catalog API &mdash; FastAPI + SQLAlchemy 2.0 + PostgreSQL</footer>
 </div>
 </body>
