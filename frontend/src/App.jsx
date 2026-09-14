@@ -37,10 +37,10 @@ function CartPanel({ onClose, onVenta, onApartado }) {
 
   return (
     <>
-      <div className="cart-drawer-backdrop" onClick={onClose} />
-      <aside className="cart-drawer" ref={panelRef}>
+      <div className="cart-drawer-backdrop" onClick={onClose} aria-hidden="true" />
+      <aside className="cart-drawer" ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="cart-drawer-title">
         <div className="cart-drawer__header">
-          <h3>Carrito ({itemCount})</h3>
+          <h3 id="cart-drawer-title">Carrito ({itemCount})</h3>
           <button type="button" className="cart-drawer__close" onClick={onClose} aria-label="Cerrar carrito">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -56,7 +56,7 @@ function CartPanel({ onClose, onVenta, onApartado }) {
             items.map(item => (
               <div key={item.product_id} className="cart-drawer__item">
                 {item.image_url ? (
-                  <img className="cart-drawer__thumb" src={item.image_url} alt={item.name} />
+                  <img className="cart-drawer__thumb" src={item.image_url} alt={item.name} loading="lazy" decoding="async" />
                 ) : (
                   <div className="cart-drawer__thumb cart-drawer__thumb--empty">—</div>
                 )}

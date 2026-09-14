@@ -183,9 +183,11 @@ export default function SaleCart() {
             <>
               <input
                 type="date"
+                inputMode="numeric"
                 className="input-sm"
                 value={dateFrom}
                 onChange={e => setDateFrom(e.target.value)}
+                autoComplete="off"
               />
               <span className="filter-bar__sep">a</span>
               <input
@@ -193,6 +195,7 @@ export default function SaleCart() {
                 className="input-sm"
                 value={dateTo}
                 onChange={e => setDateTo(e.target.value)}
+                autoComplete="off"
               />
             </>
           )}

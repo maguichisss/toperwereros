@@ -159,27 +159,20 @@ export default function ProductList() {
       <div className="filter-bar">
         <div className="filter-bar__search">
           <input
-            className={`search-input${search ? ' has-clear' : ''}`}
+            type="search"
+            enterKeyHint="search"
+            className="search-input"
             placeholder="Buscar por código, nombre, categoría, ubicación, precio o color"
+            aria-label="Buscar productos"
             value={search}
             onChange={e => handleSearchChange(e.target.value)}
             autoComplete="off"
             autoCorrect="off"
             spellCheck="false"
           />
-          {search && (
-            <button
-              type="button"
-              className="input-clear"
-              onClick={() => { setSearch(''); setPendingSearch(''); setPage(1); }}
-              aria-label="Limpiar búsqueda"
-            >
-              ✕
-            </button>
-          )}
         </div>
         <div className="filter-actions">
-          <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }} className="input-sm">
+          <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }} className="input-sm" autoComplete="off">
             <option value={20}>20</option>
             <option value={50}>50</option>
             <option value={100}>100</option>

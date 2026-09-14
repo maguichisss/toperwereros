@@ -132,29 +132,23 @@ export default function LayawayView({ initialMode }) {
         <div className="filter-bar filter-bar--tight">
           <div className="filter-bar__search">
             <input
-              className={`search-input${search ? ' has-clear' : ''}`}
+              type="search"
+              enterKeyHint="search"
+              className="search-input"
               placeholder="Buscar por nombre o #ID..."
+              aria-label="Buscar apartados por nombre o #ID"
               value={search}
               onChange={e => setSearch(e.target.value)}
               autoComplete="off"
               autoCorrect="off"
               spellCheck="false"
             />
-            {search && (
-              <button
-                type="button"
-                className="input-clear"
-                onClick={() => setSearch('')}
-                aria-label="Limpiar búsqueda"
-              >
-                ✕
-              </button>
-            )}
           </div>
           <select
             value={perPage}
             onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
             className="input-sm"
+            autoComplete="off"
           >
             <option value={10}>10</option>
             <option value={20}>20</option>

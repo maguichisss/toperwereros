@@ -159,6 +159,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
               <input
                 id="product-name"
                 ref={nameRef}
+                type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -174,12 +175,15 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
                 id="product-price"
                 ref={priceRef}
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 min="0"
                 required
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
               />
             </div>
             <div className="form-group">
@@ -187,10 +191,13 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
               <input
                 id="product-stock"
                 type="number"
+                inputMode="numeric"
                 min="0"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
                 autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
               />
             </div>
           </div>
@@ -277,6 +284,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
             <label htmlFor="product-ubicacion">Ubicación</label>
             <input
               id="product-ubicacion"
+              type="text"
               value={ubicacion}
               onChange={(e) => setUbicacion(e.target.value)}
               placeholder="Ej: Bodega A, estante 3"

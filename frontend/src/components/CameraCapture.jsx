@@ -64,6 +64,7 @@ export default function CameraCapture({ onCapture }) {
             type="file"
             accept="image/*"
             onChange={handleFileSelect}
+            aria-label="Seleccionar imagen"
           />
         </div>
       ) : (

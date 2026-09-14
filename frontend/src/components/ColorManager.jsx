@@ -80,6 +80,7 @@ export default function ColorManager() {
 
       <form className="category-form" onSubmit={handleCreate}>
         <input
+          type="text"
           placeholder="Nombre de nuevo color"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
@@ -112,6 +113,7 @@ export default function ColorManager() {
           {editingId === c.id ? (
             <>
               <input
+                type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleUpdate(c.id)}

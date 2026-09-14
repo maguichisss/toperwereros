@@ -41,6 +41,7 @@ const ProductCard = memo(({ product, onEdit, onDelete, onShowImage, canEdit, onA
             src={product.image_url}
             alt={product.name}
             loading="lazy"
+            decoding="async"
           />
         </button>
       ) : (

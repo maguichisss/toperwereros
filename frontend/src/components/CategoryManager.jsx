@@ -62,6 +62,7 @@ export default function CategoryManager() {
 
       <form className="category-form" onSubmit={handleCreate}>
         <input
+          type="text"
           placeholder="Nombre de nueva categoría"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
@@ -97,6 +98,7 @@ export default function CategoryManager() {
           {editingId === c.id ? (
             <>
               <input
+                type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleUpdate(c.id)}

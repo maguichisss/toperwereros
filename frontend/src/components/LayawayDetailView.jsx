@@ -133,6 +133,7 @@ export default function LayawayDetailView({ layaway, onBack, onCancel, onComplet
   return (
     <div className="layaway-detail">
       <button type="button" className="btn btn--secondary btn--back" onClick={onBack}>← Volver</button>
+      <h2 className="visually-hidden">Apartado #{layaway.id}</h2>
 
       {detailError && <p className="error-text">{detailError}</p>}
 
@@ -199,6 +200,7 @@ export default function LayawayDetailView({ layaway, onBack, onCancel, onComplet
                     {editingItemId === item.id ? (
                       <input
                         type="number"
+                        inputMode="numeric"
                         min="1"
                         className="qty-input"
                         value={editingQty}
@@ -206,6 +208,9 @@ export default function LayawayDetailView({ layaway, onBack, onCancel, onComplet
                         onBlur={() => handleSaveQty(item)}
                         onKeyDown={e => { if (e.key === 'Enter') handleSaveQty(item); if (e.key === 'Escape') setEditingItemId(null); }}
                         autoFocus
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
                       />
                     ) : isActive ? (
                       <span className="qty-controls">
@@ -256,8 +261,10 @@ export default function LayawayDetailView({ layaway, onBack, onCancel, onComplet
           onChange={e => setNotesDraft(e.target.value)}
           rows={3}
           disabled={!isActive}
+          aria-label="Notas del apartado"
           autoComplete="off"
           autoCorrect="off"
+          spellCheck="false"
         />
         {isActive && can('apartado.edit') && (
           <div className="layaway-notes-actions">
@@ -305,9 +312,11 @@ export default function LayawayDetailView({ layaway, onBack, onCancel, onComplet
           <div className="payment-form">
             <input
               type="number"
+              inputMode="decimal"
               step="0.01"
               min="0.01"
               placeholder="Monto"
+              aria-label="Monto del abono"
               value={paymentAmount}
               onChange={e => setPaymentAmount(e.target.value)}
               autoComplete="off"

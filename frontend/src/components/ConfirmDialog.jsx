@@ -4,13 +4,17 @@ export default function ConfirmDialog({ title, message, onConfirm, onCancel }) {
   const confirmRef = useRef(null)
 
   useEffect(() => {
+    const previouslyFocused = document.activeElement;
     confirmRef.current?.focus()
     function handleKeyDown(e) {
       if (e.key === 'Escape') onCancel()
       if (e.key === 'Enter') onConfirm()
     }
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus()
+    }
   }, [onConfirm, onCancel])
 
   return (

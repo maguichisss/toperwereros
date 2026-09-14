@@ -44,8 +44,11 @@ export default function ProductSearchBox({ placeholder, onSelect, excludeIds = [
   return (
     <div className="cart-search" ref={boxRef}>
       <input
+        type="search"
+        enterKeyHint="search"
         className="search-input"
         placeholder={placeholder}
+        aria-label={placeholder || 'Buscar producto'}
         role="combobox"
         aria-expanded={showResults && results.length > 0}
         value={query}
@@ -55,6 +58,9 @@ export default function ProductSearchBox({ placeholder, onSelect, excludeIds = [
         autoCorrect="off"
         spellCheck="false"
       />
+      <div className="visually-hidden" aria-live="polite">
+        {showResults && results.length > 0 ? `${results.length} resultado${results.length === 1 ? '' : 's'}` : ''}
+      </div>
       {showResults && results.length > 0 && (
         <div className="search-results" role="listbox">
           {results.map(p => (
@@ -67,7 +73,7 @@ export default function ProductSearchBox({ placeholder, onSelect, excludeIds = [
               aria-label={`${p.name} ${p.code} Stock: ${p.stock}`}
             >
               {p.image_url ? (
-                <img className="search-result-item__thumb" src={p.image_url} alt="" />
+                <img className="search-result-item__thumb" src={p.image_url} alt="" loading="lazy" decoding="async" />
               ) : (
                 <span className="search-result-item__thumb search-result-item__thumb--empty" />
               )}

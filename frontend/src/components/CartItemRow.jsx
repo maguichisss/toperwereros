@@ -8,7 +8,7 @@ export default function CartItemRow({ item }) {
   return (
     <div className="cart-item">
       {item.image_url ? (
-        <img className="cart-item__thumb" src={item.image_url} alt={item.name} />
+        <img className="cart-item__thumb" src={item.image_url} alt={item.name} loading="lazy" decoding="async" />
       ) : (
         <span className="cart-item__thumb cart-item__thumb--empty" />
       )}

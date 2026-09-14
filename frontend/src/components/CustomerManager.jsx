@@ -66,6 +66,7 @@ export default function CustomerManager() {
 
       <form className="category-form" onSubmit={handleCreate}>
         <input
+          type="text"
           placeholder="Nombre *"
           value={newName}
           onChange={e => setNewName(e.target.value)}
@@ -75,6 +76,8 @@ export default function CustomerManager() {
           spellCheck="false"
         />
         <input
+          type="tel"
+          inputMode="tel"
           placeholder="Teléfono"
           value={newPhone}
           onChange={e => setNewPhone(e.target.value)}
@@ -84,6 +87,7 @@ export default function CustomerManager() {
           spellCheck="false"
         />
         <input
+          type="email"
           placeholder="Email"
           value={newEmail}
           onChange={e => setNewEmail(e.target.value)}
@@ -129,6 +133,7 @@ export default function CustomerManager() {
                     <td>
                       <input
                         className="input-cell"
+                        type="text"
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleUpdate(c.id)}
@@ -142,6 +147,8 @@ export default function CustomerManager() {
                     <td>
                       <input
                         className="input-cell"
+                        type="tel"
+                        inputMode="tel"
                         value={editPhone}
                         onChange={e => setEditPhone(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleUpdate(c.id)}
@@ -154,6 +161,7 @@ export default function CustomerManager() {
                     <td>
                       <input
                         className="input-cell"
+                        type="email"
                         value={editEmail}
                         onChange={e => setEditEmail(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleUpdate(c.id)}

@@ -126,8 +126,11 @@ export default function LayawayCreateView({ onBack, onCreated }) {
         ) : (
           <div ref={customerResultsRef} className="cart-search customer-search">
             <input
+              type="search"
+              enterKeyHint="search"
               className="search-input"
               placeholder="Buscar cliente por nombre o teléfono..."
+              aria-label="Buscar cliente por nombre o teléfono"
               value={customerSearch}
               onChange={e => handleCustomerSearchChange(e.target.value)}
               onFocus={() => customerResults.length > 0 && setShowCustomerResults(true)}
@@ -151,6 +154,7 @@ export default function LayawayCreateView({ onBack, onCreated }) {
             {showNewForm && (
               <div className="customer-new-form">
                 <input
+                  type="text"
                   aria-label="Nombre del cliente"
                   placeholder="Nombre *"
                   autoComplete="name"
@@ -160,6 +164,8 @@ export default function LayawayCreateView({ onBack, onCreated }) {
                   onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
                 />
                 <input
+                  type="tel"
+                  inputMode="tel"
                   aria-label="Teléfono del cliente"
                   placeholder="Teléfono"
                   autoComplete="tel"
@@ -169,6 +175,7 @@ export default function LayawayCreateView({ onBack, onCreated }) {
                   onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
                 />
                 <input
+                  type="email"
                   aria-label="Email del cliente"
                   placeholder="Email"
                   autoComplete="email"
@@ -208,6 +215,7 @@ export default function LayawayCreateView({ onBack, onCreated }) {
               <input
                 id="layaway-deposit"
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 min="0.01"
                 max={cartTotal}
@@ -233,6 +241,7 @@ export default function LayawayCreateView({ onBack, onCreated }) {
                 rows={3}
                 autoComplete="off"
                 autoCorrect="off"
+                spellCheck="false"
               />
             </div>
             <button type="button" className="btn btn--primary btn--checkout" onClick={() => setConfirmCreate(true)}>

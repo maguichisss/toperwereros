@@ -142,6 +142,7 @@ export default function BarcodeScanner({ onDetected, onCancel }) {
               accept="image/*"
               onChange={handleFileScan}
               disabled={loading}
+              aria-label="Seleccionar imagen de código de barras"
             />
             {loading && (
               <p className="scanner-status">

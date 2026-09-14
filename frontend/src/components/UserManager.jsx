@@ -103,6 +103,20 @@ export default function UserManager() {
 
   const isSelf = (u) => u.id === currentUser?.id
 
+  useEffect(() => {
+    if (!editUser) return;
+    const previouslyFocused = document.activeElement;
+    document.getElementById('edit-user-username')?.focus();
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') setEditUser(null);
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus();
+    };
+  }, [editUser]);
+
   return (
     <div className="user-manager">
       <form onSubmit={handleSubmit} className="user-form">
@@ -127,7 +141,7 @@ export default function UserManager() {
           </div>
           <div className="form-group">
             <label htmlFor="new-user-role">Rol</label>
-            <select id="new-user-role" value={roleId} onChange={(e) => setRoleId(Number(e.target.value))}>
+            <select id="new-user-role" value={roleId} onChange={(e) => setRoleId(Number(e.target.value))} autoComplete="off">
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
@@ -189,7 +203,7 @@ export default function UserManager() {
               {!isSelf(editUser) && (
                 <div className="form-group">
                   <label htmlFor="edit-user-role">Rol</label>
-                  <select id="edit-user-role" value={editForm.role_id} onChange={(e) => setEditForm({ ...editForm, role_id: Number(e.target.value) })}>
+                  <select id="edit-user-role" value={editForm.role_id} onChange={(e) => setEditForm({ ...editForm, role_id: Number(e.target.value) })} autoComplete="off">
                     {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
                   </select>
                 </div>

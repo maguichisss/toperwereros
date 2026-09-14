@@ -377,16 +377,10 @@
   border-color: var(--primary);
 }
 
-/* Relative wrapper that anchors the clear (✕) button. */
 .filter-bar__search {
-  position: relative;
   flex: 1;
   min-width: 200px;
   width: 100%;
-}
-
-.filter-bar__search .search-input.has-clear {
-  padding-right: 2rem;
 }
 
 /* Slightly tighter bottom spacing for list filter bars. */
@@ -446,20 +440,6 @@
 .card-search .search-input:focus,
 .cart-search .search-input:focus {
   border-color: var(--primary);
-}
-
-.input-clear {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  font-size: 1.1rem;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 4px;
-  line-height: 1;
 }
 
 .search-results {
