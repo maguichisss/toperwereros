@@ -54,5 +54,5 @@ Errores típicos (400):
   colaterales (cambio de imagen de producto, eliminación de producto,
   re-subida de avatar). Para limpiar el disco desincronizado existe
   [`backend/db_diff_imgs.py`](../../backend/db_diff_imgs.py) como utilidad de mantenimiento.
-- El respaldo de imágenes es parte del [`backup.sh`](../../backup.sh) (copia el volumen de
+- El respaldo de imágenes es parte del [`scripts/backup.sh`](../../scripts/backup.sh) (copia el volumen de
   uploads) — ver [deployment.md](../technical/deployment.md).

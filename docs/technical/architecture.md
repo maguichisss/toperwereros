@@ -115,5 +115,5 @@ Three supported shapes (details in [deployment.md](deployment.md)):
 1. **Local dev** — `docker compose up`: postgres, backend on :3001, Vite on :5173.
 2. **Raspberry Pi** — [`docker-compose.pi.yml`](../../docker-compose.pi.yml): db, gunicorn backend :8080,
    nginx terminator on 80/443 with mkcert TLS.
-3. **Cloud Run + Cloud SQL** — [`docker-compose.prod.yml`](../../docker-compose.prod.yml) + `deploy/*.sh` CI, with
+3. **Cloud Run + Cloud SQL** — [`docker-compose.prod.yml`](../../docker-compose.prod.yml) + `scripts/deploy*.sh`, with
    an amd64 Cloud SQL-proxy sidecar on outbound 5432.

@@ -90,7 +90,7 @@ boots the app.
 4. `python -m seed` — idempotent categories, colors, roles, and default admin.
 5. Start the app server and forward SIGTERM to the proxy on shutdown.
 
-### One-time GCP setup ([`deploy/01-setup-infra.sh`](../../deploy/01-setup-infra.sh))
+### One-time GCP setup ([`scripts/deploy-setup-infra.sh`](../../scripts/deploy-setup-infra.sh))
 
 Requires `GCP_PROJECT`, `DB_PASSWORD`, `GCS_BUCKET`, `JWT_SECRET`,
 `DEFAULT_ADMIN_PASSWORD` env vars. Creates:
@@ -105,13 +105,13 @@ Requires `GCP_PROJECT`, `DB_PASSWORD`, `GCS_BUCKET`, `JWT_SECRET`,
 - Secret Manager secrets: `jwt-secret`, `admin-password`, `db-password`,
   `db-url` (all with SA policies).
 
-### Build & push ([`deploy/02-build-push.sh`](../../deploy/02-build-push.sh))
+### Build & push ([`scripts/deploy-build-push.sh`](../../scripts/deploy-build-push.sh))
 
 Builds `backend-prod` and `frontend-prod` targets and pushes to Artifact
 Registry (`$GCP_REGION-docker.pkg.dev/$GCP_PROJECT/store-catalog/{backend,frontend}:$TAG`).
 `TAG` defaults to the short git SHA (`IMAGE_TAG` overrides).
 
-### Deploy ([`deploy/03-deploy.sh`](../../deploy/03-deploy.sh))
+### Deploy ([`scripts/deploy-cloud-run.sh`](../../scripts/deploy-cloud-run.sh))
 
 - Deploys `store-catalog-backend` to Cloud Run: SA, `--add-cloudsql-instances`,
   secrets bound (`JWT_SECRET`, `DEFAULT_ADMIN_PASSWORD`, `DATABASE_URL`), env
@@ -134,12 +134,12 @@ The `frontend-prod` image renders an nginx template via `envsubst`
 
 ## Backups & restore
 
-- **[`backup.sh`](../../backup.sh)** — `pg_dump --no-owner -U postgres store_catalog | gzip` into
+- **[`scripts/backup.sh`](../../scripts/backup.sh)** — `pg_dump --no-owner -U postgres store_catalog | gzip` into
   `backups/<timestamp>/store_catalog.sql.gz`, then copies `/app/uploads` from
-  the backend container ([`backup.sh`](../../backup.sh) caveat: leaves a stale `backups/` copy of
+  the backend container ([`scripts/backup.sh`](../../scripts/backup.sh) caveat: leaves a stale `backups/` copy of
   own work behind only if run from the repo root).
-- **`restore.sh [backup-dir]`** — stops backend → terminates stale connections /
-  drop/recreate `store_catalog` → `psql` restore → starts backend →
+- **`scripts/restore.sh [backup-dir]`** — stops backend → terminates stale
+  connections / drop/recreate `store_catalog` → `psql` restore → starts backend →
   clears uploads and copies them back from the backup dir.
 
 Both default to [`docker-compose.yml`](../../docker-compose.yml) (`COMPOSE_FILE` overrides, e.g. Pi).

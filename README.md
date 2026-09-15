@@ -14,10 +14,11 @@ sales, layaway plans (apartados), and printable PDF catalogs.
 | [`backend/docs.html`](backend/docs.html) | Generated API reference (``/api/docs``) — see `[docs/api-reference.md](docs/api-reference.md)` |
 | [`backend/tests/`](backend/tests) | Pytest suite incl. docs-drift guards |
 | [`frontend/`](frontend) | React SPA (Vite): Productos / Apartados / Administración / Perfil tabs |
-| [`deploy/`](deploy) | GCP + Raspberry Pi deployment scripts and runbooks |
+| [`scripts/`](scripts) | Occasional maintenance utilities — see [scripts/README.md](scripts/README.md) |
+| [`scripts/deploy.sh`](scripts/deploy.sh) | GCP deploy master; steps: [`deploy-setup-infra.sh`](scripts/deploy-setup-infra.sh), [`deploy-build-push.sh`](scripts/deploy-build-push.sh), [`deploy-cloud-run.sh`](scripts/deploy-cloud-run.sh) |
 | ``docker-compose*.yml`` | Dev / Pi / Cloud-Run compose definitions |
 | [`Dockerfile`](backend/Dockerfile) | Backend multi-target build (``base``, ``backend-dev``, ``backend-prod``, ``backend-pi``) |
-| [`backup.sh`](backup.sh), [`restore.sh`](restore.sh) | PostgreSQL + uploads backup / restore |
+| [`scripts/backup.sh`](scripts/backup.sh), [`scripts/restore.sh`](scripts/restore.sh) | PostgreSQL + uploads backup / restore |
 | [`docs/`](docs) | Technical (EN), business (ES), user guides (ES), and flows (ES) |
 | [`docs/card-mockup.html`](docs/card-mockup.html) | Static mockup that the PDF/HTML catalog rendering mirrors |
 

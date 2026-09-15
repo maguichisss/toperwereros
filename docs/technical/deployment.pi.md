@@ -143,10 +143,10 @@ Backups snapshot the Postgres DB and the uploaded images. Each run creates
 
 ```sh
 # Desktop (dev DB) — uses docker-compose.yml
-./backup.sh
+./scripts/backup.sh
 
 # Pi (QA DB) — uses docker-compose.pi.yml
-COMPOSE_FILE=docker-compose.pi.yml ./backup.sh
+COMPOSE_FILE=docker-compose.pi.yml ./scripts/backup.sh
 ```
 
 `COMPOSE_FILE` is Docker Compose's own convention, so exported it is honoured
@@ -162,7 +162,7 @@ Restore on the Pi (stops backend, drops/recreates `store_catalog`, restores the
 dump + uploads):
 
 ```sh
-COMPOSE_FILE=docker-compose.pi.yml ./restore.sh backups/2026-09-08_194717
+COMPOSE_FILE=docker-compose.pi.yml ./scripts/restore.sh backups/2026-09-08_194717
 ```
 
 Notes:
