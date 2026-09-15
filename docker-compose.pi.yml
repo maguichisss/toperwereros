@@ -1,0 +1,73 @@
+# ═══════════════════════════════════════════════════════════
+#  Store Catalog — Docker Compose (Raspberry Pi / QA)
+#  Run:  docker compose -f docker-compose.pi.yml up -d --build
+#  Site: http://<pi-ip>/ (nginx on 80/443)  |  API (internal): backend:3001
+#  Variables are interpolated from the per-host root .env.
+# ═══════════════════════════════════════════════════════════
+
+
+services:
+  # PostgreSQL — internal only: NOT published to the host/LAN. The backend is
+  # its only client (db:5432); data persists in the named volume `pgdata`.
+  db:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    environment:
+      POSTGRES_DB: ${DB_NAME:-store_catalog}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-postgres}
+    #ports:
+    #  - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: ${PG_HEALTH_INTERVAL:-5s}
+      timeout: ${PG_HEALTH_TIMEOUT:-5s}
+      retries: ${PG_HEALTH_RETRIES:-10}
+
+  # Gunicorn backend (backend-pi). `backend/.env.pi` provides app env;
+  # DATABASE_URL here wins and targets the internal `db` service.
+
+  backend:
+    build:
+      context: ./backend
+      target: backend-pi
+    restart: ${RESTART_POLICY:-unless-stopped}
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/store_catalog}
+    env_file: ./backend/.env.pi
+    #ports:
+    #  - "${BACKEND_PORT:-3001}:3001"
+    volumes:
+      - backend_uploads:/app/uploads
+    
+    
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # nginx terminator (frontend-pi): serves the built SPA over 80/443 with
+  # mkcert TLS from ./certs. No Vite/port 5173 on the Pi.
+  
+  frontend:
+    build:
+      context: ./frontend
+      target: frontend-pi
+    restart: ${RESTART_POLICY:-unless-stopped}
+    #environment:
+    #  VITE_PROXY_TARGET: ${VITE_PROXY_TARGET:-http://backend:3001}
+    #  VITE_HTTPS_CERT: ${VITE_HTTPS_CERT:-/app/certs/192.168.1.41+3.pem}
+    #  VITE_HTTPS_KEY: ${VITE_HTTPS_KEY:-/app/certs/192.168.1.41+3-key.pem}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  backend_uploads:

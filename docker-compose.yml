@@ -1,32 +1,44 @@
+# ═══════════════════════════════════════════════════════════
+#  Store Catalog — Docker Compose (dev)
+#  Run:  docker compose up -d --build
+#  App:  http://localhost:5173  |  API: http://localhost:3001
+#  Variables are interpolated from the per-host root .env (defaults mirror
+#  the values below) — see backend/.env for the app-level environment.
+# ═══════════════════════════════════════════════════════════
+
 services:
+  # PostgreSQL — data lives in the named volume `pgdata`.
+  # Published on the host so you can query it directly (psql, GUI, tests).
   db:
-    image: postgres:16-alpine
-    restart: unless-stopped
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    restart: ${RESTART_POLICY:-unless-stopped}
     environment:
-      POSTGRES_DB: store_catalog
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${DB_NAME:-store_catalog}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-postgres}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: ${PG_HEALTH_INTERVAL:-5s}
+      timeout: ${PG_HEALTH_TIMEOUT:-5s}
+      retries: ${PG_HEALTH_RETRIES:-10}
 
+  # FastAPI backend. `backend/.env` provides app env; DATABASE_URL here wins
+  # over that file and targets the `db` service over the internal network.
+  # ./backend is bind-mounted for hot reload during development.
   backend:
     build:
       context: ./backend
       target: backend-dev
-    restart: unless-stopped
-    ports:
-      - "3001:3001"
-    env_file:
-      - ./backend/.env
+    restart: ${RESTART_POLICY:-unless-stopped}
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/store_catalog
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/store_catalog}
+    env_file: ./backend/.env
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
     volumes:
       - ./backend:/app
       - /app/__pycache__
@@ -35,17 +47,21 @@ services:
       db:
         condition: service_healthy
 
+  # Vite dev server — proxies API calls to the backend and serves the
+  # dev-machine TLS cert (VITE_HTTPS_CERT/KEY). ./frontend is bind-mounted
+  # for hot reload.
   frontend:
     build:
       context: ./frontend
       target: frontend-dev
-    restart: unless-stopped
-    ports:
-      - "5173:5173"
+    restart: ${RESTART_POLICY:-unless-stopped}
     environment:
-      VITE_PROXY_TARGET: http://backend:3001
-      VITE_HTTPS_CERT: /app/certs/192.168.1.41+3.pem
-      VITE_HTTPS_KEY: /app/certs/192.168.1.41+3-key.pem
+      VITE_PROXY_TARGET: ${VITE_PROXY_TARGET:-http://backend:3001}
+      VITE_HTTPS_CERT: ${VITE_HTTPS_CERT:-/app/certs/192.168.1.41+3.pem}
+      VITE_HTTPS_KEY: ${VITE_HTTPS_KEY:-/app/certs/192.168.1.41+3-key.pem}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+
     volumes:
       - ./frontend:/app
       - /app/node_modules

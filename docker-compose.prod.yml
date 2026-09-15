@@ -1,0 +1,71 @@
+# ═══════════════════════════════════════════════════════════
+#  Store Catalog — Docker Compose (prod / Cloud Run parity)
+#  Run locally to exercise the prod images against the real Cloud SQL:
+#    export DATABASE_URL=postgresql://USER:PASS@127.0.0.1:5432/store_catalog
+#    docker compose -f docker-compose.prod.yml up -d --build
+#  DATABASE_URL and CLOUD_SQL_INSTANCE are REQUIRED (fail fast).
+# ═══════════════════════════════════════════════════════════
+
+services:
+  # Cloud SQL Auth Proxy — tunnels the real Cloud PostgreSQL to a local port,
+  # bound to 127.0.0.1 only so nothing on the LAN can reach it. Deployments to
+  # Cloud Run use CLOUD_SQL_CONNECTION_STRING in the container entrypoint
+  # instead (this compose file is for local prod parity).
+  cloudsql-proxy:
+    image: ${CLOUDSQL_PROXY_IMAGE:-gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.1}
+    command:
+      - "--port=${CLOUDSQL_PROXY_PORT:-5432}"
+      - "${GCP_PROJECT}:${GCP_REGION}:${CLOUD_SQL_INSTANCE:?Set CLOUD_SQL_INSTANCE}"
+    restart: ${RESTART_POLICY:-unless-stopped}
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/service-account.json
+    volumes:
+      - ./secrets:/secrets:ro
+    ports:
+      - "127.0.0.1:${CLOUDSQL_PROXY_PORT:-5432}:${CLOUDSQL_PROXY_PORT:-5432}"
+
+
+
+  # Gunicorn backend (backend-prod). `backend/.env.prod` provides app env;
+  # DATABASE_URL is required and points at the proxy above (127.0.0.1).
+
+  backend:
+    build:
+      context: ./backend
+      target: backend-prod
+    restart: ${RESTART_POLICY:-unless-stopped}
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL, e.g. postgresql://USER:PASS@127.0.0.1:5432/store_catalog}
+    env_file: ./backend/.env.prod
+    ports: []
+
+    #volumes:
+    #  - backend_uploads:/app/uploads
+
+
+    depends_on:
+      - cloudsql-proxy
+
+
+  # Built SPA, served by the static server image (frontend-prod). No published
+  # port either — Cloud Run / the load balancer terminates public traffic.
+
+  frontend:
+    build:
+      context: ./frontend
+      target: frontend-prod
+    restart: ${RESTART_POLICY:-unless-stopped}
+    environment:
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
+
+
+    ports: []
+
+
+    depends_on:
+      - backend
+
+  # Local-only dry-run DB: `docker compose --profile dev ...` spins a local
+  # postgres to smoke-test the prod images without Cloud SQL. Never deployed.
+  db:
+    profiles: ["dev"]
