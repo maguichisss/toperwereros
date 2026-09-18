@@ -10,7 +10,7 @@ from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from html import escape
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 from fpdf import FPDF
 from PIL import Image as PILImage
@@ -22,6 +22,7 @@ from app.config import safe_upload_path, escape_like, GCS_BUCKET
 from app.models import Product, Category, Color, User
 from app.auth import require_permission
 from app.patterns import pattern_jpeg
+from app.query_filters import PRODUCT_FIELDS, apply_filters, parse_filters
 
 logger = logging.getLogger(__name__)
 
@@ -1012,12 +1013,13 @@ def draw_card(pdf: FPDF, x: float, y: float, product: Product, cfg: PDFConfig = 
 
 
 @router.get("/pdf", tags=["Catalog"], summary="Generate PDF catalog",
-              description="Generate a printable product catalog as PDF (default) or HTML. 4-column card grid, 16 products per page. Only in-stock products. Optional comma-separated product IDs, free-text search filters, and visual theme.")
+              description="Generate a printable product catalog as PDF (default), CSV, or HTML. 4-column card grid, 16 products per page. Only in-stock products. Optional comma-separated product IDs, free-text search filters, Query DSL field filters, and visual theme.")
 def catalog_pdf(
     ids: str = "",
     q: str = Query(None, description="Search term matched against code, name, ubicacion, price, category, and color"),
-    format: str = Query("pdf", description="Output format: 'pdf' (default) or 'html'"),
+    format: str = Query("pdf", description="Output format: 'pdf' (default), 'csv', or 'html'"),
     theme: str = Query("classic", description=f"Visual theme: {'; '.join(THEMES)}"),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("product.view")),
 ) -> Response:
@@ -1049,8 +1051,8 @@ def catalog_pdf(
             or ``theme`` is unknown; 500 if generation fails.
     """
 
-    if format not in ("pdf", "html"):
-        raise HTTPException(400, "El parámetro format debe ser 'pdf' o 'html'")
+    if format not in ("pdf", "html", "csv"):
+        raise HTTPException(400, "El parámetro format debe ser 'pdf', 'html' o 'csv'")
     if theme not in THEMES:
         raise HTTPException(400, f"El parámetro theme debe ser uno de: {', '.join(THEMES)}")
 
@@ -1078,9 +1080,38 @@ def catalog_pdf(
                 Product.colors.any(Color.name.ilike(pattern, escape="\\")),
             )
         )
+    dsl_params = {k: v for k, v in request.query_params.multi_items() if "__" in k}
+    if dsl_params:
+        products = apply_filters(products, parse_filters(dsl_params, PRODUCT_FIELDS))
     t0 = time.perf_counter()
     products = products.all()
     logger.debug("catalog_pdf: loaded %d products in %.2fs", len(products), time.perf_counter() - t0)
+
+    if format == "csv":
+        ordered_products = order_recent_first(products)
+
+        def csv_cell(v):
+            s = "" if v is None else str(v)
+            return f'"{s.replace(chr(34), chr(34) * 2)}"'
+
+        header = ["codigo", "nombre", "categorias", "colores", "precio", "stock",
+                  "ubicacion", "total", "fecha_creacion"]
+        lines = [",".join(csv_cell(h) for h in header)]
+        for p in ordered_products:
+            cats = ", ".join(c.name for c in p.categories)
+            cols = ", ".join(c.name for c in p.colors)
+            total = (p.stock or 1) * p.price
+            lines.append(",".join(csv_cell(x) for x in (
+                p.code, p.name, cats, cols, f"{p.price:.2f}", p.stock,
+                p.ubicacion or "", f"{total:.2f}", p.created_at.date().isoformat(),
+            )))
+        content = "\ufeff" + "\n".join(lines) + "\n"
+        logger.info("catalog_pdf: format=csv done in %.2fs (%d rows)", time.perf_counter() - t0, len(ordered_products))
+        return Response(
+            content=content,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": "attachment; filename=catalogo.csv"},
+        )
 
     try:
         cfg = apply_theme(DEFAULT_PDF_CONFIG, theme)

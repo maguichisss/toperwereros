@@ -1,4 +1,4 @@
-function contrastColor(hex) {
+export function contrastColor(hex) {
   const h = hex.replace('#', '')
   const r = parseInt(h.substring(0, 2), 16)
   const g = parseInt(h.substring(2, 4), 16)

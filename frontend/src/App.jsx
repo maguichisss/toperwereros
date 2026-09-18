@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import { CartProvider, useCart } from './context/CartContext.jsx'
 import LoginPage from './components/LoginPage.jsx'
 import ProductList from './components/ProductList.jsx'
+import CatalogExportPage from './components/CatalogExportPage.jsx'
 import LayawayView from './components/LayawayView.jsx'
 import ProfilePage from './components/ProfilePage.jsx'
 import ManagementPage from './components/ManagementPage.jsx'
@@ -11,6 +12,7 @@ import { CartIcon, LogoutIcon, UserIcon } from './components/icons.jsx'
 
 const TABS = [
   { key: 'productos', label: 'Productos' },
+  { key: 'catalogo', label: 'Catálogo' },
   { key: 'apartados', label: 'Apartados' },
   { key: 'management', label: 'Administración' },
   { key: 'perfil', label: 'Perfil' },
@@ -18,6 +20,7 @@ const TABS = [
 
 const TAB_TITLES = {
   productos: 'Productos',
+  catalogo: 'Catálogo',
   apartados: 'Apartados',
   management: 'Administración',
   perfil: 'Perfil',
@@ -226,6 +229,7 @@ function AppContent() {
       </header>
       <main className="container">
         {tab === 'productos' && <ProductList />}
+        {tab === 'catalogo' && can('product.view') && <CatalogExportPage />}
         {tab === 'apartados' && <LayawayView initialMode={createMode ? 'create' : undefined} />}
         {tab === 'management' && <ManagementPage defaultSubTab={managementSubTab} onSubTabHandled={() => setManagementSubTab(null)} />}
         {tab === 'perfil' && <ProfilePage />}

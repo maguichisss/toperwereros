@@ -143,7 +143,7 @@ matched by a `.*` parent (e.g. a role holding `product.*` satisfies
 
 | Method | Path | Permission | Description |
 | --- | --- | --- | --- |
-| GET | `/api/catalog/pdf` | `product.view` | Generate PDF (default) or HTML catalog. Only in-stock products. Query: `ids` (comma ints), `q` (search), `format` (`pdf`\|`html`), `theme`. Ordering and themes documented under Business Rules. |
+| GET | `/api/catalog/pdf` | `product.view` | Generate PDF (default), CSV, or HTML catalog. Only in-stock products. Query: `ids` (comma ints), `q` (search), `format` (`pdf`\|`csv`\|`html`), `theme`, plus Query DSL field filters (`category__eq`, `color__eq`, `ubicacion__contains`, `price__gte`/`price__lte`, `stock__gte`, `created_at__gte`/`created_at__lte`, …). CSV: UTF-8 BOM; columns `codigo,nombre,categorias,colores,precio,stock,ubicacion,total,fecha_creacion`. Ordering and themes documented under Business Rules. |
 
 ### Sales — `/api/sales`
 

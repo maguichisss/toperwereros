@@ -9,7 +9,6 @@ import Toast from './Toast.jsx';
 import useToast from '../hooks/useToast.js';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import Lightbox from './Lightbox.jsx';
-import { formatPrice } from '../utils.js';
 
 export default function ProductList() {
   const { can } = useAuth();
@@ -30,10 +29,8 @@ export default function ProductList() {
 
   const load = useCallback(async () => {
     try {
-      const params = { page, perPage };
-      if (pendingSearch) params.q = pendingSearch;
       const [res, c] = await Promise.all([
-        productsApi.list(params),
+        productsApi.list({ page, perPage, q: pendingSearch || undefined }),
         categoriesApi.list(),
       ]);
       setProducts(res.products);
@@ -63,15 +60,9 @@ export default function ProductList() {
     }, 300);
   }
 
-  useEffect(() => {
-    return () => clearTimeout(searchTimer.current);
-  }, []);
-
   function requestDelete(id, name) {
     setConfirmDelete({ id, name });
   }
-
-
 
   async function confirmDeleteProduct() {
     if (!confirmDelete) return;
@@ -103,57 +94,6 @@ export default function ProductList() {
 
   const totalPages = Math.ceil(total / perPage);
 
-  async function downloadCSV() {
-    try {
-      const res = await productsApi.listAll({ q: pendingSearch });
-      const all = res.products;
-      const headers = ['codigo', 'nombre', 'precio', 'stock', 'ubicacion', 'total']
-      const rows = all.map(p => [
-        p.code, p.name, p.price, p.stock ?? 1, p.ubicacion || '',
-        formatPrice((p.stock ?? 1) * p.price),
-      ])
-      const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n')
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'productos.csv'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    } catch {}
-  }
-
-  async function openPDF() {
-    try {
-      notify('Generando PDF…', 'info')
-      let url = '/api/catalog/pdf'
-      if (pendingSearch) url += `?q=${encodeURIComponent(pendingSearch)}`
-      const token = localStorage.getItem('store_token')
-      const r = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-      if (!r.ok) throw new Error('Error al generar PDF')
-      const blob = await r.blob()
-      const disposition = r.headers.get('Content-Disposition')
-      let filename = 'catalogo.pdf'
-      if (disposition) {
-        const match = disposition.match(/filename=(.+)/)
-        if (match) filename = match[1]
-      }
-      const blobUrl = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = blobUrl
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(blobUrl)
-      notify('PDF descargado', 'success')
-    } catch (err) {
-      notify(err.message || 'Error al generar PDF')
-    }
-  }
-
   return (
     <div>
       <div className="filter-bar">
@@ -177,12 +117,6 @@ export default function ProductList() {
             <option value={50}>50</option>
             <option value={100}>100</option>
           </select>
-          {can('product.view') && (
-            <>
-              <button type="button" className="btn btn--secondary" onClick={downloadCSV}>CSV</button>
-              <button type="button" className="btn btn--secondary" onClick={openPDF}>PDF</button>
-            </>
-          )}
         </div>
         {can('product.create') && (
         <button type="button" className="btn btn-add" onClick={() => setShowForm(true)}>
@@ -200,7 +134,7 @@ export default function ProductList() {
 
       {products.length === 0 && (
         <div className="empty-state">
-          <p>{total === 0 ? 'No hay productos aún. Haz clic en "Añadir Producto" para empezar.' : 'No se encontraron productos con los filtros actuales.'}</p>
+          <p>{total === 0 ? 'No hay productos aún. Haz clic en "Añadir Producto" para empezar.' : 'No se encontraron productos con la búsqueda actual.'}</p>
         </div>
       )}
 

@@ -521,7 +521,7 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>GET</td>
 <td><code>/api/catalog/pdf</code></td>
 <td><code>product.view</code></td>
-<td>Generate PDF (default) or HTML catalog. Only in-stock products. Query: <code>ids</code> (comma ints), <code>q</code> (search), <code>format</code> (<code>pdf</code>|<code>html</code>), <code>theme</code>. Ordering and themes documented under Business Rules.</td>
+<td>Generate PDF (default), CSV, or HTML catalog. Only in-stock products. Query: <code>ids</code> (comma ints), <code>q</code> (search), <code>format</code> (<code>pdf</code>|<code>csv</code>|<code>html</code>), <code>theme</code>, plus Query DSL field filters (<code>category__eq</code>, <code>color__eq</code>, <code>ubicacion__contains</code>, <code>price__gte</code>/<code>price__lte</code>, <code>stock__gte</code>, <code>created_at__gte</code>/<code>created_at__lte</code>, …). CSV: UTF-8 BOM; columns <code>codigo,nombre,categorias,colores,precio,stock,ubicacion,total,fecha_creacion</code>. Ordering and themes documented under Business Rules.</td>
 </tr>
 </tbody>
 </table>

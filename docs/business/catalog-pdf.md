@@ -1,7 +1,7 @@
 # Catálogo PDF
 
-El sistema genera un **catálogo semanal imprimible** (PDF por defecto, o HTML)
-que reproduce el diseño de [`docs/card-mockup.html`](../card-mockup.html) y es apto para repartir a
+El sistema genera un **catálogo semanal imprimible** (PDF por defecto, CSV o
+HTML) que reproduce el diseño de [`docs/card-mockup.html`](../card-mockup.html) y es apto para repartir a
 clientes.
 
 ## Qué productos entran
@@ -11,11 +11,17 @@ clientes.
   - `ids=1,2,3` — solo los productos indicados (comas, enteros).
   - `q=…` — texto de búsqueda sobre código, nombre, ubicación, precio,
     categoría y color (misma lógica que el buscador de productos).
+  - Filtros **Query DSL** de campo: `category__eq`, `color__eq`,
+    `ubicacion__contains`, `price__gte`/`price__lte`, `stock__gte`,
+    `created_at__gte`/`created_at__lte`, `category__in`/`color__in` (ver
+    [Query DSL](../api-reference.md)). Se combinan con `AND` junto a `ids` y
+    `q`.
 - `theme=…` — tema visual; cualquiera de:
   `classic`, `nocturno`, `kraft`, `elegante`, `marino`, `sol`, `cyber`,
   `vino`, `rosa`, `arcoiris`, `nebulosa`, `triangulos`, `olas`, `mandala`,
   `aurora`, `confeti`, `galaxia`, `marco`, `flores`.
-- `format=pdf` (default) o `html` (para vista en navegador / imprimir).
+- `format=pdf` (default), `html` (para vista en navegador / imprimir), o
+  `csv` (datos tabulares).
 
 ## Orden de presentación
 
@@ -45,10 +51,12 @@ respecto a la fecha actual: el inicio es el **lunes de esta semana** y el fin el
 
 ## Reglas de error (HTTP 400)
 
-- `format` distinto de `pdf`/`html` → `"El parámetro format debe ser 'pdf' o
-  'html'"`.
+- `format` distinto de `pdf`/`csv`/`html` → `"El parámetro format debe ser
+  'pdf', 'html' o 'csv'"`.
 - `theme` desconocido → lista los válidos.
 - `ids` con texto no numérico → `"El parámetro ids debe contener solo números"`.
+- Filtro DSL desconocido o valor no coercible → 400 (mismo comportamiento que
+  las listas).
 
 ## Consumo y archivo de descarga
 
@@ -56,6 +64,11 @@ respecto a la fecha actual: el inicio es el **lunes de esta semana** y el fin el
   `catalogo_{lunes}_{domingo}.pdf` (adjunta).
 - HTML: `text/html; charset=utf-8` (inline), ideal para imprimir desde el
   navegador.
+- CSV: `text/csv; charset=utf-8` con **BOM UTF-8** (abre directo en Excel),
+  archivo `catalogo.csv` (adjunta). Columnas:
+  `codigo,nombre,categorias,colores,precio,stock,ubicacion,total,fecha_creacion`;
+  los campos de lista se unen con `, ` y el total es `stock × precio`. El
+  orden es el mismo que el PDF (recientes primero).
 - Generar el catálogo requiere permiso de **ver productos** (admin, employee
   y viewer pueden).
 

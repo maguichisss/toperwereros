@@ -28,6 +28,23 @@ export function apiErrorMessage(detail, fallback = 'Request failed') {
   return fallback
 }
 
+export function toQueryString(obj = {}) {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined || value === null || value === '') continue
+    if (Array.isArray(value)) {
+      if (value.length) params.set(key, value.join(','))
+    } else {
+      params.set(key, String(value))
+    }
+  }
+  return params
+}
+
+function withQs(path, qs) {
+  return qs ? `${path}?${qs}` : path
+}
+
 let refreshPromise = null
 
 function refreshTokens() {
@@ -111,20 +128,25 @@ export const categoriesApi = {
 }
 
 export const productsApi = {
-  list: ({ categoryIds, q, page, perPage } = {}) => {
-    const params = new URLSearchParams()
-    if (categoryIds?.length) params.set('category_ids', categoryIds.join(','))
-    if (q) params.set('q', q)
-    if (page) params.set('page', page)
-    if (perPage) params.set('per_page', perPage)
-    const qs = params.toString()
-    return request(`/products${qs ? '?' + qs : ''}`)
+  list: ({ categoryIds, q, page, perPage, filters, modo, campos } = {}) => {
+    const qs = toQueryString({
+      category_ids: categoryIds?.length ? categoryIds.join(',') : undefined,
+      q,
+      page,
+      per_page: perPage,
+      ...(filters ?? {}),
+      modo,
+      campos,
+    }).toString()
+    return request(withQs('/products', qs))
   },
-  listAll: ({ categoryIds, q } = {}) => {
-    const params = new URLSearchParams()
-    if (categoryIds?.length) params.set('category_ids', categoryIds.join(','))
-    if (q) params.set('q', q)
-    params.set('export', 'true')
+  listAll: ({ categoryIds, q, filters } = {}) => {
+    const params = toQueryString({
+      category_ids: categoryIds?.length ? categoryIds.join(',') : undefined,
+      q,
+      ...(filters ?? {}),
+      export: 'true',
+    })
     return request(`/products?${params.toString()}`)
   },
   get: (id) => request(`/products/${id}`),
@@ -150,20 +172,25 @@ export const colorsApi = {
 
 export const salesApi = {
   create: (data) => request('/sales', { method: 'POST', body: JSON.stringify(data) }),
-  list: ({ page, perPage, startDate, endDate } = {}) => {
-    const params = new URLSearchParams()
-    if (page) params.set('page', page)
-    if (perPage) params.set('per_page', perPage)
-    if (startDate) params.set('start_date', startDate)
-    if (endDate) params.set('end_date', endDate)
-    const qs = params.toString()
-    return request(`/sales${qs ? '?' + qs : ''}`)
+  list: ({ page, perPage, startDate, endDate, filters } = {}) => {
+    const qs = toQueryString({
+      page,
+      per_page: perPage,
+      start_date: startDate,
+      end_date: endDate,
+      ...(filters ?? {}),
+    }).toString()
+    return request(withQs('/sales', qs))
   },
   get: (id) => request(`/sales/${id}`),
 }
 
 export const customersApi = {
-  list: (q) => request(`/customers${q ? '?q=' + encodeURIComponent(q) : ''}`),
+  list: (qOrObj = {}) => {
+    const { q, filters } = typeof qOrObj === 'string' ? { q: qOrObj } : qOrObj
+    const qs = toQueryString({ q, ...(filters ?? {}) }).toString()
+    return request(withQs('/customers', qs))
+  },
   create: (data) => request('/customers', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => request(`/customers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   get: (id) => request(`/customers/${id}`),
@@ -194,13 +221,15 @@ export const authApi = {
 
 export const layawaysApi = {
   create: (data) => request('/layaways', { method: 'POST', body: JSON.stringify(data) }),
-  list: ({ status, customerId, page, perPage } = {}) => {
-    const params = new URLSearchParams()
-    if (status) params.set('status', status)
-    if (customerId) params.set('customer_id', customerId)
-    if (page) params.set('page', page)
-    if (perPage) params.set('per_page', perPage)
-    return request(`/layaways?${params.toString()}`)
+  list: ({ status, customerId, page, perPage, filters } = {}) => {
+    const qs = toQueryString({
+      status,
+      customer_id: customerId,
+      page,
+      per_page: perPage,
+      ...(filters ?? {}),
+    }).toString()
+    return request(withQs('/layaways', qs))
   },
   get: (id) => request(`/layaways/${id}`),
   update: (id, data) => request(`/layaways/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),

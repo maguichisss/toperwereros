@@ -115,6 +115,67 @@ class TestCatalogPDF:
         resp = client.get("/api/catalog/pdf?format=docx", headers=admin_headers)
         assert resp.status_code == 400
 
+    def test_pdf_csv_format(self, client, admin_headers, db):
+        _create_product(db, name="CSVWidget", code="C001", price="19.50", stock=4, image_url="x")
+        prod = _create_product(db, name="Otro", code="O001", price="5.00", stock=2)
+        prod.categories = [Category(name="Ropa")]
+        db.commit()
+        resp = client.get("/api/catalog/pdf?format=csv", headers=admin_headers)
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == "text/csv; charset=utf-8"
+        assert resp.content.startswith(b"\xef\xbb\xbf")
+        text = resp.content.decode("utf-8-sig")
+        first = text.splitlines()[0]
+        assert first == '"codigo","nombre","categorias","colores","precio","stock","ubicacion","total","fecha_creacion"'
+        assert '"C001","CSVWidget","","","19.50","4","","78.00",' in text
+        assert '"O001","Otro","Ropa","","5.00","2","","10.00",' in text
+        assert "O001" in text
+
+    def test_pdf_csv_escapes_field(self, client, admin_headers, db):
+        _create_product(db, name='Widget "Doble", XL', code="E001", price="10.00", stock=1)
+        resp = client.get("/api/catalog/pdf?format=csv", headers=admin_headers)
+        assert resp.status_code == 200
+        assert '"Widget ""Doble"", XL"' in resp.content.decode("utf-8-sig")
+
+    def test_pdf_csv_stock_zero_excluded(self, client, admin_headers, db):
+        _create_product(db, name="In", code="IS01", stock=5)
+        _create_product(db, name="Out", code="OS01", stock=0)
+        resp = client.get("/api/catalog/pdf?format=csv", headers=admin_headers)
+        text = resp.content.decode("utf-8-sig")
+        assert '"IS01"' in text
+        assert "OS01" not in text
+
+    def test_pdf_csv_dsl_filter(self, client, admin_headers, db):
+        ropa = Category(name="Ropa")
+        calzado = Category(name="Calzado")
+        db.add_all([ropa, calzado])
+        db.commit()
+        db.refresh(ropa)
+        db.refresh(calzado)
+        p_ropa = _create_product(db, name="Camisa", code="RO01")
+        p_ropa.categories = [ropa]
+        p_cal = _create_product(db, name="Zapato", code="CA01")
+        p_cal.categories = [calzado]
+        db.commit()
+        resp = client.get("/api/catalog/pdf?format=csv&category__eq=Ropa", headers=admin_headers)
+        assert resp.status_code == 200
+        text = resp.content.decode("utf-8-sig")
+        assert '"RO01"' in text
+        assert "CA01" not in text
+
+    def test_pdf_csv_dsl_price_range(self, client, admin_headers, db):
+        _create_product(db, name="Caro", code="P01", price="100.00", stock=1)
+        _create_product(db, name="Barato", code="P02", price="20.00", stock=1)
+        resp = client.get("/api/catalog/pdf?format=csv&price__gte=50", headers=admin_headers)
+        text = resp.content.decode("utf-8-sig")
+        assert '"P01"' in text
+        assert "P02" not in text
+
+    def test_pdf_dsl_unknown_field_400(self, client, admin_headers, db):
+        _create_product(db, name="A", code="A01")
+        resp = client.get("/api/catalog/pdf?format=csv&bogus__eq=1", headers=admin_headers)
+        assert resp.status_code == 400
+
     def test_pdf_theme_html(self, client, admin_headers, db):
         _create_product(db, name="Widget", code="W01")
         resp = client.get("/api/catalog/pdf?format=html&theme=nocturno", headers=admin_headers)

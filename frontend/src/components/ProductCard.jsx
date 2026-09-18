@@ -2,7 +2,7 @@ import { memo, useRef, useState } from 'react';
 import { formatPrice } from '../utils.js';
 import { CartIcon, CheckIcon, EditIcon, TrashIcon } from './icons.jsx';
 
-const ProductCard = memo(({ product, onEdit, onDelete, onShowImage, canEdit, onAddToCart }) => {
+const ProductCard = memo(({ product, onEdit = () => {}, onDelete = () => {}, onShowImage = () => {}, canEdit = false, onAddToCart, showActions = true }) => {
   const clickTimer = useRef(null)
   const [added, setAdded] = useState(false)
 
@@ -72,7 +72,8 @@ const ProductCard = memo(({ product, onEdit, onDelete, onShowImage, canEdit, onA
           </div>
         )}
       </div>
-      <div className="product-card__actions">
+      {showActions && (
+        <div className="product-card__actions">
         {(product.stock ?? 1) > 0 && onAddToCart && (
           <button
             type="button"
@@ -98,7 +99,8 @@ const ProductCard = memo(({ product, onEdit, onDelete, onShowImage, canEdit, onA
             </button>
           </>
         )}
-      </div>
+        </div>
+      )}
     </div>
   )
 });

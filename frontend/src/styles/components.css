@@ -44,6 +44,11 @@
   background: var(--text-primary);
 }
 
+.btn--active {
+  background: var(--primary);
+  color: var(--text-white);
+}
+
 .btn--add {
   background: var(--success);
   color: var(--text-white);
@@ -383,6 +388,84 @@
   width: 100%;
 }
 
+/* Row of search inputs inside the filter bar. */
+.filter-bar__search--multi {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.filter-bar__search--multi .search-input {
+  flex: 1;
+  min-width: 160px;
+}
+
+/* ═══ Compact single-row catalog filter bar ═══════════════════════ */
+
+.filter-bar--catalog {
+  align-items: center;
+  gap: 0.45rem;
+  row-gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.filter-bar--catalog .filter-item {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+}
+.filter-bar--catalog .filter-item > span {
+  white-space: nowrap;
+}
+.filter-bar--catalog .category-chips {
+  max-width: 240px;
+  gap: 0.25rem;
+}
+.filter-bar--catalog .chip {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  border-width: 1.5px;
+}
+.filter-bar--catalog .color-swatches {
+  gap: 0.25rem;
+  max-width: 240px;
+  margin-top: 0;
+}
+.filter-bar--catalog .swatch {
+  width: 18px;
+  height: 18px;
+}
+.filter-bar--catalog .swatch.is-selected {
+  width: 26px;
+  height: 26px;
+  font-size: 0.4rem;
+}
+
+/* Category/color rows in the catalog stack full-width on desktop. */
+.filter-bar--grow .filter-item {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.filter-bar--grow .category-chips,
+.filter-bar--grow .color-swatches {
+  max-width: none;
+  width: 100%;
+}
+.filter-bar--catalog .input-sm {
+  padding: 0.25rem 0.35rem;
+  font-size: 0.8rem;
+}
+.filter-bar--catalog .filter-item input[type="number"] {
+  width: 68px;
+}
+.filter-bar--catalog .search-input {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.82rem;
+}
+.filter-bar--catalog .btn--small {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.45rem;
+}
+
 /* Slightly tighter bottom spacing for list filter bars. */
 .filter-bar--tight {
   margin-bottom: 0.75rem;
@@ -414,6 +497,44 @@
 .filter-bar__sep {
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+
+/* Vertical compact filter control inside the product filter bar. */
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.72rem;
+}
+.filter-item > span {
+  opacity: 0.7;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 260px;
+}
+.filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  user-select: none;
+}
+.filter-chip input {
+  margin: 0;
+  accent-color: var(--primary, #1a73e8);
+}
+.filter-chip:has(input:checked) {
+  background: var(--primary, #1a73e8);
+  color: #fff;
+  border-color: var(--primary, #1a73e8);
 }
 
 .input-sm {
