@@ -3,7 +3,7 @@
 import logging
 import re
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,16 @@ from app.database import get_db
 from app.models import Color, product_colors, User
 from app.schemas import ColorCreate, ColorResponse
 from app.auth import require_permission
+from app.query_filters import (
+    COLOR_BASIC,
+    COLOR_FIELDS,
+    apply_filters,
+    json_response,
+    parse_filters,
+    parse_projection,
+    project_rows,
+    resolve_pagination,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +32,23 @@ HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 @router.get("", response_model=list[ColorResponse], tags=["Colors"], summary="List colors",
               description="Return all colors ordered alphabetically.")
 def list_colors(
+    skip: int | None = Query(None, ge=0, description="Number of records to skip"),
+    limit: int | None = Query(None, ge=1, le=200, description="Max records to return"),
+    modo: str | None = Query(None, pattern="^(basico|detallado)$", description="Projection mode: basico or detallado"),
+    campos: str | None = Query(None, description="Comma-separated fields to return"),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("color.view")),
 ) -> list[Color]:
-    """Return all colors ordered alphabetically.
+    """Return all colors ordered alphabetically, with optional shared
+    query DSL operator filters and ``modo``/``campos`` projection.
 
     Args:
+        skip: Number of records to skip.
+        limit: Maximum records to return.
+        modo: Projection mode, ``basico`` or ``detallado``.
+        campos: Comma-separated fields to project.
+        request: Raw request for extracting operator query params.
         db: Active database session.
         current_user: Authenticated user with ``color.view`` permission.
 
@@ -38,7 +59,23 @@ def list_colors(
         HTTPException: 403 if the user lacks ``color.view`` permission.
     """
 
-    return db.query(Color).order_by(Color.name).all()
+    query = db.query(Color)
+    params = {k: v for k, v in request.query_params.multi_items()}
+    parsed = parse_filters(params, COLOR_FIELDS)
+    query = apply_filters(query, parsed)
+    projection = parse_projection(modo, campos, COLOR_FIELDS, COLOR_BASIC)
+
+    offset, limit_count = resolve_pagination(
+        skip=skip, limit=limit, default_paginated=False
+    )
+    query = query.order_by(Color.name.asc()).offset(offset)
+    if limit_count is not None:
+        query = query.limit(limit_count)
+    rows = query.all()
+
+    if projection is not None and projection.active:
+        return json_response(project_rows(rows, projection))
+    return rows
 
 
 @router.post("", response_model=ColorResponse, status_code=201, tags=["Colors"], summary="Create color",

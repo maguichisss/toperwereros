@@ -3,7 +3,7 @@
 import logging
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
@@ -29,6 +29,16 @@ from app.schemas import (
     LayawayItemUpdate,
 )
 from app.auth import require_permission
+from app.query_filters import (
+    LAYAWAY_BASIC,
+    LAYAWAY_FIELDS,
+    apply_filters,
+    json_response,
+    parse_filters,
+    parse_projection,
+    project_rows,
+    resolve_pagination,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -207,10 +217,17 @@ def list_layaways(
     customer_id: int | None = Query(None),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
+    skip: int | None = Query(None, ge=0, description="Number of records to skip (DSL pagination)"),
+    limit: int | None = Query(None, ge=1, le=200, description="Max records to return (DSL pagination)"),
+    modo: str | None = Query(None, pattern="^(basico|detallado)$", description="Projection mode: basico or detallado"),
+    campos: str | None = Query(None, description="Comma-separated fields to return"),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("apartado.view")),
 ) -> LayawayListResponse:
-    """Return a paginated list of layaways, optionally filtered by status and/or customer.
+    """Return a paginated list of layaways, optionally filtered by status
+    and/or customer, plus the shared query DSL for operator filters and
+    projection.
 
     Args:
         status: Filter by layaway status (e.g. ``active``, ``completed``,
@@ -218,6 +235,11 @@ def list_layaways(
         customer_id: Filter by customer ID.
         page: 1-indexed page number (default 1).
         per_page: Items per page, 1–100 (default 20).
+        skip: Number of records to skip (overrides ``page``/``per_page``).
+        limit: Maximum records to return (overrides ``per_page``).
+        modo: Projection mode, ``basico`` or ``detallado``.
+        campos: Comma-separated fields to project.
+        request: Raw request for extracting operator query params.
         db: Active database session.
         current_user: Authenticated user with ``apartado.view`` permission.
 
@@ -233,21 +255,28 @@ def list_layaways(
         query = query.filter(Layaway.status == status)
     if customer_id:
         query = query.filter(Layaway.customer_id == customer_id)
+    params = {k: v for k, v in request.query_params.multi_items()}
+    parsed = parse_filters(params, LAYAWAY_FIELDS)
+    query = apply_filters(query, parsed)
+    projection = parse_projection(modo, campos, LAYAWAY_FIELDS, LAYAWAY_BASIC)
 
     try:
         total = query.count()
-        layaways = (
-            query.options(
-                selectinload(Layaway.items).selectinload(LayawayItem.product),
-                selectinload(Layaway.payments),
-                selectinload(Layaway.customer),
-                selectinload(Layaway.creator),
-            )
-            .order_by(Layaway.created_at.desc())
-            .offset((page - 1) * per_page)
-            .limit(per_page)
-            .all()
+        offset, limit_count = resolve_pagination(
+            skip=skip, limit=limit, page=page, per_page=per_page
         )
+        base = query.options(
+            selectinload(Layaway.items).selectinload(LayawayItem.product),
+            selectinload(Layaway.payments),
+            selectinload(Layaway.customer),
+            selectinload(Layaway.creator),
+        ).order_by(Layaway.created_at.desc())
+        if projection is not None and projection.active:
+            rows = base.offset(offset).limit(limit_count).all()
+            return json_response(
+                {"layaways": project_rows(rows, projection), "total": total}
+            )
+        layaways = base.offset(offset).limit(limit_count).all()
     except Exception:
         logger.exception("Failed to list layaways")
         raise HTTPException(500, "Error al obtener los apartados")

@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -10,6 +10,16 @@ from app.config import escape_like
 from app.models import Customer, User
 from app.schemas import CustomerCreate, CustomerResponse
 from app.auth import require_permission
+from app.query_filters import (
+    CUSTOMER_BASIC,
+    CUSTOMER_FIELDS,
+    apply_filters,
+    json_response,
+    parse_filters,
+    parse_projection,
+    project_rows,
+    resolve_pagination,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +30,24 @@ router = APIRouter()
               description="Return all customers, optionally filtered by name or phone (ILIKE search).")
 def list_customers(
     q: str | None = Query(None),
+    skip: int | None = Query(None, ge=0, description="Number of records to skip"),
+    limit: int | None = Query(None, ge=1, le=200, description="Max records to return"),
+    modo: str | None = Query(None, pattern="^(basico|detallado)$", description="Projection mode: basico or detallado"),
+    campos: str | None = Query(None, description="Comma-separated fields to return"),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("customer.view")),
 ) -> list[Customer]:
-    """Return all customers, optionally filtered by name or phone.
+    """Return all customers, optionally filtered by name/phone search and
+    the shared query DSL (operator filters and ``modo``/``campos``).
 
     Args:
         q: Optional search string to match against ``name`` or ``phone``.
+        skip: Number of records to skip.
+        limit: Maximum records to return.
+        modo: Projection mode, ``basico`` or ``detallado``.
+        campos: Comma-separated fields to project.
+        request: Raw request for extracting operator query params.
         db: Active database session.
         current_user: Authenticated user with ``customer.view`` permission.
 
@@ -43,7 +64,22 @@ def list_customers(
         query = query.filter(
             Customer.name.ilike(pattern, escape="\\") | Customer.phone.ilike(pattern, escape="\\")
         )
-    return query.order_by(Customer.name.asc()).all()
+    params = {k: v for k, v in request.query_params.multi_items()}
+    parsed = parse_filters(params, CUSTOMER_FIELDS)
+    query = apply_filters(query, parsed)
+    projection = parse_projection(modo, campos, CUSTOMER_FIELDS, CUSTOMER_BASIC)
+
+    offset, limit_count = resolve_pagination(
+        skip=skip, limit=limit, default_paginated=False
+    )
+    query = query.order_by(Customer.name.asc()).offset(offset)
+    if limit_count is not None:
+        query = query.limit(limit_count)
+    rows = query.all()
+
+    if projection is not None and projection.active:
+        return json_response(project_rows(rows, projection))
+    return rows
 
 
 @router.get("/{customer_id}", response_model=CustomerResponse, tags=["Customers"], summary="Get customer",

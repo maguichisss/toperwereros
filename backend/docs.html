@@ -385,7 +385,7 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>GET</td>
 <td><code>/api/products</code></td>
 <td><code>product.view</code></td>
-<td>Paginated list (only <code>stock &gt; 0</code>). Query: <code>q</code> (search), <code>category_ids</code>, <code>page</code> (≥1), <code>per_page</code> (1–200, default 20), <code>export</code> (skip pagination). Search matches code, name, ubicacion, price, category name, color name (ILIKE, escaped).</td>
+<td>Paginated list (only <code>stock &gt; 0</code>). Query: <code>q</code> (search), <code>category_ids</code>, <code>page</code> (≥1), <code>per_page</code> (1–200, default 20), <code>export</code> (skip pagination), plus the shared Query DSL (<code>skip</code>/<code>limit</code>, <code>field__op</code> operators, <code>modo</code>/<code>campos</code>). Search matches code, name, ubicacion, price, category name, color name (ILIKE, escaped).</td>
 </tr>
 <tr>
 <td>GET</td>
@@ -428,7 +428,7 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>GET</td>
 <td><code>/api/categories</code></td>
 <td><code>category.view</code></td>
-<td>List all categories (alphabetical).</td>
+<td>List all categories (alphabetical). Shared Query DSL supported (<code>skip</code>/<code>limit</code>, operators, <code>modo</code>/<code>campos</code>).</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -465,7 +465,7 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>GET</td>
 <td><code>/api/colors</code></td>
 <td><code>color.view</code></td>
-<td>List all colors (alphabetical).</td>
+<td>List all colors (alphabetical). Shared Query DSL supported (<code>skip</code>/<code>limit</code>, operators, <code>modo</code>/<code>campos</code>).</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -540,7 +540,7 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>GET</td>
 <td><code>/api/sales</code></td>
 <td><code>sale.view</code></td>
-<td>Paginated list, newest first, with line items and creator name. Query: <code>page</code> (≥1), <code>per_page</code> (1–100, default 20), <code>start_date</code>, <code>end_date</code> (<code>YYYY-MM-DD</code>, inclusive).</td>
+<td>Paginated list, newest first, with line items and creator name. Query: <code>page</code> (≥1), <code>per_page</code> (1–100, default 20), <code>start_date</code>, <code>end_date</code> (<code>YYYY-MM-DD</code>, inclusive), plus the shared Query DSL.</td>
 </tr>
 <tr>
 <td>GET</td>
@@ -571,7 +571,7 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>GET</td>
 <td><code>/api/customers</code></td>
 <td><code>customer.view</code></td>
-<td>List customers; <code>q</code> matches <code>name</code> or <code>phone</code> (ILIKE); ordered by name.</td>
+<td>List customers; <code>q</code> matches <code>name</code> or <code>phone</code> (ILIKE); ordered by name. Shared Query DSL supported (<code>skip</code>/<code>limit</code>, operators, <code>modo</code>/<code>campos</code>).</td>
 </tr>
 <tr>
 <td>GET</td>
@@ -620,7 +620,7 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>GET</td>
 <td><code>/api/layaways</code></td>
 <td><code>apartado.view</code></td>
-<td>Paginated list, newest first. Query: <code>status</code> (<code>active</code>|<code>completed</code>|<code>cancelled</code>), <code>customer_id</code>, <code>page</code>, <code>per_page</code> (1–100).</td>
+<td>Paginated list, newest first. Query: <code>status</code> (<code>active</code>|<code>completed</code>|<code>cancelled</code>), <code>customer_id</code>, <code>page</code>, <code>per_page</code> (1–100), plus the shared Query DSL.</td>
 </tr>
 <tr>
 <td>GET</td>
@@ -672,6 +672,154 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 </tr>
 </tbody>
 </table>
+<h2>Query DSL (list endpoints)</h2>
+<p>All list GET endpoints (<code>/api/products</code>, <code>/api/categories</code>, <code>/api/colors</code>,
+<code>/api/sales</code>, <code>/api/customers</code>, <code>/api/layaways</code>) support a shared query DSL on
+top of their endpoint-specific parameters.</p>
+<h3>Pagination</h3>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>skip</code></td>
+<td>int</td>
+<td><code>0</code></td>
+<td>Number of records to skip</td>
+</tr>
+<tr>
+<td><code>limit</code></td>
+<td>int</td>
+<td><code>100</code></td>
+<td>Max records to return (1–200)</td>
+</tr>
+</tbody>
+</table>
+<p><code>skip</code>/<code>limit</code> take priority over the legacy <code>page</code>/<code>per_page</code> aliases, which
+remain fully supported. Endpoints that previously returned every row
+(<code>/api/categories</code>, <code>/api/colors</code>, <code>/api/customers</code>) keep doing so unless
+<code>skip</code>/<code>limit</code> are supplied. <code>/api/products</code> with <code>export=true</code> ignores
+pagination and returns all matches.</p>
+<h3>Filter operators</h3>
+<p>Filters use the field name from the model, with an optional <code>__op</code> suffix
+(no suffix = <code>__eq</code>). Example: <code>?price__gte=100&amp;name__contains=cuervo</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Operator</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__eq</code> (default)</td>
+<td>Equal</td>
+<td><code>?status=active</code></td>
+</tr>
+<tr>
+<td><code>__ne</code></td>
+<td>Not equal</td>
+<td><code>?status__ne=cancelled</code></td>
+</tr>
+<tr>
+<td><code>__gt</code></td>
+<td>Greater than</td>
+<td><code>?price__gt=100</code></td>
+</tr>
+<tr>
+<td><code>__gte</code></td>
+<td>Greater than or equal</td>
+<td><code>?stock__gte=10</code></td>
+</tr>
+<tr>
+<td><code>__lt</code></td>
+<td>Less than</td>
+<td><code>?stock__lt=5</code></td>
+</tr>
+<tr>
+<td><code>__lte</code></td>
+<td>Less than or equal</td>
+<td><code>?balance__lte=50</code></td>
+</tr>
+<tr>
+<td><code>__like</code></td>
+<td>Case-insensitive LIKE (raw <code>%</code> / <code>_</code> wildcards)</td>
+<td><code>?name__like=%25cuervo%25</code></td>
+</tr>
+<tr>
+<td><code>__contains</code></td>
+<td>Case-insensitive substring (escaped)</td>
+<td><code>?name__contains=tequila</code></td>
+</tr>
+<tr>
+<td><code>__startswith</code></td>
+<td>Case-insensitive prefix (escaped)</td>
+<td><code>?name__startswith=jose</code></td>
+</tr>
+<tr>
+<td><code>__endswith</code></td>
+<td>Case-insensitive suffix (escaped)</td>
+<td><code>?name__endswith=ml</code></td>
+</tr>
+<tr>
+<td><code>__not_like</code></td>
+<td>NOT LIKE</td>
+<td><code>?name__not_like=generico</code></td>
+</tr>
+<tr>
+<td><code>__in</code></td>
+<td>In comma-separated list</td>
+<td><code>?id__in=1,2,3</code></td>
+</tr>
+<tr>
+<td><code>__not_in</code></td>
+<td>Not in comma-separated list</td>
+<td><code>?id__not_in=4,5,6</code></td>
+</tr>
+<tr>
+<td><code>__is_null</code></td>
+<td>IS NULL / IS NOT NULL (<code>true</code>/<code>false</code>/<code>1</code>/<code>0</code>)</td>
+<td><code>?email__is_null=true</code></td>
+</tr>
+</tbody>
+</table>
+<p>Values are coerced to the column type (int, decimal, bool, datetime). Date
+columns accept <code>YYYY-MM-DD</code> (treated as midnight). String operators
+(<code>__like</code>, <code>__contains</code>, <code>__startswith</code>, <code>__endswith</code>, <code>__not_like</code>) only apply
+to text fields. Products additionally accept <code>category</code> and <code>color</code> as
+filter-only fields matched against the related names
+(e.g. <code>?category__contains=herram</code>). Unknown fields, unknown operators, or
+uncoercible values return <strong>400</strong>.</p>
+<h3>Field selection</h3>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modo</code></td>
+<td>Preset projection: <code>basico</code> (essential fields) or <code>detallado</code> (all scalar fields)</td>
+</tr>
+<tr>
+<td><code>campos</code></td>
+<td>Explicit comma-separated field list, e.g. <code>campos=id,name,price</code></td>
+</tr>
+</tbody>
+</table>
+<p>When <code>modo</code> or <code>campos</code> is used, list responses contain only the requested
+fields (wrapped in the endpoint's usual envelope for products/layaways).
+Without them, the standard typed response is returned unchanged. Unknown or
+non-selectable fields return <strong>400</strong>.</p>
 <h2>Business Rules</h2>
 <h3>Products</h3>
 <ul>

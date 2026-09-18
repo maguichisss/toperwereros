@@ -5,6 +5,7 @@ application to fall back to local disk storage in development.
 """
 
 import logging
+import os
 import time
 from datetime import timedelta
 
@@ -16,9 +17,32 @@ _client = None
 _signing_credentials = None
 _signing_expiry = 0
 
+_on_cloud_run = None
+
+
+def _on_gcp() -> bool:
+    """Return whether we are running on Google Cloud Run.
+
+    The only GCP deployment of this app is Cloud Run, which always sets the
+    ``K_SERVICE`` environment variable.  Checking it is instant and requires
+    no network I/O, avoiding the ~12s hangs that ``google.auth`` ADC discovery
+    causes on non-GCP machines.  The result is cached for the process
+    lifetime.
+    """
+    global _on_cloud_run
+    if _on_cloud_run is None:
+        _on_cloud_run = bool(os.environ.get("K_SERVICE"))
+    return _on_cloud_run
+
 
 def _get_client():
-    """Lazy-initialize the GCS client (avoids import-time credential checks)."""
+    """Lazy-initialize the GCS client (avoids import-time credential checks).
+
+    Only meaningful on Cloud Run; off-GCP it fails fast so callers can fall
+    back to local behavior instead of blocking on credential discovery.
+    """
+    if not _on_gcp():
+        raise RuntimeError("Google Cloud Storage is only available on Cloud Run")
     global _client
     if _client is None:
         from google.cloud import storage
@@ -97,7 +121,7 @@ def upload_to_gcs(data: bytes, filename: str) -> str:
     return filename
 
 
-def generate_signed_url(object_name: str) -> str:
+def generate_signed_url(object_name: str, expires_hours: int | None = None) -> str:
     """Generate a v4 signed URL for a GCS object.
 
     Works on Cloud Run without a service-account JSON key file by
@@ -105,14 +129,18 @@ def generate_signed_url(object_name: str) -> str:
 
     Args:
         object_name: The GCS object name.
+        expires_hours: URL lifetime in hours; defaults to
+            ``SIGNED_URL_EXPIRY_HOURS``.
 
     Returns:
         A signed URL string.
     """
+    if expires_hours is None:
+        expires_hours = SIGNED_URL_EXPIRY_HOURS
     blob = _bucket().blob(object_name)
     return blob.generate_signed_url(
         version="v4",
-        expiration=timedelta(hours=SIGNED_URL_EXPIRY_HOURS),
+        expiration=timedelta(hours=expires_hours),
         method="GET",
         credentials=_get_signing_credentials(),
     )
@@ -131,20 +159,37 @@ def download_from_gcs(object_name: str) -> bytes:
     return blob.download_as_bytes()
 
 
-def resolve_image_url(url: str | None) -> str | None:
+def resolve_image_url(url: str | None, expires_hours: int | None = None) -> str | None:
     """Convert ``/uploads/file.jpg`` to a signed URL when GCS is configured.
 
     In development (no ``GCS_BUCKET``), returns the original URL unchanged.
+    If GCS is configured but a signed URL cannot be produced (missing google
+    libraries, no credentials, or not running on GCP), falls back to returning
+    the original URL unchanged so local static serving keeps working.
 
     Args:
         url: An image URL like ``/uploads/<filename>``.
+        expires_hours: URL lifetime in hours for the signed URL.
 
     Returns:
-        A signed URL, or the original URL if GCS is not configured.
+        A signed URL, or the original URL if GCS is not configured or
+        unavailable.
     """
     if not url or not GCS_BUCKET:
         return url
-    return generate_signed_url(url.removeprefix("/uploads/"))
+    if not _on_gcp():
+        return url
+    try:
+        return generate_signed_url(
+            url.removeprefix("/uploads/"), expires_hours=expires_hours
+        )
+    except Exception as exc:
+        logger.warning(
+            "Google Cloud Storage unavailable (%s); serving %s unsigned (local fallback)",
+            exc,
+            url,
+        )
+        return url
 
 
 def delete_from_gcs(url: str | None) -> None:

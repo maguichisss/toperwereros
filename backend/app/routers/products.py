@@ -3,7 +3,7 @@
 import logging
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import or_, String
 from sqlalchemy.orm import Session, selectinload
 
@@ -12,6 +12,16 @@ from app.config import safe_upload_path, escape_like, GCS_BUCKET
 from app.models import Product, Category, Color, User
 from app.schemas import ProductCreate, ProductResponse, ProductListResponse
 from app.auth import require_permission
+from app.query_filters import (
+    PRODUCT_BASIC,
+    PRODUCT_FIELDS,
+    apply_filters,
+    json_response,
+    parse_filters,
+    parse_projection,
+    project_rows,
+    resolve_pagination,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +36,11 @@ def list_products(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=200),
     export: bool = False,
+    skip: int | None = Query(None, ge=0, description="Number of records to skip (DSL pagination)"),
+    limit: int | None = Query(None, ge=1, le=200, description="Max records to return (DSL pagination)"),
+    modo: str | None = Query(None, pattern="^(basico|detallado)$", description="Projection mode: basico or detallado"),
+    campos: str | None = Query(None, description="Comma-separated fields to return"),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("product.view")),
 ) -> ProductListResponse:
@@ -33,7 +48,9 @@ def list_products(
 
     Supports full-text search across code, name, ubicacion, price, category
     name, and color name.  When ``export=True``, pagination is skipped and all
-    matching products are returned.
+    matching products are returned.  Additional operator filters (``__eq``,
+    ``__gt``, ``__contains``, ``__in``, ...) and ``modo``/``campos``
+    projection are supported through the shared query DSL.
 
     Args:
         category_ids: Comma-separated category IDs to filter by.
@@ -41,6 +58,11 @@ def list_products(
         page: 1-indexed page number (default 1).
         per_page: Items per page, 1–200 (default 20).
         export: If ``True``, return all results without pagination.
+        skip: Number of records to skip (overrides ``page``/``per_page``).
+        limit: Maximum records to return (overrides ``per_page``).
+        modo: Projection mode, ``basico`` or ``detallado``.
+        campos: Comma-separated fields to project.
+        request: Raw request for extracting operator query params.
         db: Active database session.
         current_user: Authenticated user with ``product.view`` permission.
 
@@ -70,14 +92,36 @@ def list_products(
                 Product.colors.any(Color.name.ilike(pattern, escape="\\")),
             )
         )
+    params = {k: v for k, v in request.query_params.multi_items()}
+    parsed = parse_filters(params, PRODUCT_FIELDS)
+    query = apply_filters(query, parsed)
+    projection = parse_projection(modo, campos, PRODUCT_FIELDS, PRODUCT_BASIC)
     total = query.count()
+
+    if projection is not None and projection.active:
+        offset, limit_count = resolve_pagination(
+            skip=skip, limit=limit, page=page, per_page=per_page, export=export
+        )
+        rows = (
+            query.order_by(Product.created_at.desc())
+            .offset(offset)
+            .limit(limit_count)
+            .all()
+        )
+        return json_response(
+            {"products": project_rows(rows, projection), "total": total}
+        )
+
     if export:
         products = query.order_by(Product.created_at.desc()).all()
     else:
+        offset, limit_count = resolve_pagination(
+            skip=skip, limit=limit, page=page, per_page=per_page
+        )
         products = (
             query.order_by(Product.created_at.desc())
-            .offset((page - 1) * per_page)
-            .limit(per_page)
+            .offset(offset)
+            .limit(limit_count)
             .all()
         )
     return ProductListResponse(products=products, total=total)

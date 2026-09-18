@@ -4,13 +4,23 @@ import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.models import Product, Sale, SaleItem, User
 from app.schemas import SaleCreate, SaleResponse, SaleItemResponse
 from app.auth import require_permission
+from app.query_filters import (
+    SALE_BASIC,
+    SALE_FIELDS,
+    apply_filters,
+    json_response,
+    parse_filters,
+    parse_projection,
+    project_rows,
+    resolve_pagination,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,18 +66,29 @@ def list_sales(
     per_page: int = Query(20, ge=1, le=100),
     start_date: str | None = Query(None, description="Start date YYYY-MM-DD (inclusive)"),
     end_date: str | None = Query(None, description="End date YYYY-MM-DD (inclusive)"),
+    skip: int | None = Query(None, ge=0, description="Number of records to skip (DSL pagination)"),
+    limit: int | None = Query(None, ge=1, le=200, description="Max records to return (DSL pagination)"),
+    modo: str | None = Query(None, pattern="^(basico|detallado)$", description="Projection mode: basico or detallado"),
+    campos: str | None = Query(None, description="Comma-separated fields to return"),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("sale.view")),
 ) -> list[SaleResponse]:
     """Return a paginated list of sales, newest first.
 
     Each sale is serialized with its line items and creator username.
+    Supports the shared query DSL for operator filters and projection.
 
     Args:
         page: 1-indexed page number (default 1).
         per_page: Items per page, 1–100 (default 20).
         start_date: Optional start date filter (YYYY-MM-DD, inclusive).
         end_date: Optional end date filter (YYYY-MM-DD, inclusive).
+        skip: Number of records to skip (overrides ``page``/``per_page``).
+        limit: Maximum records to return (overrides ``per_page``).
+        modo: Projection mode, ``basico`` or ``detallado``.
+        campos: Comma-separated fields to project.
+        request: Raw request for extracting operator query params.
         db: Active database session.
         current_user: Authenticated user with ``sale.view`` permission.
 
@@ -86,18 +107,22 @@ def list_sales(
         if end_date:
             dt = datetime.fromisoformat(end_date) + timedelta(days=1)
             stmt = stmt.where(Sale.created_at < dt)
+        params = {k: v for k, v in request.query_params.multi_items()}
+        parsed = parse_filters(params, SALE_FIELDS)
+        stmt = apply_filters(stmt, parsed)
+        projection = parse_projection(modo, campos, SALE_FIELDS, SALE_BASIC)
         total = stmt.count()
-        sales = (
-            stmt
-            .options(
-                selectinload(Sale.items).selectinload(SaleItem.product),
-                selectinload(Sale.creator),
-            )
-            .order_by(Sale.created_at.desc())
-            .offset((page - 1) * per_page)
-            .limit(per_page)
-            .all()
+        offset, limit_count = resolve_pagination(
+            skip=skip, limit=limit, page=page, per_page=per_page
         )
+        base = stmt.options(
+            selectinload(Sale.items).selectinload(SaleItem.product),
+            selectinload(Sale.creator),
+        ).order_by(Sale.created_at.desc())
+        if projection is not None and projection.active:
+            rows = base.offset(offset).limit(limit_count).all()
+            return json_response({"sales": project_rows(rows, projection), "total": total})
+        sales = base.offset(offset).limit(limit_count).all()
     except Exception:
         logger.exception("Failed to list sales")
         raise HTTPException(500, "Error al obtener las ventas")

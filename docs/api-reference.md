@@ -109,7 +109,7 @@ matched by a `.*` parent (e.g. a role holding `product.*` satisfies
 
 | Method | Path | Permission | Description |
 | --- | --- | --- | --- |
-| GET | `/api/products` | `product.view` | Paginated list (only `stock > 0`). Query: `q` (search), `category_ids`, `page` (≥1), `per_page` (1–200, default 20), `export` (skip pagination). Search matches code, name, ubicacion, price, category name, color name (ILIKE, escaped). |
+| GET | `/api/products` | `product.view` | Paginated list (only `stock > 0`). Query: `q` (search), `category_ids`, `page` (≥1), `per_page` (1–200, default 20), `export` (skip pagination), plus the shared Query DSL (`skip`/`limit`, `field__op` operators, `modo`/`campos`). Search matches code, name, ubicacion, price, category name, color name (ILIKE, escaped). |
 | GET | `/api/products/{product_id}` | `product.view` | Single product with categories and colors. |
 | POST | `/api/products` | `product.create` | Create product: unique code, name/code required, price ≥ 0, referenced categories/colors must exist. |
 | PUT | `/api/products/{product_id}` | `product.edit` | Full update; replaces categories/colors; deletes the old image file when `image_url` changes. |
@@ -119,7 +119,7 @@ matched by a `.*` parent (e.g. a role holding `product.*` satisfies
 
 | Method | Path | Permission | Description |
 | --- | --- | --- | --- |
-| GET | `/api/categories` | `category.view` | List all categories (alphabetical). |
+| GET | `/api/categories` | `category.view` | List all categories (alphabetical). Shared Query DSL supported (`skip`/`limit`, operators, `modo`/`campos`). |
 | POST | `/api/categories` | `category.create` | Create category (name unique, lowered). |
 | PUT | `/api/categories/{category_id}` | `category.edit` | Update category name. |
 | DELETE | `/api/categories/{category_id}` | `category.delete` | Delete; **409** if assigned to any product. |
@@ -128,7 +128,7 @@ matched by a `.*` parent (e.g. a role holding `product.*` satisfies
 
 | Method | Path | Permission | Description |
 | --- | --- | --- | --- |
-| GET | `/api/colors` | `color.view` | List all colors (alphabetical). |
+| GET | `/api/colors` | `color.view` | List all colors (alphabetical). Shared Query DSL supported (`skip`/`limit`, operators, `modo`/`campos`). |
 | POST | `/api/colors` | `color.create` | Create color; `hex` must match `#RRGGBB`, name unique and lowered. |
 | PUT | `/api/colors/{color_id}` | `color.edit` | Update name and/or hex. |
 | DELETE | `/api/colors/{color_id}` | `color.delete` | Delete; **409** if assigned to any product. |
@@ -149,7 +149,7 @@ matched by a `.*` parent (e.g. a role holding `product.*` satisfies
 
 | Method | Path | Permission | Description |
 | --- | --- | --- | --- |
-| GET | `/api/sales` | `sale.view` | Paginated list, newest first, with line items and creator name. Query: `page` (≥1), `per_page` (1–100, default 20), `start_date`, `end_date` (`YYYY-MM-DD`, inclusive). |
+| GET | `/api/sales` | `sale.view` | Paginated list, newest first, with line items and creator name. Query: `page` (≥1), `per_page` (1–100, default 20), `start_date`, `end_date` (`YYYY-MM-DD`, inclusive), plus the shared Query DSL. |
 | GET | `/api/sales/{sale_id}` | `sale.view` | Single sale with all line items. |
 | POST | `/api/sales` | `sale.create` | Create sale. At least one item, atomic stock decrement via savepoint, unit price captured from product at sale time, `created_by` = authenticated user. |
 
@@ -157,7 +157,7 @@ matched by a `.*` parent (e.g. a role holding `product.*` satisfies
 
 | Method | Path | Permission | Description |
 | --- | --- | --- | --- |
-| GET | `/api/customers` | `customer.view` | List customers; `q` matches `name` or `phone` (ILIKE); ordered by name. |
+| GET | `/api/customers` | `customer.view` | List customers; `q` matches `name` or `phone` (ILIKE); ordered by name. Shared Query DSL supported (`skip`/`limit`, operators, `modo`/`campos`). |
 | GET | `/api/customers/{customer_id}` | `customer.view` | Single customer. |
 | POST | `/api/customers` | `customer.create` | Create customer (name required; phone/email/notes optional). |
 | PUT | `/api/customers/{customer_id}` | `customer.edit` | Update customer fields. |
@@ -168,7 +168,7 @@ matched by a `.*` parent (e.g. a role holding `product.*` satisfies
 | Method | Path | Permission | Description |
 | --- | --- | --- | --- |
 | POST | `/api/layaways` | `apartado.create` | Create layaway. Provide `customer_id` **or** inline `customer` (not both/neither). Deposit > 0 and ≤ total; locks in prices, decrements stock; deposit recorded as first payment. |
-| GET | `/api/layaways` | `apartado.view` | Paginated list, newest first. Query: `status` (`active`\|`completed`\|`cancelled`), `customer_id`, `page`, `per_page` (1–100). |
+| GET | `/api/layaways` | `apartado.view` | Paginated list, newest first. Query: `status` (`active`\|`completed`\|`cancelled`), `customer_id`, `page`, `per_page` (1–100), plus the shared Query DSL. |
 | GET | `/api/layaways/{layaway_id}` | `apartado.view` | Single layaway with items, payments, customer, creator, linked `sale_id`. |
 | PATCH | `/api/layaways/{layaway_id}` | `apartado.edit` | Update `notes` on an active layaway. |
 | POST | `/api/layaways/{layaway_id}/payments` | `apartado.edit` | Add payment: positive and ≤ balance; auto-completes (creates linked Sale) when balance hits $0. |
@@ -177,6 +177,67 @@ matched by a `.*` parent (e.g. a role holding `product.*` satisfies
 | PUT | `/api/layaways/{layaway_id}/items/{item_id}` | `apartado.edit` | Change item quantity (≥ 1); delta-adjusts stock; same payments floor rule. |
 | PATCH | `/api/layaways/{layaway_id}/cancel` | `apartado.edit` | Cancel active layaway; restores all stock; payments history retained. |
 | PATCH | `/api/layaways/{layaway_id}/complete` | `apartado.edit` | Manually complete active layaway; creates linked Sale (idempotent). |
+
+## Query DSL (list endpoints)
+
+All list GET endpoints (`/api/products`, `/api/categories`, `/api/colors`,
+`/api/sales`, `/api/customers`, `/api/layaways`) support a shared query DSL on
+top of their endpoint-specific parameters.
+
+### Pagination
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| `skip` | int | `0` | Number of records to skip |
+| `limit` | int | `100` | Max records to return (1–200) |
+
+`skip`/`limit` take priority over the legacy `page`/`per_page` aliases, which
+remain fully supported. Endpoints that previously returned every row
+(`/api/categories`, `/api/colors`, `/api/customers`) keep doing so unless
+`skip`/`limit` are supplied. `/api/products` with `export=true` ignores
+pagination and returns all matches.
+
+### Filter operators
+
+Filters use the field name from the model, with an optional `__op` suffix
+(no suffix = `__eq`). Example: `?price__gte=100&name__contains=cuervo`.
+
+| Operator | Description | Example |
+| --- | --- | --- |
+| `__eq` (default) | Equal | `?status=active` |
+| `__ne` | Not equal | `?status__ne=cancelled` |
+| `__gt` | Greater than | `?price__gt=100` |
+| `__gte` | Greater than or equal | `?stock__gte=10` |
+| `__lt` | Less than | `?stock__lt=5` |
+| `__lte` | Less than or equal | `?balance__lte=50` |
+| `__like` | Case-insensitive LIKE (raw `%` / `_` wildcards) | `?name__like=%25cuervo%25` |
+| `__contains` | Case-insensitive substring (escaped) | `?name__contains=tequila` |
+| `__startswith` | Case-insensitive prefix (escaped) | `?name__startswith=jose` |
+| `__endswith` | Case-insensitive suffix (escaped) | `?name__endswith=ml` |
+| `__not_like` | NOT LIKE | `?name__not_like=generico` |
+| `__in` | In comma-separated list | `?id__in=1,2,3` |
+| `__not_in` | Not in comma-separated list | `?id__not_in=4,5,6` |
+| `__is_null` | IS NULL / IS NOT NULL (`true`/`false`/`1`/`0`) | `?email__is_null=true` |
+
+Values are coerced to the column type (int, decimal, bool, datetime). Date
+columns accept `YYYY-MM-DD` (treated as midnight). String operators
+(`__like`, `__contains`, `__startswith`, `__endswith`, `__not_like`) only apply
+to text fields. Products additionally accept `category` and `color` as
+filter-only fields matched against the related names
+(e.g. `?category__contains=herram`). Unknown fields, unknown operators, or
+uncoercible values return **400**.
+
+### Field selection
+
+| Param | Description |
+| --- | --- |
+| `modo` | Preset projection: `basico` (essential fields) or `detallado` (all scalar fields) |
+| `campos` | Explicit comma-separated field list, e.g. `campos=id,name,price` |
+
+When `modo` or `campos` is used, list responses contain only the requested
+fields (wrapped in the endpoint's usual envelope for products/layaways).
+Without them, the standard typed response is returned unchanged. Unknown or
+non-selectable fields return **400**.
 
 ## Business Rules
 
