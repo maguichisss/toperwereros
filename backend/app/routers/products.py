@@ -4,7 +4,7 @@ import logging
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import or_, String
+from sqlalchemy import or_, String, func
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
@@ -73,10 +73,7 @@ def list_products(
         HTTPException: 403 if the user lacks ``product.view`` permission.
     """
 
-    query = db.query(Product).options(
-        selectinload(Product.categories),
-        selectinload(Product.colors),
-    ).filter(Product.stock > 0)
+    query = db.query(Product).filter(Product.stock > 0)
     if category_ids:
         ids = [int(x) for x in category_ids.split(",")]
         query = query.filter(Product.categories.any(Category.id.in_(ids)))
@@ -96,35 +93,51 @@ def list_products(
     parsed = parse_filters(params, PRODUCT_FIELDS)
     query = apply_filters(query, parsed)
     projection = parse_projection(modo, campos, PRODUCT_FIELDS, PRODUCT_BASIC)
-    total = query.count()
 
     if projection is not None and projection.active:
         offset, limit_count = resolve_pagination(
             skip=skip, limit=limit, page=page, per_page=per_page, export=export
         )
-        rows = (
-            query.order_by(Product.created_at.desc())
-            .offset(offset)
-            .limit(limit_count)
-            .all()
-        )
+        rows, total = _fetch_page(query, offset, limit_count)
         return json_response(
             {"products": project_rows(rows, projection), "total": total}
         )
 
-    if export:
-        products = query.order_by(Product.created_at.desc()).all()
-    else:
-        offset, limit_count = resolve_pagination(
-            skip=skip, limit=limit, page=page, per_page=per_page
-        )
-        products = (
-            query.order_by(Product.created_at.desc())
-            .offset(offset)
-            .limit(limit_count)
-            .all()
-        )
+    eager = query.options(
+        selectinload(Product.categories),
+        selectinload(Product.colors),
+    )
+    offset, limit_count = resolve_pagination(
+        skip=skip, limit=limit, page=page, per_page=per_page, export=export
+    )
+    products, total = _fetch_page(eager, offset, limit_count)
     return ProductListResponse(products=products, total=total)
+
+
+def _fetch_page(
+    query: Session, offset: int, limit_count: int | None
+) -> tuple[list, int]:
+    """Fetch rows for a page and total count in a single query round trip.
+
+    Uses a window ``count(*) OVER()`` so ``total`` reflects the full filtered
+    set without a separate COUNT query.  When ``limit_count`` is None (export)
+    all rows are returned and ``total`` equals their length.
+    """
+
+    ordered = query.order_by(Product.created_at.desc())
+    if limit_count is None:
+        rows = ordered.all()
+        return rows, len(rows)
+    rows_with_total = (
+        ordered.with_entities(Product, func.count().over().label("_total"))
+        .offset(offset)
+        .limit(limit_count)
+        .all()
+    )
+    if rows_with_total:
+        rows = [row[0] for row in rows_with_total]
+        return rows, rows_with_total[0][1]
+    return [], query.count()
 
 
 @router.get("/{product_id}", response_model=ProductResponse, tags=["Products"], summary="Get product",

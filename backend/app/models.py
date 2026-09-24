@@ -8,7 +8,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import Integer, String, Numeric, ForeignKey, DateTime, Table, Column, func, Boolean
+from sqlalchemy import Integer, String, Numeric, ForeignKey, DateTime, Table, Column, Index, func, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -18,7 +18,7 @@ product_colors = Table(
     "product_colors",
     Base.metadata,
     Column("product_id", Integer, ForeignKey("products.id", ondelete="CASCADE"), primary_key=True),
-    Column("color_id", Integer, ForeignKey("colors.id", ondelete="CASCADE"), primary_key=True),
+    Column("color_id", Integer, ForeignKey("colors.id", ondelete="CASCADE"), primary_key=True, index=True),
 )
 """Association table linking products to their available colors."""
 
@@ -26,7 +26,7 @@ product_categories = Table(
     "product_categories",
     Base.metadata,
     Column("product_id", Integer, ForeignKey("products.id", ondelete="CASCADE"), primary_key=True),
-    Column("category_id", Integer, ForeignKey("categories.id", ondelete="CASCADE"), primary_key=True),
+    Column("category_id", Integer, ForeignKey("categories.id", ondelete="CASCADE"), primary_key=True, index=True),
 )
 """Association table linking products to their categories."""
 
@@ -68,6 +68,11 @@ class Product(Base):
     image_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        Index("ix_products_stock_created_at", "stock", "created_at"),
+        Index("ix_products_code", "code", unique=True),
+    )
 
     categories: Mapped[list["Category"]] = relationship("Category", secondary=product_categories)
     colors: Mapped[list["Color"]] = relationship("Color", secondary=product_colors, backref="products")

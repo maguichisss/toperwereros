@@ -68,6 +68,22 @@ class TestListProducts:
         assert data["total"] == 5
         assert len(data["products"]) == 2
 
+    def test_page_beyond_range_keeps_real_total(self, client, admin_headers, db):
+        for i in range(5):
+            _create_product(db, name=f"P{i}", code=f"C{i}")
+        resp = client.get("/api/products?page=99&per_page=20", headers=admin_headers)
+        data = resp.json()
+        assert data["products"] == []
+        assert data["total"] == 5
+
+    def test_page_beyond_range_with_filters_keeps_real_total(self, client, admin_headers, db):
+        for i in range(5):
+            _create_product(db, name=f"P{i}", code=f"C{i}")
+        _create_product(db, name="Alpha Widget", code="CAW01", stock=0)
+        resp = client.get("/api/products?q=Alpha&page=50&per_page=10", headers=admin_headers)
+        assert resp.json()["products"] == []
+        assert resp.json()["total"] == 0
+
     def test_category_filter(self, client, admin_headers, db):
         cat = _create_category(db, "Tools")
         _create_product(db, name="Hammer", code="H01", category_ids=[cat.id])
