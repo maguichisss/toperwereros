@@ -9,7 +9,7 @@ import logging
 import os
 from decimal import Decimal
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -17,6 +17,7 @@ from fastapi.exceptions import RequestValidationError
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from app import i18n
 from app.logging_config import setup_logging
 from app.config import UPLOAD_DIR, GCS_BUCKET, get_rate_limit_key
 from app.routers.docs import REDOC_HTML
@@ -48,6 +49,17 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Localize HTTPException detail based on the Accept-Language header."""
+    detail = i18n.translate(exc.detail, i18n.negotiate_lang(request)) if isinstance(exc.detail, str) else exc.detail
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": detail},
+        headers=exc.headers,
+    )
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Handle 422 validation errors by logging details and returning a JSON response.
@@ -67,6 +79,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         exc.errors(),
     )
     errors = json.loads(json.dumps(exc.errors(), default=str))
+    if i18n.negotiate_lang(request) == "es":
+        for error in errors:
+            if isinstance(error.get("msg"), str):
+                error["msg"] = i18n.translate(error["msg"], "es")
     return JSONResponse(status_code=422, content={"detail": errors})
 
 app.add_middleware(

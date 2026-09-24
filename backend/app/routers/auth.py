@@ -71,21 +71,21 @@ def login(
     user = db.query(User).filter(User.username == data.username.strip().lower()).first()
 
     if not user:
-        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
 
     if not user.active:
-        raise HTTPException(status_code=401, detail="Usuario inactivo")
+        raise HTTPException(status_code=401, detail="Inactive user")
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     if user.locked_until and user.locked_until > now:
-        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
 
     if not verify_password(data.password, user.hashed_password):
         user.failed_login_attempts += 1
         if user.failed_login_attempts >= LOCKOUT_MAX_ATTEMPTS:
             user.locked_until = now + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
         db.commit()
-        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
 
     user.failed_login_attempts = 0
     user.locked_until = None
@@ -117,24 +117,24 @@ def refresh_tokens(
     rt = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
 
     if not rt:
-        raise HTTPException(401, "Token de refresco inválido")
+        raise HTTPException(401, "Invalid refresh token")
 
     if rt.revoked:
         revoke_refresh_family(db, rt.family_id)
         db.commit()
-        raise HTTPException(401, "Token de refresco revocado")
+        raise HTTPException(401, "Revoked refresh token")
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     if rt.expires_at < now:
         db.delete(rt)
         db.commit()
-        raise HTTPException(401, "Token de refresco expirado")
+        raise HTTPException(401, "Expired refresh token")
 
     user = db.query(User).filter(User.id == rt.user_id).first()
     if not user or not user.active:
         rt.revoked = True
         db.commit()
-        raise HTTPException(401, "Usuario inactivo")
+        raise HTTPException(401, "Inactive user")
 
     rt.revoked = True
     db.flush()
@@ -201,7 +201,7 @@ def create_role(
     name = data.name.strip().lower()
     existing = db.query(Role).filter(Role.name == name).first()
     if existing:
-        raise HTTPException(400, "El nombre del rol ya existe")
+        raise HTTPException(400, "A role with that name already exists")
     role = Role(name=name)
     db.add(role)
     try:
@@ -209,7 +209,7 @@ def create_role(
     except Exception:
         db.rollback()
         logger.exception("Failed to create role")
-        raise HTTPException(500, "Error al crear el rol")
+        raise HTTPException(500, "Error creating role")
     db.refresh(role)
     return RoleResponse(id=role.id, name=role.name)
 
@@ -261,7 +261,7 @@ def change_password(
         current_user: Authenticated user injected by dependency.
 
     Returns:
-        ``{"ok": True, "detail": "Contraseña actualizada correctamente"}``.
+        ``{"ok": True, "detail": "Password updated successfully"}``.
 
     Raises:
         HTTPException: 400 if the current password is incorrect or the new
@@ -269,9 +269,9 @@ def change_password(
     """
 
     if not verify_password(data.current_password, current_user.hashed_password):
-        raise HTTPException(400, "Contraseña actual incorrecta")
+        raise HTTPException(400, "Current password is incorrect")
     if len(data.new_password) < 4:
-        raise HTTPException(400, "La nueva contraseña debe tener al menos 4 caracteres")
+        raise HTTPException(400, "The new password must be at least 4 characters long")
     current_user.hashed_password = hash_password(data.new_password)
     revoke_all_user_refresh_tokens(db, current_user.id)
     try:
@@ -279,8 +279,8 @@ def change_password(
     except Exception:
         db.rollback()
         logger.exception("Failed to change password for user %d", current_user.id)
-        raise HTTPException(500, "Error al cambiar la contraseña")
-    return {"ok": True, "detail": "Contraseña actualizada correctamente"}
+        raise HTTPException(500, "Error changing password")
+    return {"ok": True, "detail": "Password updated successfully"}
 
 
 @router.patch("/profile", response_model=UserResponse, tags=["Auth"], summary="Update profile",
@@ -308,7 +308,7 @@ def update_profile(
         if data.email != current_user.email:
             existing = db.query(User).filter(User.email == data.email, User.id != current_user.id).first()
             if existing:
-                raise HTTPException(400, "El email ya está registrado por otro usuario")
+                raise HTTPException(400, "Email already registered by another user")
         current_user.email = data.email or None
     if data.image_url is not None:
         current_user.image_url = data.image_url
@@ -317,7 +317,7 @@ def update_profile(
     except Exception:
         db.rollback()
         logger.exception("Failed to update profile for user %d", current_user.id)
-        raise HTTPException(500, "Error al actualizar el perfil")
+        raise HTTPException(500, "Error updating profile")
     return UserResponse(
         id=current_user.id,
         username=current_user.username,
@@ -364,14 +364,14 @@ def upload_avatar(
             break
         total += len(chunk)
         if total > MAX_SIZE:
-            raise HTTPException(400, "Archivo demasiado grande (máx 5MB)")
+            raise HTTPException(400, "File too large (max 5MB)")
         chunks.append(chunk)
     content = b"".join(chunks)
     if len(content) < 8:
-        raise HTTPException(400, "Archivo de imagen inválido")
+        raise HTTPException(400, "Invalid image file")
     result = detect_image_type(content[:12])
     if not result:
-        raise HTTPException(400, "Solo se permiten imágenes JPEG, PNG y WebP")
+        raise HTTPException(400, "Only JPEG, PNG and WebP images are allowed")
     ext, expected_mime = result
     if current_user.image_url:
         if GCS_BUCKET:
@@ -392,7 +392,7 @@ def upload_avatar(
                 f.write(content)
     except Exception:
         logger.exception("Failed to upload avatar")
-        raise HTTPException(500, "Error al subir el avatar")
+        raise HTTPException(500, "Error uploading avatar")
     return {"image_url": f"/uploads/{filename}"}
 
 
@@ -460,11 +460,11 @@ def register(
     username = data.username.strip().lower()
     existing = db.query(User).filter(User.username == username).first()
     if existing:
-        raise HTTPException(400, "El nombre de usuario ya existe")
+        raise HTTPException(400, "Username already exists")
     if data.email:
         existing_email = db.query(User).filter(User.email == data.email).first()
         if existing_email:
-            raise HTTPException(400, "El email ya está registrado")
+            raise HTTPException(400, "Email already registered")
     user = User(
         username=username,
         email=data.email,
@@ -478,7 +478,7 @@ def register(
     except Exception:
         db.rollback()
         logger.exception("Failed to register user")
-        raise HTTPException(500, "Error al registrar el usuario")
+        raise HTTPException(500, "Error registering user")
     db.refresh(user)
     return UserResponse(
         id=user.id,
@@ -518,29 +518,29 @@ def update_user(
     """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(404, "Usuario no encontrado")
+        raise HTTPException(404, "User not found")
 
     if data.username is not None:
         username = data.username.strip().lower()
         existing = db.query(User).filter(User.username == username, User.id != user_id).first()
         if existing:
-            raise HTTPException(400, "El nombre de usuario ya existe")
+            raise HTTPException(400, "Username already exists")
         user.username = username
 
     if data.email is not None:
         existing_email = db.query(User).filter(User.email == data.email, User.id != user_id).first()
         if existing_email:
-            raise HTTPException(400, "El email ya está registrado")
+            raise HTTPException(400, "Email already registered")
         user.email = data.email
 
     if data.role_id is not None:
         if user_id == current_user.id:
-            raise HTTPException(400, "No puedes cambiar tu propio rol")
+            raise HTTPException(400, "You cannot change your own role")
         user.role_id = data.role_id
 
     if data.active is not None:
         if user_id == current_user.id and not data.active:
-            raise HTTPException(400, "No puedes desactivar tu propia cuenta")
+            raise HTTPException(400, "You cannot deactivate your own account")
         user.active = data.active
 
     if data.password is not None:
@@ -551,7 +551,7 @@ def update_user(
     except Exception:
         db.rollback()
         logger.exception("Failed to update user %d", user_id)
-        raise HTTPException(500, "Error al actualizar el usuario")
+        raise HTTPException(500, "Error updating user")
     db.refresh(user)
     logger.info("User %d updated by admin %d", user_id, current_user.id)
     return UserResponse(
@@ -593,14 +593,14 @@ def toggle_user_active(
     """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(404, "Usuario no encontrado")
+        raise HTTPException(404, "User not found")
 
     active = data.get("active")
     if active is None:
-        raise HTTPException(400, "El campo 'active' es requerido")
+        raise HTTPException(400, "The 'active' field is required")
 
     if user_id == current_user.id and not active:
-        raise HTTPException(400, "No puedes desactivar tu propia cuenta")
+        raise HTTPException(400, "You cannot deactivate your own account")
 
     user.active = active
     try:
@@ -608,7 +608,7 @@ def toggle_user_active(
     except Exception:
         db.rollback()
         logger.exception("Failed to toggle active status for user %d", user_id)
-        raise HTTPException(500, "Error al actualizar el estado del usuario")
+        raise HTTPException(500, "Error updating user status")
     db.refresh(user)
     action = "activated" if active else "deactivated"
     logger.info("User %d %s by admin %d", user_id, action, current_user.id)

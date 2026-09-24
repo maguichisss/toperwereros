@@ -194,7 +194,7 @@ class TestCatalogPDF:
         _create_product(db, name="A", code="A01")
         resp = client.get("/api/catalog/pdf?theme=unknown", headers=admin_headers)
         assert resp.status_code == 400
-        assert b"theme debe ser uno de" in resp.content
+        assert b"The 'theme' parameter must be one of" in resp.content
 
     def test_pdf_q_filter(self, client, admin_headers, db):
         _create_product(db, name="AlphaWidget", code="AW01")

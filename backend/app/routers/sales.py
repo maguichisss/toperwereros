@@ -125,7 +125,7 @@ def list_sales(
         sales = base.offset(offset).limit(limit_count).all()
     except Exception:
         logger.exception("Failed to list sales")
-        raise HTTPException(500, "Error al obtener las ventas")
+        raise HTTPException(500, "Error fetching sales")
     return [serialize_sale(s) for s in sales]
 
 
@@ -162,9 +162,9 @@ def get_sale(
         )
     except Exception:
         logger.exception("Failed to get sale %d", sale_id)
-        raise HTTPException(500, "Error al obtener la venta")
+        raise HTTPException(500, "Error fetching sale")
     if not sale:
-        raise HTTPException(404, "Venta no encontrada")
+        raise HTTPException(404, "Sale not found")
     return serialize_sale(sale)
 
 
@@ -195,7 +195,7 @@ def create_sale(
     """
 
     if not data.items:
-        raise HTTPException(400, "La venta debe tener al menos un artículo")
+        raise HTTPException(400, "The sale must have at least one item")
 
     total = Decimal("0.00")
     sale_items = []
@@ -205,9 +205,9 @@ def create_sale(
             for item in data.items:
                 product = db.query(Product).filter(Product.id == item.product_id).first()
                 if not product:
-                    raise HTTPException(404, f"Producto {item.product_id} no encontrado")
+                    raise HTTPException(404, f"Product {item.product_id} not found")
                 if product.stock < item.quantity:
-                    raise HTTPException(400, f"Stock insuficiente para '{product.name}': {product.stock} disponible(s), {item.quantity} solicitado(s)")
+                    raise HTTPException(400, f"Insufficient stock for '{product.name}': {product.stock} available, {item.quantity} requested")
 
                 unit_price = product.price
                 total += unit_price * item.quantity
@@ -234,4 +234,4 @@ def create_sale(
     except Exception:
         db.rollback()
         logger.exception("Failed to create sale — rolling back stock")
-        raise HTTPException(500, "Error al procesar la venta. Stock no descontado.")
+        raise HTTPException(500, "Error processing sale. Stock not deducted.")

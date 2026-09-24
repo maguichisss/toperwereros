@@ -62,7 +62,7 @@ def safe_upload_path(url: str | None) -> str | None:
     filename = url.removeprefix("/uploads/")
     resolved = os.path.realpath(os.path.join(UPLOAD_DIR, filename))
     if not resolved.startswith(os.path.realpath(UPLOAD_DIR)):
-        raise HTTPException(400, "Ruta de imagen inválida")
+        raise HTTPException(400, "Invalid image path")
     return resolved
 
 

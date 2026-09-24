@@ -3,6 +3,7 @@ import { apiErrorMessage } from '../api/client.js'
 import { decodeJwtPayload } from '../utils.js'
 
 const API_BASE = '/api'
+const LANG_HEADERS = { 'Accept-Language': 'es-MX' }
 const STORAGE_KEY = 'store_token'
 const REFRESH_KEY = 'store_refresh_token'
 
@@ -37,7 +38,7 @@ export function AuthProvider({ children }) {
   const fetchUser = useCallback(async (t) => {
     try {
       const res = await fetch(`${API_BASE}/auth/me`, {
-        headers: { Authorization: `Bearer ${t}` },
+        headers: { ...LANG_HEADERS, Authorization: `Bearer ${t}` },
       })
       if (!res.ok) throw new Error('Unauthorized')
       const data = await res.json()
@@ -55,7 +56,7 @@ export function AuthProvider({ children }) {
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...LANG_HEADERS },
         body: JSON.stringify({ refresh_token: rt }),
       })
       if (!res.ok) return null
@@ -92,7 +93,7 @@ export function AuthProvider({ children }) {
   const login = async (username, password) => {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...LANG_HEADERS },
       body: JSON.stringify({ username, password }),
     })
     if (!res.ok) {
@@ -110,7 +111,7 @@ export function AuthProvider({ children }) {
       try {
         await fetch(`${API_BASE}/auth/logout`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${t}` },
+          headers: { ...LANG_HEADERS, Authorization: `Bearer ${t}` },
         })
       } catch { /* ignore */ }
     }

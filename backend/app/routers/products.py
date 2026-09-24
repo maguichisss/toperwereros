@@ -150,7 +150,7 @@ def get_product(
 
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
-        raise HTTPException(404, "Producto no encontrado")
+        raise HTTPException(404, "Product not found")
     return product
 
 
@@ -181,25 +181,25 @@ def create_product(
 
     name = data.name.strip()
     if not name:
-        raise HTTPException(400, "El nombre es obligatorio")
+        raise HTTPException(400, "Name is required")
     code = data.code.strip()
     if not code:
-        raise HTTPException(400, "El código es obligatorio")
+        raise HTTPException(400, "Code is required")
     existing = db.query(Product).filter(Product.code == code).first()
     if existing:
-        raise HTTPException(400, f"Ya existe un producto con ese código: '{existing.name}'")
+        raise HTTPException(400, f"A product with code '{existing.name}' already exists")
     if data.price is None or data.price < 0:
-        raise HTTPException(400, "El precio debe ser válido")
+        raise HTTPException(400, "Price must be valid")
     categories = []
     if data.category_ids:
         categories = db.query(Category).filter(Category.id.in_(data.category_ids)).all()
         if len(categories) != len(data.category_ids):
-            raise HTTPException(400, "Una o más categorías no fueron encontradas")
+            raise HTTPException(400, "One or more categories were not found")
     colors = []
     if data.color_ids:
         colors = db.query(Color).filter(Color.id.in_(data.color_ids)).all()
         if len(colors) != len(data.color_ids):
-            raise HTTPException(400, "Uno o más colores no fueron encontrados")
+            raise HTTPException(400, "One or more colors were not found")
     product = Product(
         name=name,
         code=code,
@@ -217,7 +217,7 @@ def create_product(
     except Exception:
         db.rollback()
         logger.exception("Failed to create product")
-        raise HTTPException(500, "Error al crear el producto")
+        raise HTTPException(500, "Error creating product")
     db.refresh(product)
     return product
 
@@ -252,23 +252,23 @@ def update_product(
 
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
-        raise HTTPException(404, "Producto no encontrado")
+        raise HTTPException(404, "Product not found")
     name = data.name.strip()
     if not name:
-        raise HTTPException(400, "El nombre es obligatorio")
+        raise HTTPException(400, "Name is required")
     if data.price is None or data.price < 0:
-        raise HTTPException(400, "El precio debe ser válido")
+        raise HTTPException(400, "Price must be valid")
     code = data.code.strip()
     if not code:
-        raise HTTPException(400, "El código es obligatorio")
+        raise HTTPException(400, "Code is required")
     existing = db.query(Product).filter(Product.code == code, Product.id != product_id).first()
     if existing:
-        raise HTTPException(400, f"Ya existe un producto con ese código: '{existing.name}'")
+        raise HTTPException(400, f"A product with code '{existing.name}' already exists")
     colors = product.colors
     if data.color_ids is not None:
         colors = db.query(Color).filter(Color.id.in_(data.color_ids)).all()
         if len(colors) != len(data.color_ids):
-            raise HTTPException(400, "Uno o más colores no fueron encontrados")
+            raise HTTPException(400, "One or more colors were not found")
     product.name = name
     product.code = code
     product.stock = data.stock
@@ -287,7 +287,7 @@ def update_product(
     if data.category_ids is not None:
         categories = db.query(Category).filter(Category.id.in_(data.category_ids)).all()
         if len(categories) != len(data.category_ids):
-            raise HTTPException(400, "Una o más categorías no fueron encontradas")
+            raise HTTPException(400, "One or more categories were not found")
         product.categories = categories
     product.colors = colors
     try:
@@ -295,7 +295,7 @@ def update_product(
     except Exception:
         db.rollback()
         logger.exception("Failed to update product %d", product_id)
-        raise HTTPException(500, "Error al actualizar el producto")
+        raise HTTPException(500, "Error updating product")
     db.refresh(product)
     return product
 
@@ -324,7 +324,7 @@ def delete_product(
 
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
-        raise HTTPException(404, "Producto no encontrado")
+        raise HTTPException(404, "Product not found")
 
     if product.image_url:
         if GCS_BUCKET:
@@ -343,4 +343,4 @@ def delete_product(
     except Exception:
         db.rollback()
         logger.exception("Failed to delete product %d", product_id)
-        raise HTTPException(500, "Error al eliminar el producto")
+        raise HTTPException(500, "Error deleting product")

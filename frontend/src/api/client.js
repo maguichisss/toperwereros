@@ -1,4 +1,5 @@
 const API_BASE = '/api'
+const LANG_HEADERS = { 'Accept-Language': 'es-MX' }
 
 function getToken() {
   return localStorage.getItem('store_token')
@@ -9,7 +10,7 @@ function getRefreshToken() {
 }
 
 function authHeaders(extra = {}) {
-  const headers = { 'Content-Type': 'application/json', ...extra }
+  const headers = { 'Content-Type': 'application/json', ...LANG_HEADERS, ...extra }
   const token = getToken()
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers
@@ -21,7 +22,7 @@ function forceLogout() {
   window.location.reload()
 }
 
-export function apiErrorMessage(detail, fallback = 'Request failed') {
+export function apiErrorMessage(detail, fallback = 'No se pudo completar la petición') {
   if (!detail) return fallback
   if (typeof detail === 'string') return detail
   if (Array.isArray(detail)) return detail.map(e => e.msg).join('; ')
@@ -55,7 +56,7 @@ function refreshTokens() {
       try {
         const res = await fetch(`${API_BASE}/auth/refresh`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...LANG_HEADERS },
           body: JSON.stringify({ refresh_token: rt }),
         })
         if (!res.ok) return null
@@ -72,14 +73,14 @@ function refreshTokens() {
 }
 
 async function uploadOne(path, form) {
-  let headers = {}
+  let headers = { ...LANG_HEADERS }
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
   let res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers, body: form })
   if (res.status === 401) {
     const newToken = await refreshTokens()
     if (newToken) {
-      headers = { Authorization: `Bearer ${newToken}` }
+      headers = { ...LANG_HEADERS, Authorization: `Bearer ${newToken}` }
       res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers, body: form })
     } else {
       forceLogout()
@@ -88,7 +89,7 @@ async function uploadOne(path, form) {
   }
   if (res.status === 204) return null
   const data = await res.json()
-  if (!res.ok) throw new Error(apiErrorMessage(data.detail, 'Upload failed'))
+  if (!res.ok) throw new Error(apiErrorMessage(data.detail, 'No se pudo subir la imagen'))
   return data
 }
 

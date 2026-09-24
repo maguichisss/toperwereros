@@ -99,10 +99,10 @@ def create_category(
 
     name = data.name.strip()
     if not name:
-        raise HTTPException(400, "El nombre es obligatorio")
+        raise HTTPException(400, "Name is required")
     existing = db.query(Category).filter(Category.name == name).first()
     if existing:
-        raise HTTPException(409, "La categoría ya fue creada")
+        raise HTTPException(409, "Category already exists")
     category = Category(name=name)
     db.add(category)
     try:
@@ -110,7 +110,7 @@ def create_category(
     except Exception:
         db.rollback()
         logger.exception("Failed to create category")
-        raise HTTPException(500, "Error al crear la categoría")
+        raise HTTPException(500, "Error creating category")
     db.refresh(category)
     return category
 
@@ -142,20 +142,20 @@ def update_category(
 
     name = data.name.strip()
     if not name:
-        raise HTTPException(400, "El nombre es obligatorio")
+        raise HTTPException(400, "Name is required")
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
-        raise HTTPException(404, "Categoría no encontrada")
+        raise HTTPException(404, "Category not found")
     conflict = db.query(Category).filter(Category.name == name, Category.id != category_id).first()
     if conflict:
-        raise HTTPException(409, "La categoría ya fue creada")
+        raise HTTPException(409, "Category already exists")
     category.name = name
     try:
         db.commit()
     except Exception:
         db.rollback()
         logger.exception("Failed to update category %d", category_id)
-        raise HTTPException(500, "Error al actualizar la categoría")
+        raise HTTPException(500, "Error updating category")
     db.refresh(category)
     return category
 
@@ -185,13 +185,13 @@ def delete_category(
 
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
-        raise HTTPException(404, "Categoría no encontrada")
+        raise HTTPException(404, "Category not found")
     in_use = db.execute(
         select(product_categories).where(product_categories.c.category_id == category_id)
     ).first()
     if in_use:
         raise HTTPException(
-            409, "No se puede eliminar una categoría asignada a productos"
+            409, "Cannot delete a category assigned to products"
         )
     db.delete(category)
     try:
@@ -199,4 +199,4 @@ def delete_category(
     except Exception:
         db.rollback()
         logger.exception("Failed to delete category %d", category_id)
-        raise HTTPException(500, "Error al eliminar la categoría")
+        raise HTTPException(500, "Error deleting category")

@@ -36,7 +36,7 @@ sequenceDiagram
     end
     alt Alguna validación falla
         B->>D: rollback del savepoint → stock intacto
-        B-->>S: 400/404 (mensaje en español)
+        B-->>S: 400/404 (mensaje según Accept-Language: es)
     else Todo válido
         B->>D: sale.total = Σ; inserta Sale + líneas
         B->>D: commit

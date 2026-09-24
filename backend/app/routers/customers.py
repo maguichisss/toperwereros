@@ -105,7 +105,7 @@ def get_customer(
 
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
-        raise HTTPException(404, "Cliente no encontrado")
+        raise HTTPException(404, "Customer not found")
     return customer
 
 
@@ -142,7 +142,7 @@ def create_customer(
     except Exception:
         db.rollback()
         logger.exception("Failed to create customer")
-        raise HTTPException(500, "Error al crear el cliente")
+        raise HTTPException(500, "Error creating customer")
     db.refresh(customer)
     return customer
 
@@ -172,7 +172,7 @@ def update_customer(
 
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
-        raise HTTPException(404, "Cliente no encontrado")
+        raise HTTPException(404, "Customer not found")
     customer.name = data.name
     customer.phone = data.phone
     customer.email = data.email
@@ -182,7 +182,7 @@ def update_customer(
     except Exception:
         db.rollback()
         logger.exception("Failed to update customer %d", customer_id)
-        raise HTTPException(500, "Error al actualizar el cliente")
+        raise HTTPException(500, "Error updating customer")
     db.refresh(customer)
     return customer
 
@@ -211,11 +211,11 @@ def delete_customer(
 
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
-        raise HTTPException(404, "Cliente no encontrado")
+        raise HTTPException(404, "Customer not found")
     db.delete(customer)
     try:
         db.commit()
     except Exception:
         db.rollback()
         logger.exception("Failed to delete customer %d", customer_id)
-        raise HTTPException(500, "Error al eliminar el cliente")
+        raise HTTPException(500, "Error deleting customer")

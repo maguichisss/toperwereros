@@ -141,7 +141,7 @@ def _coerce_bool(raw: str, key: str) -> bool:
     if lowered in BOOL_FALSE:
         return False
     raise HTTPException(
-        400, f"Valor inválido para el filtro {key}: '{raw}' (use true/false)"
+        400, f"Invalid value for filter {key}: '{raw}' (use true/false)"
     )
 
 
@@ -161,7 +161,7 @@ def _coerce_scalar(py_type: type, key: str, raw: str) -> Any:
             return date.fromisoformat(raw)
         return raw
     except (ValueError, InvalidOperation) as exc:
-        raise HTTPException(400, f"Valor inválido para el filtro {key}: '{raw}'") from exc
+        raise HTTPException(400, f"Invalid value for filter {key}: '{raw}'") from exc
 
 
 def _coerce_value(py_type: type, key: str, raw: str, op: str) -> Any:
@@ -170,7 +170,7 @@ def _coerce_value(py_type: type, key: str, raw: str, op: str) -> Any:
     if op in ("in", "not_in"):
         parts = [p.strip() for p in raw.split(",") if p.strip()]
         if not parts:
-            raise HTTPException(400, f"El filtro {key} requiere al menos un valor")
+            raise HTTPException(400, f"Filter {key} requires at least one value")
         return [_coerce_scalar(py_type, key, p) for p in parts]
     return _coerce_scalar(py_type, key, raw)
 
@@ -204,9 +204,9 @@ def parse_filters(
             field, op = raw_key, "eq"
         spec = fields.get(field)
         if spec is None:
-            raise HTTPException(400, f"Parámetro de filtro desconocido: {raw_key}")
+            raise HTTPException(400, f"Unknown filter parameter: {raw_key}")
         if op in _TEXT_ONLY_OPS and spec.py_type is not str:
-            raise HTTPException(400, f"El operador '{op}' solo aplica a campos de texto")
+            raise HTTPException(400, f"The operator '{op}' only applies to text fields")
         value = _coerce_value(spec.py_type, raw_key, raw_value, op)
         parsed.append(ParsedFilter(spec=spec, op=op, value=value))
     return parsed
@@ -241,7 +241,7 @@ def _column_condition(col, op: str, value: Any, py_type: type):
         return ~col.in_(value)
     if op == "is_null":
         return col.is_(None) if value else col.isnot(None)
-    raise HTTPException(400, f"Operador de filtro desconocido: {op}")
+    raise HTTPException(400, f"Unknown filter operator: {op}")
 
 
 def apply_filters(query: Query, parsed: list[ParsedFilter]) -> Query:
@@ -276,7 +276,7 @@ def parse_projection(
     if modo is None and campos is None:
         return None
     if modo is not None and modo not in ("basico", "detallado"):
-        raise HTTPException(400, "El parámetro modo debe ser 'basico' o 'detallado'")
+        raise HTTPException(400, "The 'modo' parameter must be 'basico' or 'detallado'")
 
     if campos:
         keys = [c.strip() for c in campos.split(",") if c.strip()]
@@ -288,7 +288,7 @@ def parse_projection(
     for key in keys:
         spec = fields.get(key)
         if spec is None or not spec.selectable:
-            raise HTTPException(400, f"Campo de proyección no seleccionable: {key}")
+            raise HTTPException(400, f"Non-selectable projection field: {key}")
 
     seen: set[str] = set()
     ordered: list[str] = []

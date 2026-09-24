@@ -1456,9 +1456,9 @@ def catalog_pdf(
     """
 
     if format not in ("pdf", "html", "csv"):
-        raise HTTPException(400, "El parámetro format debe ser 'pdf', 'html' o 'csv'")
+        raise HTTPException(400, "The 'format' parameter must be 'pdf', 'html' or 'csv'")
     if theme not in THEMES:
-        raise HTTPException(400, f"El parámetro theme debe ser uno de: {', '.join(THEMES)}")
+        raise HTTPException(400, f"The 'theme' parameter must be one of: {', '.join(THEMES)}")
 
     products = (
         db.query(Product)
@@ -1469,7 +1469,7 @@ def catalog_pdf(
         try:
             id_list = [int(x) for x in ids.split(",") if x.strip()]
         except ValueError:
-            raise HTTPException(400, "El parámetro ids debe contener solo números")
+            raise HTTPException(400, "The 'ids' parameter must contain only numbers")
         if id_list:
             products = products.filter(Product.id.in_(id_list))
     if q:
@@ -1557,4 +1557,4 @@ def catalog_pdf(
         raise
     except Exception:
         logger.exception("Failed to generate catalog (%d products) after %.2fs", len(products), time.perf_counter() - t0)
-        raise HTTPException(500, "Error al generar el catálogo PDF")
+        raise HTTPException(500, "Error generating the PDF catalog")

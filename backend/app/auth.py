@@ -158,7 +158,7 @@ def get_current_user(
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No autenticado",
+            detail="Not authenticated",
             headers={"WWW-Authenticate": "Bearer"},
         )
     token = credentials.credentials
@@ -166,14 +166,14 @@ def get_current_user(
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
         sub = payload.get("sub")
         if sub is None:
-            raise HTTPException(status_code=401, detail="Token inválido")
+            raise HTTPException(status_code=401, detail="Invalid token")
         user_id: int = int(sub)
     except (JWTError, TypeError, ValueError):
-        raise HTTPException(status_code=401, detail="Token inválido")
+        raise HTTPException(status_code=401, detail="Invalid token")
 
     user = db.query(User).filter(User.id == user_id).first()
     if user is None or not user.active:
-        raise HTTPException(status_code=401, detail="Usuario no encontrado o inactivo")
+        raise HTTPException(status_code=401, detail="User not found or inactive")
     return user
 
 
@@ -213,6 +213,6 @@ def require_permission(*perms: str) -> Callable[..., Awaitable[User]]:
                 return current_user
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permiso para realizar esta acción",
+            detail="You do not have permission to perform this action",
         )
     return dependency

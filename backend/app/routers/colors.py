@@ -103,12 +103,12 @@ def create_color(
     name = data.name.strip()
     hex_val = data.hex.strip()
     if not name:
-        raise HTTPException(400, "El nombre es obligatorio")
+        raise HTTPException(400, "Name is required")
     if not HEX_RE.match(hex_val):
-        raise HTTPException(400, "El color hexadecimal debe tener formato #RRGGBB")
+        raise HTTPException(400, "The hex color must be in #RRGGBB format")
     existing = db.query(Color).filter(Color.name == name).first()
     if existing:
-        raise HTTPException(409, f"El color '{name}' ya existe")
+        raise HTTPException(409, f"A color named '{name}' already exists")
     color = Color(name=name, hex=hex_val)
     db.add(color)
     try:
@@ -116,7 +116,7 @@ def create_color(
     except Exception:
         db.rollback()
         logger.exception("Failed to create color")
-        raise HTTPException(500, "Error al crear el color")
+        raise HTTPException(500, "Error creating color")
     db.refresh(color)
     return color
 
@@ -149,15 +149,15 @@ def update_color(
     name = data.name.strip()
     hex_val = data.hex.strip()
     if not name:
-        raise HTTPException(400, "El nombre es obligatorio")
+        raise HTTPException(400, "Name is required")
     if not HEX_RE.match(hex_val):
-        raise HTTPException(400, "El color hexadecimal debe tener formato #RRGGBB")
+        raise HTTPException(400, "The hex color must be in #RRGGBB format")
     color = db.query(Color).filter(Color.id == color_id).first()
     if not color:
-        raise HTTPException(404, "Color no encontrado")
+        raise HTTPException(404, "Color not found")
     conflict = db.query(Color).filter(Color.name == name, Color.id != color_id).first()
     if conflict:
-        raise HTTPException(409, f"El color '{name}' ya existe")
+        raise HTTPException(409, f"A color named '{name}' already exists")
     color.name = name
     color.hex = hex_val
     try:
@@ -165,7 +165,7 @@ def update_color(
     except Exception:
         db.rollback()
         logger.exception("Failed to update color")
-        raise HTTPException(500, "Error al actualizar el color")
+        raise HTTPException(500, "Error updating color")
     db.refresh(color)
     return color
 
@@ -195,13 +195,13 @@ def delete_color(
 
     color = db.query(Color).filter(Color.id == color_id).first()
     if not color:
-        raise HTTPException(404, "Color no encontrado")
+        raise HTTPException(404, "Color not found")
     in_use = db.execute(
         select(product_colors).where(product_colors.c.color_id == color_id)
     ).first()
     if in_use:
         raise HTTPException(
-            409, "No se puede eliminar un color asignado a productos"
+            409, "Cannot delete a color assigned to products"
         )
     db.delete(color)
     try:
@@ -209,4 +209,4 @@ def delete_color(
     except Exception:
         db.rollback()
         logger.exception("Failed to delete color %d", color_id)
-        raise HTTPException(500, "Error al eliminar el color")
+        raise HTTPException(500, "Error deleting color")

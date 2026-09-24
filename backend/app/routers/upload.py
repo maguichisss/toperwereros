@@ -53,14 +53,14 @@ def upload_image(
             break
         total += len(chunk)
         if total > MAX_SIZE:
-            raise HTTPException(400, "Archivo demasiado grande (máx 5MB)")
+            raise HTTPException(400, "File too large (max 5MB)")
         chunks.append(chunk)
     content = b"".join(chunks)
     if len(content) < 8:
-        raise HTTPException(400, "Archivo de imagen inválido")
+        raise HTTPException(400, "Invalid image file")
     result = detect_image_type(content[:12])
     if not result:
-        raise HTTPException(400, "Solo se permiten imágenes JPEG, PNG y WebP")
+        raise HTTPException(400, "Only JPEG, PNG and WebP images are allowed")
     ext, expected_mime = result
     filename = f"{uuid.uuid4().hex}{ext}"
     try:
@@ -73,5 +73,5 @@ def upload_image(
                 f.write(content)
     except Exception:
         logger.exception("Failed to upload image")
-        raise HTTPException(500, "Error al subir la imagen")
+        raise HTTPException(500, "Error uploading image")
     return {"image_url": f"/uploads/{filename}"}

@@ -34,8 +34,9 @@ vista del negocio de Toperwereros. Está separada en dominios:
 - Montos en **pesos (MXN)**, dos decimales (`Numeric(10,2)`), prefijo `$`.
 - Estados de apartado: `active` (activo) → `completed` (liquidado) o `cancelled`
   (cancelado).
-- Errores de la API en **español**, pensados para mostrarse directamente en el
-  panel.
+- Errores de la API en **español** cuando se solicita con `Accept-Language: es`
+  (el panel siempre lo envía), pensados para mostrarse directamente en la UI;
+  en inglés canónico por omisión.
 
 > Para el contrato técnico de cada endpoint ver
 > [Referencia de API](../api-reference.md). Para diagramas paso a paso ver
