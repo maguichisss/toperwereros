@@ -10,7 +10,7 @@ import pytest
 from PIL import Image as PILImage
 from fpdf import FPDF
 
-from app.routers.catalog import PDFConfig, DEFAULT_PDF_CONFIG, THEMES, apply_theme, cover_image, css_color, draw_card, order_by_category_color_stock, order_recent_first
+from app.routers.catalog import PDFConfig, DEFAULT_PDF_CONFIG, THEMES, apply_theme, cover_image, css_color, draw_card, order_by_category_color_stock, order_recent_first, _select_cover_products
 from app.patterns import pattern_jpeg
 from app.models import Product, Category, Color
 from decimal import Decimal
@@ -478,3 +478,175 @@ class TestThemes:
             assert data[:2] == b"\xff\xd8", f"pattern {pid} is not a JPEG"
             assert len(data) > 1000
         assert len({data for data in jpegs.values()}) == 10
+
+
+class TestCatalogCover:
+    def test_html_has_cover_with_brand_and_validity(self):
+        product = Product(name="Widget", code="W001", price=Decimal("99"), stock=1)
+        cfg = PDFConfig(contact_whatsapp="527207965588")
+        html = cfg.render_html([product], "agosto 03", "agosto 09", 32)
+        assert 'class="page page-cover"' in html
+        assert 'class="page-index"' not in html
+        assert "Índice" not in html
+        assert "Toperwereros" in html
+        assert "Válido de agosto 03 a agosto 09" in html
+        assert "semana 32" in html
+        assert "527207965588" in html
+
+    def test_cover_whatsapp_link_uses_cover_message(self):
+        product = Product(name="Widget", code="W001", price=Decimal("99"), stock=1)
+        cfg = PDFConfig(contact_whatsapp="527207965588")
+        html = cfg.render_html([product], "agosto 03", "agosto 09", 32)
+        assert "cover-contact__wa" in html
+        assert "https://wa.me/527207965588?text=" in html
+        assert "quisiera%20preguntar" in html
+        assert "cover-contact__wa-icon" in html
+        assert "M17.472 14.382" in html
+        assert "viewBox" in html
+        assert "+527207965588" not in html
+        assert "cover-contact__num" not in html
+        assert "720 796 5588" in html
+        assert "cover-contact__wa-num" in html
+
+    def test_cover_label_and_phone_display(self):
+        product = Product(name="Widget", code="W001", price=Decimal("99"), stock=1)
+        cfg = PDFConfig(contact_whatsapp="527207965588")
+        html = cfg.render_html([product], "agosto 03", "agosto 09", 32)
+        assert "Pregunta por nuestro catálogo completo" in html
+        from app.routers.catalog import _cover_phone_display
+        assert _cover_phone_display("527207965588") == "720 796 5588"
+        assert _cover_phone_display("9995299") == "999 5299"
+        assert _cover_phone_display("5599") == "5599"
+        assert _cover_phone_display("55512345551234") == "234 555 1234"
+
+    def test_cover_gallery_renders_up_to_six_products(self):
+        from app.config import UPLOAD_DIR
+        products = []
+        for i in range(8):
+            filename = f"cover_test_{os.getpid()}_{i}.jpg"
+            filepath = os.path.join(UPLOAD_DIR, filename)
+            with open(filepath, "wb") as f:
+                f.write(pattern_jpeg("rainbow"))
+            products.append(
+                Product(name=f"P{i}", code=f"C{i:02d}", price=Decimal("10"), stock=2, image_url=f"/uploads/{filename}")
+            )
+        try:
+            cfg = PDFConfig()
+            html = cfg.render_cover_html(products, "agosto 03", "agosto 09", 32)
+            assert html.count("cover-gallery-cell") == 6
+            assert "cover-logo" not in html or "data:image/png" in html
+            selected = _select_cover_products(products, 32, cfg.cover_sample_count, cfg)
+            assert len(selected) == 6
+        finally:
+            for i in range(8):
+                filepath = os.path.join(UPLOAD_DIR, f"cover_test_{os.getpid()}_{i}.jpg")
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+
+    def test_cover_gallery_safe_without_images(self):
+        products = [Product(name="P1", code="C01", price=Decimal("10"), stock=2)]
+        cfg = PDFConfig()
+        assert _select_cover_products(products, 32, cfg.cover_sample_count, cfg) == []
+        html = cfg.render_cover_html(products, "agosto 03", "agosto 09", 32)
+        assert html.count("cover-gallery-cell") == 6
+
+    def test_cover_selection_is_deterministic_by_week(self):
+        from app.config import UPLOAD_DIR
+        products = []
+        for i in range(10):
+            filename = f"cover_det_{os.getpid()}_{i}.jpg"
+            filepath = os.path.join(UPLOAD_DIR, filename)
+            with open(filepath, "wb") as f:
+                f.write(pattern_jpeg("rainbow"))
+            products.append(
+                Product(name=f"P{i}", code=f"C{i:02d}", price=Decimal("10"), stock=2, image_url=f"/uploads/{filename}")
+            )
+        try:
+            cfg = PDFConfig()
+            a = _select_cover_products(products, 32, 6, cfg)
+            b = _select_cover_products(products, 32, 6, cfg)
+            c = _select_cover_products(products, 33, 6, cfg)
+            assert [p.code for p in a] == [p.code for p in b]
+            assert len({p.code for p in a}) == 6
+            assert [p.code for p in a] != [p.code for p in c]
+        finally:
+            for i in range(10):
+                filepath = os.path.join(UPLOAD_DIR, f"cover_det_{os.getpid()}_{i}.jpg")
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+
+    def test_pdf_renders_with_contact(self):
+        product = Product(name="Widget", code="W001", price=Decimal("99"), stock=1)
+        cfg = PDFConfig(contact_whatsapp="527207965588")
+        pdf = cfg.render_pdf([product], "agosto 03", "agosto 09", 32)
+        assert pdf.startswith(b"%PDF")
+        assert len(pdf) > 0
+        assert b"wa.me/527207965588" in pdf
+
+    def test_empty_catalog_pdf(self):
+        cfg = PDFConfig()
+        pdf = cfg.render_pdf([], "agosto 03", "agosto 09", 32)
+        assert pdf.startswith(b"%PDF")
+        assert len(pdf) > 0
+
+
+class TestCardWhatsApp:
+    def test_card_html_uses_wa_link_when_contact_set(self):
+        product = Product(name="Cafetera Italiana", code="CF-01", price=Decimal("99"), stock=1)
+        cfg = PDFConfig(contact_whatsapp="527207965588")
+        html = cfg._card_html(product)
+        assert 'class="card-wa"' in html
+        assert "https://wa.me/527207965588" in html
+        assert "Cafetera%20Italiana" in html
+        assert "CF-01" in html
+        assert "Escríbenos a" in html
+        assert 'class="product-code"' not in html
+
+    def test_card_html_keeps_code_without_contact(self):
+        product = Product(name="Cafetera", code="CF-01", price=Decimal("99"), stock=1)
+        html = PDFConfig()._card_html(product)
+        assert 'class="product-code"' in html
+        assert "CF-01" in html
+        assert "card-wa" not in html
+
+    def test_render_html_embeds_wa_link(self):
+        product = Product(name="Cafetera Italiana", code="CF-01", price=Decimal("99"), stock=1)
+        cfg = PDFConfig(contact_whatsapp="527207965588")
+        html = cfg.render_html([product], "agosto 03", "agosto 09", 32)
+        assert 'class="card-wa" href="https://wa.me/527207965588?text=Hola%2C%20sigue%20disponible' in html
+
+    def test_pdf_embeds_clickable_wa_link(self):
+        product = Product(name="Cafetera", code="CF-01", price=Decimal("99"), stock=1)
+        cfg = PDFConfig(contact_whatsapp="527207965588")
+        pdf = cfg.render_pdf([product], "agosto 03", "agosto 09", 32)
+        assert b"/Annots" in pdf
+        assert b"wa.me/527207965588" in pdf
+        assert b"/XObject" in pdf
+        assert b"/SMask" in pdf
+
+    def test_whatsapp_icon_png_is_small_green_silhouette(self):
+        from app.routers.catalog import _whatsapp_icon_png, _WHATSAPP_ICON_PATH
+        from PIL import Image
+        import io
+        png = _whatsapp_icon_png()
+        img = Image.open(io.BytesIO(png))
+        assert img.size == (256, 256)
+        assert img.mode == "RGBA"
+        assert len(png) < 10000
+        alpha = img.getchannel("A")
+        bbox = alpha.getbbox()
+        assert bbox is not None and bbox[0] >= 0
+        assert alpha.point(lambda a: 255 if a > 127 else 0).getextrema() == (0, 255)
+        assert _WHATSAPP_ICON_PATH.startswith("M17.472 14.382")
+
+    def test_whatsapp_icon_png_supports_custom_color(self):
+        from app.routers.catalog import _whatsapp_icon_png
+        from PIL import Image
+        import io
+        white_png = _whatsapp_icon_png((255, 255, 255))
+        img = Image.open(io.BytesIO(white_png))
+        assert img.size == (256, 256)
+        assert img.mode == "RGBA"
+        pixels = list(img.getdata())
+        colored = {(r, g, b) for r, g, b, a in pixels if a > 60}
+        assert colored and colored == {(255, 255, 255)}

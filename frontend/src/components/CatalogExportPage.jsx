@@ -203,6 +203,35 @@ export default function CatalogExportPage() {
     }
   }
 
+  async function preview() {
+    if (busy) return;
+    setBusy(true);
+    setMsg('Generando…');
+    try {
+      const params = new URLSearchParams({ ...queryFilters, format: 'html', theme })
+      const token = localStorage.getItem('store_token');
+      const r = await fetch(`/api/catalog/pdf?${params.toString()}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!r.ok) throw new Error('Error al generar la vista previa');
+      const blob = await r.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+      setMsg(`Vista previa abierta (${total ?? '?'} producto${total === 1 ? '' : 's'})`);
+    } catch (e) {
+      setMsg(e.message || 'Error al generar la vista previa');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const totalPages = total != null ? Math.ceil(total / PREVIEW_PAGE_SIZE) : 0;
 
   const openPreview = useCallback((p) => setPreviewImage(p.image_url), []);
@@ -252,6 +281,7 @@ export default function CatalogExportPage() {
             <button type="button" className="btn btn--secondary" onClick={handleClear}>Limpiar</button>
           )}
           <button type="button" className="btn btn--secondary" disabled={busy} onClick={() => download('pdf')}>PDF</button>
+          <button type="button" className="btn btn--secondary" disabled={busy} onClick={preview}>Vista previa</button>
           <button type="button" className="btn btn--secondary" disabled={busy} onClick={() => download('csv')}>CSV</button>
         </div>
       </div>

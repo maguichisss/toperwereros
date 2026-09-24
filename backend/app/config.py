@@ -14,6 +14,7 @@ SIGNED_URL_EXPIRY_HOURS: int = int(os.getenv("SIGNED_URL_EXPIRY_HOURS", "1"))
 LOCKOUT_MAX_ATTEMPTS: int = int(os.getenv("LOCKOUT_MAX_ATTEMPTS", "5"))
 LOCKOUT_DURATION_MINUTES: int = int(os.getenv("LOCKOUT_DURATION_MINUTES", "15"))
 REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+WHATSAPP_NUMBER: str = os.getenv("WHATSAPP_NUMBER", "527207965588")
 
 MAGIC_BYTES: dict[bytes, tuple[str, str]] = {
     b'\xff\xd8\xff': ('.jpg', 'image/jpeg'),

@@ -49,6 +49,44 @@ Cada página lleva `"Válido de {lunes} a {domingo} | semana {N}"`, calculado
 respecto a la fecha actual: el inicio es el **lunes de esta semana** y el fin el
 **domingo**, en español (`enero … diciembre`), con número de semana ISO.
 
+## Portada
+
+Los catálogos PDF y HTML (no el CSV) empiezan con una **portada** previa a los
+productos que muestra:
+
+1. **Logo** de la marca — se lee de `backend/app/assets/logo.png` si el archivo
+   existe; si falta, la portada se genera igual sin el logo.
+2. **Nombre de la marca** — `Toperwereros` en grande.
+3. **Vigencia** — `Válido de {lunes} a {domingo} | semana {N}`.
+4. **Galería de productos** — 6 imágenes seleccionadas al azar entre los
+   productos con foto, distribuidas en 3 filas (3 + 2 + 1). La selección es
+   **determinista por semana**: la misma semana siempre muestra las mismas
+   imágenes; si hay menos de 6, se muestran las disponibles.
+5. **Contacto WhatsApp** — si existe la variable de entorno `WHATSAPP_NUMBER`,
+   un bloque clicable con el texto `Pregunta por nuestro catálogo completo`
+   sobre un botón **WhatsApp** de dos líneas (icono de la marca + "WhatsApp"
+   y debajo el número a 10 dígitos, p. ej. `720 796 5588`, sin prefijo país)
+   que abre `https://wa.me/<número>` con el mensaje
+   `Hola, quisiera preguntar sobre algunos productos disponibles`.
+
+`WHATSAPP_NUMBER` (por defecto `527207965588`) se envía sin el signo `+` (el
+formato que espera `https://wa.me/<número>`); si se deja vacío, la portada
+omite el bloque de contacto.
+
+## Contacto por tarjeta
+
+Cuando `WHATSAPP_NUMBER` tiene valor, cada tarjeta de producto (tanto en el
+PDF como en el HTML, no en el CSV) sustituye el **código del producto** por un
+enlace **"Escríbenos a"** con el icono de WhatsApp:
+
+- el enlace abre `https://wa.me/<número>` con un mensaje prefabricado
+  `Hola, sigue disponible el producto: {nombre} - {código}`;
+- en el PDF el bloque es clicable (`/Annots` con acción `URI`); en el HTML es
+  un `<a target="_blank">`;
+- si el bloque no cabe junto al precio, se reduce el tamaño de la fuente o se
+  acorta a "Escríbenos";
+- sin `WHATSAPP_NUMBER` se muestra el código del producto como antes.
+
 ## Reglas de error (HTTP 400)
 
 - `format` distinto de `pdf`/`csv`/`html` → `"El parámetro format debe ser

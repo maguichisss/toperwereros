@@ -13,7 +13,7 @@ compose file, default `docker-compose.yml`) against the running stack.
 | [restore.sh](restore.sh) | Stop backend, drop/recreate DB from a backup, restore uploads. | Disaster recovery / migration |
 | [seed.sh](seed.sh) | Idempotent re-seed of categories, colors, roles, default admin (`python seed.py` in the container). | After a raw DB wipe outside the normal compose flow |
 | [db-diff-images.sh](db-diff-images.sh) | Report (or `--delete`) images out of sync between the uploads volume and `products.image_url` (wraps `db_diff_imgs.py`). | Image-hygiene check/cleanup |
-| [gen-docs.sh](gen-docs.sh) | Regenerate `backend/docs.html` from `docs/api-reference.md` and run the two docs-drift tests (needs `backend/.venv`). | After editing the API reference |
+| [generate_docs.sh](generate_docs.sh) `[--markdown\|--html\|--all\|--check]` | Regenerate `docs/api-reference.md` and/or `backend/docs.html` from code; `--check` fails if committed artifacts differ while writing to stdout. | After editing an API endpoint or the permission matrix |
 | [reset-admin-password.sh](reset-admin-password.sh) `<pw>` | Reset the seeded `admin` user's bcrypt password. | Forgotten admin credentials |
 | [db-reset-dev.sh](db-reset-dev.sh) | Drop/recreate the dev database and restart the backend (entrypoint rebuilds schema + seeds). Requires typing `RESET`; refuses non-dev `COMPOSE_FILE` unless `ALLOW_REMOTE=1`. | Dev DB nuke |
 | [check-doc-links.py](check-doc-links.py) | Verifies every relative Markdown link in `README.md` and `docs/` resolves. | Before committing doc changes |
@@ -40,6 +40,7 @@ compose file, default `docker-compose.yml`) against the running stack.
   local dev database only.
 - `backup.sh` / `restore.sh` live here; usage is documented in
   [deployment.md](../docs/technical/deployment.md).
-- Backend Python utilities (`backend/scripts/gen_api_docs.py`,
-  `backend/db_diff_imgs.py`, `backend/seed.py`) stay under `backend/`; these
-  scripts wrap them for the live stack.
+- Backend Python utilities (`backend/db_diff_imgs.py`, `backend/seed.py`) stay under
+  `backend/`; these scripts wrap them for the live stack. The docs pipeline lives
+  under `scripts/` (`generate_api_reference.py` → `generate_docs_html.py`,
+  driven by `generate_docs.sh`).

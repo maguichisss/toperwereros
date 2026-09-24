@@ -1,6 +1,7 @@
 #!/bin/sh
 # Generate a preview printable catalog: login with admin/employee credentials,
-# fetch a themed PDF from the API, and save it as ./catalogo-preview.pdf.
+# fetch a themed PDF (or HTML) from the API, and save it as
+# ./catalogo-preview.{pdf,html}.
 #
 # Credentials come from ADMIN_USER / ADMIN_PASSWORD (defaults: admin + the
 # seeded DEFAULT_ADMIN_PASSWORD from backend/.env).
@@ -9,7 +10,8 @@ set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BACKEND_URL="${BACKEND_URL:-http://localhost:3001}"
 THEME="${1:-classic}"
-OUT="${OUT:-catalogo-preview.pdf}"
+FORMAT="${FORMAT:-pdf}"
+OUT="${OUT:-catalogo-preview.$FORMAT}"
 
 ADMIN_USER="${ADMIN_USER:-admin}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(grep '^DEFAULT_ADMIN_PASSWORD=' "$ROOT/backend/.env" 2>/dev/null | cut -d= -f2)}"
@@ -24,7 +26,7 @@ token=$(curl -fsS "$BACKEND_URL/api/auth/login" \
     -d "{\"username\":\"$ADMIN_USER\",\"password\":\"$ADMIN_PASSWORD\"}" \
     | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
 
-curl -fsS "$BACKEND_URL/api/catalog/pdf?theme=$THEME" \
+curl -fsS "$BACKEND_URL/api/catalog/pdf?theme=$THEME&format=$FORMAT" \
     -H "Authorization: Bearer $token" -o "$OUT"
 
-echo "Catalog preview written to $OUT (theme: $THEME)"
+echo "Catalog preview written to $OUT (theme: $THEME, format: $FORMAT)"

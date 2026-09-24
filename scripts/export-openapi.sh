@@ -7,7 +7,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VENV="$ROOT/backend/.venv/bin/python"
 
 if [ ! -x "$VENV" ]; then
-    echo "error: backend/.venv not found. See scripts/gen-docs.sh for setup." >&2
+    echo "error: backend/.venv not found. Create it with:" >&2
+    echo "  python -m venv backend/.venv && backend/.venv/bin/pip install -r backend/requirements-dev.txt" >&2
     exit 1
 fi
 

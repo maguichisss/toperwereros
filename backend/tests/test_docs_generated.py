@@ -3,7 +3,7 @@ truth must produce a byte-identical file to the one committed in the repo.
 
 After editing ``docs/api-reference.md``, regenerate and commit the output::
 
-    python scripts/gen_api_docs.py      # from backend/
+    python scripts/generate_docs_html.py      # from repo root
     pytest tests/test_docs_generated.py -q
 """
 
@@ -12,16 +12,16 @@ import sys
 from pathlib import Path
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-SCRIPTS_DIR = BACKEND_DIR / "scripts"
 REPO_ROOT = BACKEND_DIR.parent
+SCRIPTS_DIR = REPO_ROOT / "scripts"
 API_REFERENCE = REPO_ROOT / "docs" / "api-reference.md"
 COMMITTED_HTML = BACKEND_DIR / "docs.html"
 
 
 def _load_generator():
-    """Import ``scripts/gen_api_docs.py`` by file path (it is not a package)."""
+    """Import ``scripts/generate_docs_html.py`` by file path (it is not a package)."""
     spec = importlib.util.spec_from_file_location(
-        "gen_api_docs", SCRIPTS_DIR / "gen_api_docs.py"
+        "generate_docs_html", SCRIPTS_DIR / "generate_docs_html.py"
     )
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -36,7 +36,7 @@ def test_regenerated_docs_html_matches_committed() -> None:
     committed = COMMITTED_HTML.read_bytes()
     assert committed == regenerated, (
         "backend/docs.html is out of sync with docs/api-reference.md. "
-        "Run `python scripts/gen_api_docs.py` (from backend/) and commit the "
+        "Run `python scripts/generate_docs_html.py` (from repo root) and commit the "
         "regenerated file."
     )
 

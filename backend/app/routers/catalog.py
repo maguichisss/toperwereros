@@ -1,14 +1,19 @@
 """Catalog output generation — renders in-stock products as PDF or HTML."""
 
 import base64
+import functools
 import io
 import logging
+import math
 import os
+import random
+import re
 import time
 from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from html import escape
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
@@ -18,7 +23,7 @@ from sqlalchemy import or_, String
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
-from app.config import safe_upload_path, escape_like, GCS_BUCKET
+from app.config import safe_upload_path, escape_like, GCS_BUCKET, WHATSAPP_NUMBER
 from app.models import Product, Category, Color, User
 from app.auth import require_permission
 from app.patterns import pattern_jpeg
@@ -40,6 +45,206 @@ _FONT_FILES: dict[tuple[str, str], str] = {
 
 # How many of the most recently added products lead the catalog.
 RECENT_CATALOG_COUNT = 64
+
+# WhatsApp brand color used for the per-card "Escríbenos" link.
+WHATSAPP_GREEN = (37, 211, 102)
+_WHATSAPP_GREEN_CSS = "#25D366"
+
+# Inline WhatsApp speech-bubble icon (simple-icons "whatsapp" path).
+_WHATSAPP_ICON_PATH = (
+    "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767."
+    ".966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-"
+    "1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497."
+    ".099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-"
+    ".371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 "
+    "1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 "
+    "1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-"
+    ".57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 "
+    "9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 "
+    "2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 "
+    "5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h."
+    ".005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"
+)
+
+_WHATSAPP_ICON_SVG = (
+    '<svg class="card-wa__icon" viewBox="0 0 24 24" width="3mm" height="3mm" fill="'
+    + _WHATSAPP_GREEN_CSS
+    + '" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
+    f'<path d="{_WHATSAPP_ICON_PATH}"/></svg>'
+)
+
+# Path geometry is a fixed constant: rasterizing it once per process is enough.
+_SVG_PATH_TOKEN_RE = re.compile(
+    r"[MmLlHhCcAaZz]|[+-]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][+-]?\d+)?"
+)
+
+
+def _flatten_svg_path(path: str) -> list[list[tuple[float, float]]]:
+    """Flatten an SVG path (cubic/line/arc only) into closed polygon polylines."""
+    tokens = [t for t in _SVG_PATH_TOKEN_RE.findall(path) if t]
+    i, cur, poly, subs, cmd = 0, (0.0, 0.0), [], [], None
+
+    def number():
+        nonlocal i
+        value = float(tokens[i])
+        i += 1
+        return value
+
+    def arc(x1, y1, rx, ry, rot, large_arc, sweep, x2, y2):
+        phi = math.radians(rot)
+        c1, s1 = math.cos(phi), math.sin(phi)
+        dx, dy = (x1 - x2) / 2, (y1 - y2) / 2
+        x1p = c1 * dx + s1 * dy
+        y1p = -s1 * dx + c1 * dy
+        rx, ry = abs(rx), abs(ry)
+        scale = x1p**2 / rx**2 + y1p**2 / ry**2
+        if scale > 1:
+            s = math.sqrt(scale)
+            rx *= s
+            ry *= s
+        sign = -1 if int(large_arc) == int(sweep) else 1
+        den = rx**2 * y1p**2 + ry**2 * x1p**2
+        factor = sign * math.sqrt(max((rx**2 * ry**2 - rx**2 * y1p**2 - ry**2 * x1p**2) / den, 0)) if den else 0
+        cxp = factor * (rx * y1p / ry)
+        cyp = factor * (-ry * x1p / rx)
+        cx = c1 * cxp - s1 * cyp + (x1 + x2) / 2
+        cy = s1 * cxp + c1 * cyp + (y1 + y2) / 2
+
+        def angle(ux, uy, vx, vy):
+            k = (ux * vx + uy * vy) / (math.hypot(ux, uy) * math.hypot(vx, vy))
+            k = max(-1.0, min(1.0, k))
+            a = math.degrees(math.acos(k))
+            return a if (ux * vy - uy * vx) >= 0 else -a
+
+        start_angle = angle(1, 0, (x1p - cxp) / rx, (y1p - cyp) / ry)
+        delta = angle((x1p - cxp) / rx, (y1p - cyp) / ry, (-x1p - cxp) / rx, (-y1p - cyp) / ry)
+        if not sweep and delta > 0:
+            delta -= 360
+        if sweep and delta < 0:
+            delta += 360
+        points = []
+        steps = max(8, int(abs(delta) / 6))
+        for k in range(1, steps + 1):
+            a = math.radians(start_angle + delta * k / steps)
+            ex, ey = rx * math.cos(a), ry * math.sin(a)
+            points.append((cx + c1 * ex - s1 * ey, cy + s1 * ex + c1 * ey))
+        return points
+
+    while i < len(tokens):
+        t = tokens[i]
+        if t in "MmLlHhCcAaZz":
+            prev, cmd = cmd, t
+            i += 1
+            if cmd in ("m", "M") and prev is not None and poly:
+                subs.append(poly)
+                poly = []
+            if cmd == "Z":
+                if poly:
+                    subs.append(poly)
+                poly = []
+                cmd = "PP"
+            continue
+        if cmd == "M":
+            x, y = number(), number()
+            cur = (x, y)
+            poly.append(cur)
+            cmd = "l"
+        elif cmd == "m":
+            x, y = number(), number()
+            cur = (cur[0] + x, cur[1] + y)
+            poly.append(cur)
+            cmd = "l"
+        elif cmd == "h":
+            x = number()
+            cur = (cur[0] + x, cur[1])
+            poly.append(cur)
+        elif cmd == "H":
+            x = number()
+            cur = (x, cur[1])
+            poly.append(cur)
+        elif cmd in ("l", "L"):
+            x, y = number(), number()
+            cur = (x, y) if cmd == "L" else (cur[0] + x, cur[1] + y)
+            poly.append(cur)
+        elif cmd in ("c", "C"):
+            if cmd == "C":
+                c1x, c1y, c2x, c2y, x, y = (number() for _ in range(6))
+            else:
+                c1x, c1y = cur[0] + number(), cur[1] + number()
+                c2x, c2y = cur[0] + number(), cur[1] + number()
+                x, y = cur[0] + number(), cur[1] + number()
+            for k in range(1, 13):
+                kk = k / 12
+                bx = ((1 - kk) ** 3) * cur[0] + 3 * ((1 - kk) ** 2) * kk * c1x + 3 * (1 - kk) * (kk**2) * c2x + (kk**3) * x
+                by = ((1 - kk) ** 3) * cur[1] + 3 * ((1 - kk) ** 2) * kk * c1y + 3 * (1 - kk) * (kk**2) * c2y + (kk**3) * y
+                poly.append((bx, by))
+            cur = (x, y)
+        elif cmd in ("a", "A"):
+            rx, ry, rot, large_arc, sweep, x2, y2 = (number() for _ in range(7))
+            if cmd == "a":
+                x2, y2 = cur[0] + x2, cur[1] + y2
+            poly.extend(arc(cur[0], cur[1], rx, ry, rot, large_arc, sweep, x2, y2))
+            cur = (x2, y2)
+    if poly:
+        subs.append(poly)
+    return [p for p in subs if len(p) >= 3]
+
+
+def _point_in_polygon(x: float, y: float, poly: list[tuple[float, float]]) -> bool:
+    inside = False
+    j = len(poly) - 1
+    for k in range(len(poly)):
+        xi, yi = poly[k]
+        xj, yj = poly[j]
+        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / ((yj - yi) or 1e-12) + xi:
+            inside = not inside
+        j = k
+    return inside
+
+
+@functools.lru_cache(maxsize=4)
+def _whatsapp_icon_png(rgb: tuple[int, int, int] = WHATSAPP_GREEN) -> bytes:
+    """Rasterize the simple-icons WhatsApp glyph to an RGBA PNG (cached)."""
+    subs = _flatten_svg_path(_WHATSAPP_ICON_PATH)
+    size = 256
+    scale = size / 24.0
+    mask = PILImage.new("L", (size, size), 0)
+    for y in range(size):
+        py = y / scale
+        for x in range(size):
+            px = x / scale
+            parity = sum(1 for p in subs if _point_in_polygon(px, py, p)) % 2
+            if parity:
+                mask.putpixel((x, y), 255)
+    img = PILImage.new("RGBA", (size, size), (0, 0, 0, 0))
+    color = PILImage.new("RGBA", (size, size), (*rgb, 255))
+    img.paste(color, (0, 0), mask)
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+# Wa.me link template: message is prefilled with the product name and code.
+def wa_me_link(number: str, text: str) -> str:
+    """Build a wa.me URL with any prefilled text."""
+    return f"https://wa.me/{number}?text={quote(text)}"
+
+
+def wa_link(number: str, product_name: str, product_code: str) -> str:
+    """Build the wa.me URL with a prefilled "sigue disponible" message."""
+    text = f"Hola, sigue disponible el producto: {product_name} - {product_code}"
+    return wa_me_link(number, text)
+
+
+def _cover_phone_display(number: str) -> str:
+    """Return the cover-formatted number: last 10 digits grouped 3-3-4, no country code."""
+    digits = "".join(ch for ch in number if ch.isdigit())
+    local = digits[-10:] if len(digits) > 10 else digits
+    if len(local) > 7:
+        return f"{local[:-7]} {local[-7:-4]} {local[-4:]}"
+    if len(local) == 7:
+        return f"{local[-7:-4]} {local[-4:]}"
+    return local
 
 
 def _register_fonts(pdf: FPDF) -> None:
@@ -137,6 +342,12 @@ class PDFConfig:
     price_decimals: int = 0
     code_max_len: int = 20
     jpeg_quality: int = 85
+    contact_whatsapp: str = ""
+    contact_label: str = "Pregunta por nuestro catálogo completo"
+    brand_name: str = "Toperwereros"
+    logo_path: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "logo.png")
+    cover_wa_message: str = "Hola, quisiera preguntar sobre algunos productos disponibles"
+    cover_sample_count: int = 6
 
     @property
     def page_bottom(self) -> float:
@@ -201,6 +412,107 @@ class PDFConfig:
         pdf.set_draw_color(*self.header_line)
         pdf.line(self.margin, self.rule_y, self.margin + self.grid_width, self.rule_y)
 
+    def _new_page_with_bg(self, pdf: FPDF) -> None:
+        """Start a fresh page filled with the page color and optional pattern."""
+        pdf.add_page()
+        pdf.set_fill_color(*self.page_fill)
+        pdf.rect(0, 0, self.page_w, self.page_h, style="F")
+        if self.page_pattern:
+            try:
+                pdf.image(io.BytesIO(pattern_jpeg(self.page_pattern)), x=0, y=0, w=self.page_w, h=self.page_h)
+            except Exception:
+                logger.warning("Omitiendo patrón de fondo inválido: %s", self.page_pattern)
+
+    def render_cover(self, pdf: FPDF, products: list[Product], week_start_str: str, week_end_str: str, week_num: int) -> None:
+        """Render the catalog cover: logo, brand, validity, product gallery, WhatsApp."""
+        self._new_page_with_bg(pdf)
+        cx = self.page_w / 2
+        y = 16.0
+
+        if self.logo_path and os.path.exists(self.logo_path):
+            try:
+                logo_w = 38.0
+                pdf.image(self.logo_path, x=cx - logo_w / 2, y=y, w=logo_w, h=logo_w)
+                y += logo_w + 3
+            except Exception:
+                logger.warning("Omitiendo logo inválido: %s", self.logo_path)
+
+        pdf.set_font(self.base_family, "B", self.title_size * 2.4)
+        pdf.set_text_color(*self.title_color)
+        brand_w = pdf.get_string_width(self.brand_name)
+        pdf.set_xy(cx - brand_w / 2, y)
+        pdf.cell(brand_w, 12, self.brand_name)
+        y += 16
+
+        pdf.set_font(self.base_family, "", self.subtitle_size * 1.6)
+        pdf.set_text_color(*self.subtitle_color)
+        subtitle = f"Válido de {week_start_str} a {week_end_str}  |  semana {week_num}"
+        sub_w = pdf.get_string_width(subtitle)
+        pdf.set_xy(cx - sub_w / 2, y)
+        pdf.cell(sub_w, 6, subtitle)
+        y += 10
+
+        selected = _select_cover_products(products, week_num, self.cover_sample_count, self)
+        thumb_w, thumb_h, gap = 56.0, 52.0, 4.0
+        idx = 0
+        for count in (3, 2, 1):
+            row_w = count * thumb_w + (count - 1) * gap
+            x = cx - row_w / 2
+            for _ in range(count):
+                if idx < len(selected):
+                    product = selected[idx]
+                    try:
+                        pdf.image(
+                            cover_image(self._get_image_bytes(product), self, target_w=thumb_w, target_h=thumb_h),
+                            x=x, y=y, w=thumb_w, h=thumb_h,
+                        )
+                    except Exception:
+                        draw_placeholder(pdf, x, y, product.name, self)
+                idx += 1
+                x += thumb_w + gap
+            y += thumb_h + gap
+
+        if self.contact_whatsapp:
+            box_w, box_h = 74, 26
+            box_x, box_y = cx - box_w / 2, self.page_h - 46
+            url = wa_me_link(self.contact_whatsapp, self.cover_wa_message)
+            pdf.set_fill_color(*self.card_fill)
+            pdf.set_draw_color(*self.band_fill)
+            pdf.set_line_width(self.card_border_width)
+            pdf.rect(box_x, box_y, box_w, box_h, style="DF", round_corners=True, corner_radius=self.card_corner_radius)
+
+            pdf.set_font(self.base_family, "", self.price_size)
+            pdf.set_text_color(*self.subtitle_color)
+            label = self.contact_label
+            label_w = pdf.get_string_width(label)
+            pdf.set_xy(cx - label_w / 2, box_y + 1.7)
+            pdf.cell(label_w, 6, label)
+
+            btn_h = 15
+            btn_y = box_y + 9
+            pdf.set_font(self.base_family, "B", self.price_size)
+            icon_w = 8
+            icon_gap = 1.5
+            pad_x = 4.5
+            text_w = pdf.get_string_width("WhatsApp")
+            block_w = icon_w + icon_gap + text_w
+            phone = _cover_phone_display(self.contact_whatsapp)
+            phone_w = pdf.get_string_width(phone)
+            btn_w = max(block_w, phone_w) + 2 * pad_x
+            btn_x = cx - btn_w / 2
+            pdf.set_text_color(*self.band_text)
+            pdf.set_fill_color(*self.band_fill)
+            pdf.rect(btn_x, btn_y, btn_w, btn_h, style="F", round_corners=True, corner_radius=self.band_corner_radius)
+
+            block_x = cx - block_w / 2
+            icon_y = btn_y + 1.0
+            pdf.image(io.BytesIO(_whatsapp_icon_png(self.band_text)), x=block_x, y=icon_y, w=icon_w, h=icon_w)
+            pdf.set_xy(block_x + icon_w + icon_gap, btn_y + 0.75)
+            pdf.cell(text_w, 8, "WhatsApp")
+            pdf.set_xy(cx - phone_w / 2, btn_y + 9.0)
+            pdf.cell(phone_w, 6, phone)
+            pdf.link(box_x, box_y, box_w, box_h, url)
+
     def render_card(self, pdf: FPDF, x: float, y: float, product: Product) -> None:
         """Draw one product card: image, name, and price band with code."""
         pdf.set_line_width(self.card_border_width)
@@ -255,22 +567,52 @@ class PDFConfig:
         pdf.cell(pdf.get_string_width(price_str), self.band_height, price_str)
 
         code_str = product.code[:self.code_max_len]
-        pdf.set_font(self.code_family, "", self.code_size)
-        code_w = pdf.get_string_width(code_str)
-        code_x = band_x + band_w - self.price_padding_x - code_w
-        pdf.set_xy(code_x, band_y)
-        pdf.cell(code_w, self.band_height, code_str)
+        if self.contact_whatsapp:
+            pdf.set_font(self.base_family, "B", self.price_size * 0.75)
+            pdf.set_text_color(*self.band_text)
+            label = "Escríbenos a "
+            label_w = pdf.get_string_width(label)
+            icon_w = self.band_height * 0.7
+            gap = 1.0
+            block_w = label_w + gap + icon_w
+            price_w = pdf.get_string_width(f"{self.price_prefix}{product.price:.{self.price_decimals}f}")
+            max_x = band_x + band_w - self.price_padding_x
+            available = max_x - (band_x + self.price_padding_x + price_w)
+            if block_w > available and available > 0:
+                scale = (available - gap - icon_w) / label_w
+                font_size = max(self.price_size * 0.75 * scale, 3.5)
+                pdf.set_font(self.code_family, "", font_size)
+                label = "Escríbenos"
+                label_w = pdf.get_string_width(label)
+                block_w = label_w + gap + icon_w
+            x0 = band_x + band_w - self.price_padding_x - block_w
+            pdf.set_xy(x0, band_y)
+            pdf.cell(label_w, self.band_height, label)
+            icon_y = band_y + (self.band_height - icon_w) / 2
+            pdf.image(
+                io.BytesIO(_whatsapp_icon_png()),
+                x=x0 + label_w + gap,
+                y=icon_y,
+                w=icon_w,
+                h=icon_w,
+            )
+            pdf.link(x0, band_y, block_w, self.band_height, wa_link(self.contact_whatsapp, product.name, product.code))
+        else:
+            pdf.set_font(self.code_family, "", self.code_size)
+            code_w = pdf.get_string_width(code_str)
+            code_x = band_x + band_w - self.price_padding_x - code_w
+            pdf.set_xy(code_x, band_y)
+            pdf.cell(code_w, self.band_height, code_str)
 
     def render_pdf(self, products: list[Product], week_start_str: str, week_end_str: str, week_num: int) -> bytes:
         """Render the ordered products to a multi-page PDF byte string."""
         pdf = FPDF()
         pdf.set_auto_page_break(auto=False)
         _register_fonts(pdf)
-        self.render_page_header(pdf, week_start_str, week_end_str, week_num)
+        self.render_cover(pdf, products, week_start_str, week_end_str, week_num)
         t_cards = time.perf_counter()
-        for idx, page_products in enumerate(paginate(products, self)):
-            if idx > 0:
-                self.render_page_header(pdf, week_start_str, week_end_str, week_num)
+        for page_products in paginate(products, self):
+            self.render_page_header(pdf, week_start_str, week_end_str, week_num)
             for i, product in enumerate(page_products):
                 col = i % self.cols
                 row = i // self.cols
@@ -281,25 +623,85 @@ class PDFConfig:
         logger.debug("catalog_pdf: drew %d cards in %.2fs (avg %.3fs)", len(products), card_seconds, card_seconds / max(len(products), 1))
         return bytes(pdf.output())
 
-    def _card_html(self, product: Product) -> str:
-        name = escape(product.name)
-        code = escape(product.code[:self.code_max_len])
-        price = escape(f"{self.price_prefix}{product.price:.{self.price_decimals}f}")
+    def _image_html(self, product: Product) -> str:
+        """Build the product image HTML (<img> or placeholder letter)."""
         if product.image_url and self._image_exists(product.image_url):
             if GCS_BUCKET:
                 from app.gcs import resolve_image_url
                 img_src = resolve_image_url(product.image_url, expires_hours=168)
             else:
                 img_src = product.image_url
-            image = f'<img src="{escape(img_src)}" alt="">'
+            return f'<img src="{escape(img_src)}" alt="">'
+        return f'<span class="initial">{escape(product.name[:1].upper())}</span>'
+
+    def _card_html(self, product: Product) -> str:
+        name = escape(product.name)
+        code = escape(product.code[:self.code_max_len])
+        price = escape(f"{self.price_prefix}{product.price:.{self.price_decimals}f}")
+        image = self._image_html(product)
+        if self.contact_whatsapp:
+            href = escape(wa_link(self.contact_whatsapp, product.name, product.code))
+            band_right = (
+                f'<a class="card-wa" href="{href}" target="_blank" rel="noopener noreferrer">'
+                f'Escríbenos a {_WHATSAPP_ICON_SVG}</a>'
+            )
         else:
-            image = f'<span class="initial">{escape(product.name[:1].upper())}</span>'
+            band_right = f'<span class="product-code">{code}</span>'
         return (
             f'<div class="card"><div class="product-image">{image}</div>'
             f'<div class="product-name">{name}</div>'
             f'<div class="product-price"><span>{price}</span>'
-            f'<span class="product-code">{code}</span></div></div>'
+            f'{band_right}</div></div>'
         )
+
+    def render_cover_html(self, products: list[Product], week_start_str: str, week_end_str: str, week_num: int) -> str:
+        """Render the catalog cover page (self-contained HTML snippet)."""
+        parts = ['<div class="page page-cover">', '<div class="cover-inner">']
+        if self.logo_path and os.path.exists(self.logo_path):
+            try:
+                with open(self.logo_path, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode("ascii")
+                parts.append(
+                    f'<img class="cover-logo" src="data:image/png;base64,{b64}" alt="{escape(self.brand_name)}">'
+                )
+            except Exception:
+                logger.warning("Omitiendo logo inválido: %s", self.logo_path)
+        parts.append(f'<div class="cover-title">{escape(self.brand_name)}</div>')
+        parts.append(
+            f'<div class="cover-subtitle">Válido de {escape(week_start_str)} a {escape(week_end_str)}'
+            f'&nbsp;&nbsp;|&nbsp;&nbsp;semana {week_num}</div>'
+        )
+        selected = _select_cover_products(products, week_num, self.cover_sample_count, self)
+        parts.append('<div class="cover-gallery">')
+        idx = 0
+        for count in (3, 2, 1):
+            parts.append('<div class="cover-gallery-row">')
+            for _ in range(count):
+                if idx < len(selected):
+                    parts.append(f'<div class="cover-gallery-cell">{self._image_html(selected[idx])}</div>')
+                else:
+                    parts.append('<div class="cover-gallery-cell"></div>')
+                idx += 1
+            parts.append('</div>')
+        parts.append('</div>')
+        if self.contact_whatsapp:
+            href = escape(wa_me_link(self.contact_whatsapp, self.cover_wa_message))
+            icon_svg = (
+                '<svg class="cover-contact__wa-icon" viewBox="0 0 24 24" fill="currentColor" '
+                'xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
+                f'<path d="{_WHATSAPP_ICON_PATH}"/></svg>'
+            )
+            parts.append('<div class="cover-contact">')
+            parts.append(f'<div class="cover-contact__label">{escape(self.contact_label)}</div>')
+            parts.append(
+                f'<a class="cover-contact__wa" href="{href}">'
+                f'<span class="cover-contact__wa-line">{icon_svg}WhatsApp</span>'
+                f'<span class="cover-contact__wa-num">{escape(_cover_phone_display(self.contact_whatsapp))}</span>'
+                '</a>'
+            )
+            parts.append('</div>')
+        parts.append('</div></div>')
+        return "\n".join(parts)
 
     def render_html(self, products: list[Product], week_start_str: str, week_end_str: str, week_num: int) -> str:
         """Render the ordered products to a printable HTML document."""
@@ -310,6 +712,7 @@ class PDFConfig:
             f"<style>{self._css()}</style>",
             "</head><body>",
         ]
+        parts.append(self.render_cover_html(products, week_start_str, week_end_str, week_num))
         for page_products in paginate(products, self):
             parts.append('<div class="page">')
             parts.append('<header class="page-header">')
@@ -429,7 +832,28 @@ body {{ margin: 0; background: var(--color-page); font-family: var(--font-family
 
 .product-code {{ font-family: var(--font-family-code); font-size: var(--code-font); font-weight: normal; color: var(--color-band-text); white-space: nowrap; }}
 
+.card-wa {{ display: inline-flex; align-items: center; gap: 2mm; font-family: var(--font-family-code); font-size: calc(var(--price-font) * 0.75); font-weight: bold; color: var(--color-band-text); white-space: nowrap; text-decoration: none; }}
+.card-wa__icon {{ width: 3mm; height: 3mm; flex-shrink: 0; }}
+
 .product-price {{ margin: var(--price-margin); height: var(--price-h); background: var(--color-band); border-radius: var(--price-radius); display: flex; justify-content: space-between; align-items: center; padding: 0 var(--price-padding-x); font-size: var(--price-font); font-weight: bold; color: var(--color-band-text); white-space: nowrap; }}
+
+/* --- portada --- */
+.page-cover {{ display: flex; align-items: center; justify-content: center; }}
+.cover-inner {{ display: flex; flex-direction: column; align-items: center; gap: 1.2mm; max-width: 80%; text-align: center; }}
+.cover-logo {{ max-width: 42mm; max-height: 42mm; object-fit: contain; }}
+.cover-title {{ font-size: {pt(self.title_size * 2.4)}; font-weight: bold; color: var(--color-title); }}
+.cover-subtitle {{ font-size: {pt(self.subtitle_size * 1.6)}; color: var(--color-subtitle); }}
+.cover-gallery {{ display: flex; flex-direction: column; align-items: center; gap: 3mm; margin-top: 8mm; }}
+.cover-gallery-row {{ display: flex; gap: 3mm; justify-content: center; }}
+.cover-gallery-cell {{ width: 56mm; height: 52mm; overflow: hidden; border-radius: var(--card-radius); border: 0.3px solid var(--color-header-rule); background: var(--color-image-bg); }}
+.cover-gallery-cell img {{ width: 100%; height: 100%; object-fit: cover; }}
+.cover-gallery-cell .initial {{ display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: {pt(self.placeholder_size)}; font-weight: bold; color: var(--color-image-initial); }}
+.cover-contact {{ margin-top: 6mm; border: 0.4mm solid var(--color-band); border-radius: var(--card-radius); padding: 5mm 8mm; display: flex; flex-direction: column; align-items: center; gap: 1.6mm; background: var(--color-surface); }}
+.cover-contact__label {{ font-size: {pt(self.price_size)}; color: var(--color-subtitle); }}
+.cover-contact__wa {{ display: inline-flex; flex-direction: column; align-items: center; gap: 0.4mm; font-size: {pt(self.price_size)}; font-weight: bold; color: var(--color-band-text); background: var(--color-band); border-radius: var(--price-radius); padding: 1.6mm 6mm; text-decoration: none; }}
+.cover-contact__wa-line {{ display: inline-flex; align-items: center; gap: 1.5mm; }}
+.cover-contact__wa-num {{ font-weight: bold; }}
+.cover-contact__wa-icon {{ width: {pt(self.price_size)}; height: {pt(self.price_size)}; }}
 """
 
 
@@ -928,7 +1352,16 @@ def order_recent_first(products: list[Product], recent_count: int = RECENT_CATAL
     return recent + rest
 
 
-def cover_image(source: str | io.BytesIO, cfg: PDFConfig = DEFAULT_PDF_CONFIG) -> io.BytesIO:
+def _select_cover_products(products: list[Product], week_num: int, n: int, cfg: PDFConfig) -> list[Product]:
+    """Pick up to ``n`` products with an available image, deterministically by week."""
+    with_image = [p for p in products if cfg._get_image_bytes(p)]
+    if not with_image:
+        return []
+    rng = random.Random(week_num * 7919 % 2**31)
+    return rng.sample(with_image, min(n, len(with_image)))
+
+
+def cover_image(source: str | io.BytesIO, cfg: PDFConfig = DEFAULT_PDF_CONFIG, target_w: float | None = None, target_h: float | None = None) -> io.BytesIO:
     """Crop and resize an image to fill the PDF card dimensions at 72 DPI.
 
     The image is center-cropped to maintain aspect ratio, then saved as a
@@ -937,6 +1370,8 @@ def cover_image(source: str | io.BytesIO, cfg: PDFConfig = DEFAULT_PDF_CONFIG) -
     Args:
         source: Absolute path to the source image file, or a BytesIO object.
         cfg: PDF configuration for the target image size and JPEG quality.
+        target_w: Override image width in mm (defaults to ``cfg.img_w``).
+        target_h: Override image height in mm (defaults to ``cfg.img_h``).
 
     Returns:
         A ``BytesIO`` buffer containing the resized JPEG image data.
@@ -947,8 +1382,8 @@ def cover_image(source: str | io.BytesIO, cfg: PDFConfig = DEFAULT_PDF_CONFIG) -
     """
 
     dpi = 72
-    target_w = int(cfg.img_w * dpi / 25.4)
-    target_h = int(cfg.img_h * dpi / 25.4)
+    target_w = int((target_w or cfg.img_w) * dpi / 25.4)
+    target_h = int((target_h or cfg.img_h) * dpi / 25.4)
     img = PILImage.open(source)
     img = img.convert("RGB")
     ratio = max(target_w / img.width, target_h / img.height)
@@ -1115,6 +1550,8 @@ def catalog_pdf(
 
     try:
         cfg = apply_theme(DEFAULT_PDF_CONFIG, theme)
+        if WHATSAPP_NUMBER:
+            cfg = replace(cfg, contact_whatsapp=WHATSAPP_NUMBER)
 
         today = date.today()
         monday = today - timedelta(days=today.weekday())

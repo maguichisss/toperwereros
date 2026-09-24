@@ -57,15 +57,15 @@
 </div>
 
 <div class="grid">
-<div class="stat"><div class="num">46</div><div class="label">Endpoints</div></div>
-<div class="stat"><div class="num">9</div><div class="label">Modules</div></div>
+<div class="stat"><div class="num">48</div><div class="label">Endpoints</div></div>
+<div class="stat"><div class="num">10</div><div class="label">Modules</div></div>
 <div class="stat"><div class="num">3</div><div class="label">Roles</div></div>
-<div class="stat"><div class="num">15</div><div class="label">Permissions</div></div>
+<div class="stat"><div class="num">21</div><div class="label">Permissions</div></div>
 </div>
 <h1>Store Catalog API Reference</h1>
 <blockquote>
 <p>This document is the <strong>single source of truth</strong> for the public API contract.
-It is rendered into <a href="../backend/docs.html"><code>backend/docs.html</code></a> by <a href="../backend/scripts/gen_api_docs.py"><code>backend/scripts/gen_api_docs.py</code></a>
+It is rendered into <a href="../backend/docs.html"><code>backend/docs.html</code></a> by <a href="../scripts/generate_docs_html.py"><code>scripts/generate_docs_html.py</code></a>
 and served at <code>/docs</code>. Two pytest guards (<a href="../backend/tests/test_docs_permissions.py"><code>test_docs_permissions.py</code></a>,
 <a href="../backend/tests/test_docs_generated.py"><code>test_docs_generated.py</code></a>) keep it in sync with the code.
 Interactive schemas: <code>/swagger</code> (OpenAPI) · <code>/redoc</code> · <code>/openapi.json</code>.</p>
@@ -75,8 +75,6 @@ Interactive schemas: <code>/swagger</code> (OpenAPI) · <code>/redoc</code> · <
 categories, colors, image upload, PDF catalog generation, sales (POS),
 customers, and layaways (apartados). Every endpoint except <code>POST /api/auth/login</code>
 requires a JWT Bearer token. Response/error messages are in Spanish.</p>
-<p><strong>Stats</strong> — Endpoints: <strong>46</strong> · Modules: <strong>9</strong> · Roles: <strong>3</strong> ·
-Employee permissions: <strong>15</strong></p>
 <h2>Authentication</h2>
 <p>All endpoints except <code>POST /api/auth/login</code> require:</p>
 <pre><code>Authorization: Bearer &lt;access_token&gt;
@@ -111,7 +109,7 @@ Employee permissions: <strong>15</strong></p>
 </tr>
 <tr>
 <td>Login lockout</td>
-<td>5 failed attempts → locked for <code>LOCKOUT_DURATION_MINUTES</code> (15)</td>
+<td>5 failed attempts -&gt; locked for <code>LOCKOUT_DURATION_MINUTES</code> (15)</td>
 </tr>
 </tbody>
 </table>
@@ -146,11 +144,11 @@ refresh token for a new access+refresh pair (the old one is revoked).</p>
 </tbody>
 </table>
 <h3>Permission matrix (machine-readable source)</h3>
-<p>This block is authoritative for the permission drift test — it must equal
+<p>This block is authoritative for the permission drift test -- it must equal
 <code>app.auth.ROLE_PERMISSIONS</code>.</p>
 <!-- ROLES:START -->
 
-<pre><code class="language-json">{&quot;admin&quot;: [&quot;*&quot;], &quot;employee&quot;: [&quot;product.view&quot;, &quot;product.create&quot;, &quot;product.edit&quot;, &quot;product.delete&quot;, &quot;sale.view&quot;, &quot;sale.create&quot;, &quot;apartado.view&quot;, &quot;apartado.create&quot;, &quot;apartado.edit&quot;, &quot;customer.view&quot;, &quot;customer.create&quot;, &quot;customer.edit&quot;, &quot;customer.delete&quot;, &quot;category.view&quot;, &quot;color.view&quot;], &quot;viewer&quot;: [&quot;product.view&quot;, &quot;sale.view&quot;, &quot;apartado.view&quot;, &quot;customer.view&quot;, &quot;category.view&quot;, &quot;color.view&quot;]}
+<pre><code class="language-json">{&quot;admin&quot;:[&quot;*&quot;],&quot;employee&quot;:[&quot;product.view&quot;,&quot;product.create&quot;,&quot;product.edit&quot;,&quot;product.delete&quot;,&quot;sale.view&quot;,&quot;sale.create&quot;,&quot;apartado.view&quot;,&quot;apartado.create&quot;,&quot;apartado.edit&quot;,&quot;customer.view&quot;,&quot;customer.create&quot;,&quot;customer.edit&quot;,&quot;customer.delete&quot;,&quot;category.view&quot;,&quot;color.view&quot;],&quot;viewer&quot;:[&quot;product.view&quot;,&quot;sale.view&quot;,&quot;apartado.view&quot;,&quot;customer.view&quot;,&quot;category.view&quot;,&quot;color.view&quot;]}
 </code></pre>
 <!-- ROLES:END -->
 
@@ -166,48 +164,6 @@ refresh token for a new access+refresh pair (the old one is revoked).</p>
 </thead>
 <tbody>
 <tr>
-<td><code>product.view</code></td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td><code>product.create</code></td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td><code>product.edit</code></td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td><code>product.delete</code></td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td><code>sale.view</code></td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td><code>sale.create</code></td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td><code>apartado.view</code></td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
 <td><code>apartado.create</code></td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
@@ -220,7 +176,19 @@ refresh token for a new access+refresh pair (the old one is revoked).</p>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td><code>customer.view</code></td>
+<td><code>apartado.view</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+<tr>
+<td><code>category.view</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+<tr>
+<td><code>color.view</code></td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
@@ -232,54 +200,92 @@ refresh token for a new access+refresh pair (the old one is revoked).</p>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td><code>customer.edit</code></td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
 <td><code>customer.delete</code></td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td><code>category.view</code></td>
+<td><code>customer.edit</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>customer.view</code></td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
 </tr>
 <tr>
-<td><code>category.create</code> / <code>category.edit</code> / <code>category.delete</code></td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;"></td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td><code>color.view</code></td>
+<td><code>product.create</code></td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td><code>color.create</code> / <code>color.edit</code> / <code>color.delete</code></td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;"></td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td><code>user.manage</code></td>
+<td><code>product.delete</code></td>
+<td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>product.edit</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
 <td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>product.view</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+<tr>
+<td><code>sale.create</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td><code>sale.view</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
 </tr>
 </tbody>
 </table>
 <p>Admin bypasses all checks via the <code>*</code> wildcard; permission strings may also be
 matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> satisfies
 <code>product.view</code>).</p>
+<h3>Permission inventory &amp; coverage</h3>
+<p>Computed from the live routes and <code>ROLE_PERMISSIONS</code>; enforced by
+<a href="../backend/tests/test_route_permissions.py"><code>test_route_permissions.py</code></a>.</p>
+<pre><code class="language-text">Permission Coverage Report
+==================================================
+Total routes analyzed:    48
+  Public:                 2
+  With permission:        39
+  Authenticated only:     5
+  (allowlisted):          5
+  (violations):           0
+
+Permissions:
+  In inventory (declared ∪ explicit): 22
+  Declared on routes:                 22
+  Undefined (not in inventory):       0
+  Truly unused:                       0
+  Admin-only (wildcard):              7
+
+Coverage Tiers:
+  ✅ Explicitly assigned:    15   (explicitly given to employee/viewer)
+  🔑 Admin-only (wildcard):   7   (only admin reaches them)
+  ❌ Truly unused:            0   (not declared anywhere)
+
+Total: 22 = 15 + 7 + 0
+</code></pre>
 <h2>Endpoint Reference</h2>
-<h3>Auth — <code>/api/auth</code></h3>
+<h3>Auth -- <code>/api/auth</code></h3>
 <table>
 <thead>
 <tr>
@@ -292,85 +298,85 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <tbody>
 <tr>
 <td>POST</td>
-<td><code>/api/auth/login</code></td>
+<td><code>/api/auth/avatar</code></td>
 <td>public</td>
-<td>Authenticate; returns <code>access_token</code> + <code>refresh_token</code>. Rate-limited 5/min/IP.</td>
-</tr>
-<tr>
-<td>POST</td>
-<td><code>/api/auth/refresh</code></td>
-<td>refresh token</td>
-<td>Rotate tokens. Rate-limited 10/min/IP.</td>
-</tr>
-<tr>
-<td>POST</td>
-<td><code>/api/auth/logout</code></td>
-<td>authenticated</td>
-<td>Revoke all refresh tokens for the user.</td>
-</tr>
-<tr>
-<td>GET</td>
-<td><code>/api/auth/me</code></td>
-<td>authenticated</td>
-<td>Current user profile (id, username, email, role, avatar).</td>
-</tr>
-<tr>
-<td>GET</td>
-<td><code>/api/auth/roles</code></td>
-<td><code>user.manage</code></td>
-<td>List roles ordered by id.</td>
-</tr>
-<tr>
-<td>POST</td>
-<td><code>/api/auth/roles</code></td>
-<td><code>user.manage</code></td>
-<td>Create role (name lowered, unique). Rate-limited via register bucket.</td>
+<td>Upload a profile avatar image. Validates magic bytes (JPEG/PNG/WebP) and enforces a 5 MB size limit. Rate-limited to 3 attempts per minute per IP.</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/api/auth/change-password</code></td>
-<td>authenticated</td>
-<td>Change own password (min 4 chars); revokes all sessions. Rate-limited 1/min/IP.</td>
+<td>public</td>
+<td>Change the authenticated user's password. New password must be at least 4 characters. Rate-limited to 1 attempt per minute per IP.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/login</code></td>
+<td>public</td>
+<td>Authenticate with username/password and receive a JWT token. Rate-limited to 5 attempts per minute per IP.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/logout</code></td>
+<td>public</td>
+<td>Revoke all refresh tokens for the authenticated user.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/auth/me</code></td>
+<td>public</td>
+<td>Return the authenticated user's profile including id, username, email, role, and avatar.</td>
 </tr>
 <tr>
 <td>PATCH</td>
 <td><code>/api/auth/profile</code></td>
-<td>authenticated</td>
-<td>Update own <code>email</code> and/or <code>image_url</code> (email uniqueness enforced).</td>
+<td>public</td>
+<td>Update own email and/or avatar URL. Email uniqueness is enforced across users.</td>
 </tr>
 <tr>
 <td>POST</td>
-<td><code>/api/auth/avatar</code></td>
-<td>authenticated</td>
-<td>Upload avatar (JPEG/PNG/WebP, ≤ 5 MB); deletes previous. Rate-limited 3/min/IP.</td>
-</tr>
-<tr>
-<td>GET</td>
-<td><code>/api/auth/users</code></td>
-<td><code>user.manage</code></td>
-<td>List all users ordered by username.</td>
+<td><code>/api/auth/refresh</code></td>
+<td>public</td>
+<td>Exchange a valid refresh token for a new access+refresh token pair. Old refresh token is revoked (rotation).</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/api/auth/register</code></td>
 <td><code>user.manage</code></td>
-<td>Create user (unique username/email lowercased). Rate-limited 5/min/IP.</td>
+<td>Create a new user account. Username and email must be unique. Requires admin (user.manage) permission. Rate-limited to 5 attempts per minute per IP.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/auth/roles</code></td>
+<td><code>user.manage</code></td>
+<td>Return all roles. Requires admin (user.manage) permission.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/auth/roles</code></td>
+<td><code>user.manage</code></td>
+<td>Create a new role. Requires admin (user.manage) permission.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/auth/users</code></td>
+<td><code>user.manage</code></td>
+<td>Return all users ordered by username. Requires admin (user.manage) permission.</td>
 </tr>
 <tr>
 <td>PUT</td>
 <td><code>/api/auth/users/{user_id}</code></td>
 <td><code>user.manage</code></td>
-<td>Update user fields; cannot change own role or deactivate self.</td>
+<td>Admin-only. Update username, email, role, password, or active status of a user.</td>
 </tr>
 <tr>
 <td>PATCH</td>
 <td><code>/api/auth/users/{user_id}/active</code></td>
 <td><code>user.manage</code></td>
-<td>Toggle active/disabled; cannot deactivate self.</td>
+<td>Enable or disable a user account. Admin only. Cannot deactivate yourself.</td>
 </tr>
 </tbody>
 </table>
-<h3>Products — <code>/api/products</code></h3>
+<h3>Products -- <code>/api/products</code></h3>
 <table>
 <thead>
 <tr>
@@ -385,35 +391,35 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>GET</td>
 <td><code>/api/products</code></td>
 <td><code>product.view</code></td>
-<td>Paginated list (only <code>stock &gt; 0</code>). Query: <code>q</code> (search), <code>category_ids</code>, <code>page</code> (≥1), <code>per_page</code> (1–200, default 20), <code>export</code> (skip pagination), plus the shared Query DSL (<code>skip</code>/<code>limit</code>, <code>field__op</code> operators, <code>modo</code>/<code>campos</code>). Search matches code, name, ubicacion, price, category name, color name (ILIKE, escaped).</td>
-</tr>
-<tr>
-<td>GET</td>
-<td><code>/api/products/{product_id}</code></td>
-<td><code>product.view</code></td>
-<td>Single product with categories and colors.</td>
+<td>Paginated product list with full-text search (code, name, ubicacion, price, category, color), category filtering, and export mode.</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/api/products</code></td>
 <td><code>product.create</code></td>
-<td>Create product: unique code, name/code required, price ≥ 0, referenced categories/colors must exist.</td>
+<td>Create a new product. Requires unique code, valid price (&gt;= 0), and existing category/color IDs.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/products/{product_id}</code></td>
+<td><code>product.view</code></td>
+<td>Return a single product by ID with categories and colors loaded.</td>
 </tr>
 <tr>
 <td>PUT</td>
 <td><code>/api/products/{product_id}</code></td>
 <td><code>product.edit</code></td>
-<td>Full update; replaces categories/colors; deletes the old image file when <code>image_url</code> changes.</td>
+<td>Full product update. Old image file is deleted from disk when image_url changes.</td>
 </tr>
 <tr>
 <td>DELETE</td>
 <td><code>/api/products/{product_id}</code></td>
 <td><code>product.delete</code></td>
-<td>Delete product and its image file (204).</td>
+<td>Delete a product and remove its image file from disk.</td>
 </tr>
 </tbody>
 </table>
-<h3>Categories — <code>/api/categories</code></h3>
+<h3>Categories -- <code>/api/categories</code></h3>
 <table>
 <thead>
 <tr>
@@ -428,29 +434,29 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>GET</td>
 <td><code>/api/categories</code></td>
 <td><code>category.view</code></td>
-<td>List all categories (alphabetical). Shared Query DSL supported (<code>skip</code>/<code>limit</code>, operators, <code>modo</code>/<code>campos</code>).</td>
+<td>Return all categories ordered alphabetically.</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/api/categories</code></td>
 <td><code>category.create</code></td>
-<td>Create category (name unique, lowered).</td>
+<td>Create a new category. Name must be non-empty and unique.</td>
 </tr>
 <tr>
 <td>PUT</td>
 <td><code>/api/categories/{category_id}</code></td>
 <td><code>category.edit</code></td>
-<td>Update category name.</td>
+<td>Update a category's name. New name must be unique.</td>
 </tr>
 <tr>
 <td>DELETE</td>
 <td><code>/api/categories/{category_id}</code></td>
 <td><code>category.delete</code></td>
-<td>Delete; <strong>409</strong> if assigned to any product.</td>
+<td>Delete a category. Blocked with 409 if the category is assigned to any product.</td>
 </tr>
 </tbody>
 </table>
-<h3>Colors — <code>/api/colors</code></h3>
+<h3>Colors -- <code>/api/colors</code></h3>
 <table>
 <thead>
 <tr>
@@ -465,29 +471,29 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>GET</td>
 <td><code>/api/colors</code></td>
 <td><code>color.view</code></td>
-<td>List all colors (alphabetical). Shared Query DSL supported (<code>skip</code>/<code>limit</code>, operators, <code>modo</code>/<code>campos</code>).</td>
+<td>Return all colors ordered alphabetically.</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/api/colors</code></td>
 <td><code>color.create</code></td>
-<td>Create color; <code>hex</code> must match <code>#RRGGBB</code>, name unique and lowered.</td>
+<td>Create a new color. Name must be unique. Hex must match #RRGGBB format.</td>
 </tr>
 <tr>
 <td>PUT</td>
 <td><code>/api/colors/{color_id}</code></td>
 <td><code>color.edit</code></td>
-<td>Update name and/or hex.</td>
+<td>Update a color's name and hex code. Both must be valid and unique.</td>
 </tr>
 <tr>
 <td>DELETE</td>
 <td><code>/api/colors/{color_id}</code></td>
 <td><code>color.delete</code></td>
-<td>Delete; <strong>409</strong> if assigned to any product.</td>
+<td>Delete a color. Blocked with 409 if the color is assigned to any product.</td>
 </tr>
 </tbody>
 </table>
-<h3>Upload — <code>/api/upload</code></h3>
+<h3>Upload -- <code>/api/upload</code></h3>
 <table>
 <thead>
 <tr>
@@ -502,11 +508,11 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>POST</td>
 <td><code>/api/upload</code></td>
 <td><code>product.edit</code></td>
-<td>Upload product image. Magic bytes (JPEG/PNG/WebP), ≤ 5 MB, ≥ 8 bytes. Returns <code>{"image_url": "/uploads/&lt;uuid&gt;.&lt;ext&gt;"}</code>. Rate-limited 5/min/IP.</td>
+<td>Upload a product image. Validates magic bytes (JPEG/PNG/WebP) and enforces a 5 MB size limit. Returns the URL path; link to a product via PUT /api/products/{id}. Rate-limited to 5 attempts per minute per IP.</td>
 </tr>
 </tbody>
 </table>
-<h3>Catalog — <code>/api/catalog</code></h3>
+<h3>Catalog -- <code>/api/catalog</code></h3>
 <table>
 <thead>
 <tr>
@@ -521,11 +527,11 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>GET</td>
 <td><code>/api/catalog/pdf</code></td>
 <td><code>product.view</code></td>
-<td>Generate PDF (default), CSV, or HTML catalog. Only in-stock products. Query: <code>ids</code> (comma ints), <code>q</code> (search), <code>format</code> (<code>pdf</code>|<code>csv</code>|<code>html</code>), <code>theme</code>, plus Query DSL field filters (<code>category__eq</code>, <code>color__eq</code>, <code>ubicacion__contains</code>, <code>price__gte</code>/<code>price__lte</code>, <code>stock__gte</code>, <code>created_at__gte</code>/<code>created_at__lte</code>, …). CSV: UTF-8 BOM; columns <code>codigo,nombre,categorias,colores,precio,stock,ubicacion,total,fecha_creacion</code>. Ordering and themes documented under Business Rules.</td>
+<td>Generate a printable product catalog as PDF (default), CSV, or HTML. 4-column card grid, 16 products per page. Only in-stock products. Optional comma-separated product IDs, free-text search filters, Query DSL field filters, and visual theme.</td>
 </tr>
 </tbody>
 </table>
-<h3>Sales — <code>/api/sales</code></h3>
+<h3>Sales -- <code>/api/sales</code></h3>
 <table>
 <thead>
 <tr>
@@ -540,23 +546,23 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>GET</td>
 <td><code>/api/sales</code></td>
 <td><code>sale.view</code></td>
-<td>Paginated list, newest first, with line items and creator name. Query: <code>page</code> (≥1), <code>per_page</code> (1–100, default 20), <code>start_date</code>, <code>end_date</code> (<code>YYYY-MM-DD</code>, inclusive), plus the shared Query DSL.</td>
-</tr>
-<tr>
-<td>GET</td>
-<td><code>/api/sales/{sale_id}</code></td>
-<td><code>sale.view</code></td>
-<td>Single sale with all line items.</td>
+<td>Paginated list of sales, newest first. Each sale includes line items and creator username.</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/api/sales</code></td>
 <td><code>sale.create</code></td>
-<td>Create sale. At least one item, atomic stock decrement via savepoint, unit price captured from product at sale time, <code>created_by</code> = authenticated user.</td>
+<td>Create a new sale. Atomic stock decrement via savepoint. Unit price is captured from the product at sale time. created_by tracks the authenticated user.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/sales/{sale_id}</code></td>
+<td><code>sale.view</code></td>
+<td>Return a single sale by ID with all line items and product details.</td>
 </tr>
 </tbody>
 </table>
-<h3>Customers — <code>/api/customers</code></h3>
+<h3>Customers -- <code>/api/customers</code></h3>
 <table>
 <thead>
 <tr>
@@ -571,35 +577,35 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>GET</td>
 <td><code>/api/customers</code></td>
 <td><code>customer.view</code></td>
-<td>List customers; <code>q</code> matches <code>name</code> or <code>phone</code> (ILIKE); ordered by name. Shared Query DSL supported (<code>skip</code>/<code>limit</code>, operators, <code>modo</code>/<code>campos</code>).</td>
-</tr>
-<tr>
-<td>GET</td>
-<td><code>/api/customers/{customer_id}</code></td>
-<td><code>customer.view</code></td>
-<td>Single customer.</td>
+<td>Return all customers, optionally filtered by name or phone (ILIKE search).</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/api/customers</code></td>
 <td><code>customer.create</code></td>
-<td>Create customer (name required; phone/email/notes optional).</td>
+<td>Create a new customer record with name, phone, email, and notes.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/customers/{customer_id}</code></td>
+<td><code>customer.view</code></td>
+<td>Return a single customer by ID.</td>
 </tr>
 <tr>
 <td>PUT</td>
 <td><code>/api/customers/{customer_id}</code></td>
 <td><code>customer.edit</code></td>
-<td>Update customer fields.</td>
+<td>Update an existing customer's profile fields.</td>
 </tr>
 <tr>
 <td>DELETE</td>
 <td><code>/api/customers/{customer_id}</code></td>
 <td><code>customer.delete</code></td>
-<td>Delete customer (204).</td>
+<td>Delete a customer record.</td>
 </tr>
 </tbody>
 </table>
-<h3>Layaways (apartados) — <code>/api/layaways</code></h3>
+<h3>Layaways (apartados) -- <code>/api/layaways</code></h3>
 <table>
 <thead>
 <tr>
@@ -614,61 +620,61 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <td>POST</td>
 <td><code>/api/layaways</code></td>
 <td><code>apartado.create</code></td>
-<td>Create layaway. Provide <code>customer_id</code> <strong>or</strong> inline <code>customer</code> (not both/neither). Deposit &gt; 0 and ≤ total; locks in prices, decrements stock; deposit recorded as first payment.</td>
+<td>Create a new layaway (apartado). Provide customer_id or inline customer object. Deposit locks in prices and decrements stock. Initial deposit is recorded as the first payment.</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/api/layaways</code></td>
 <td><code>apartado.view</code></td>
-<td>Paginated list, newest first. Query: <code>status</code> (<code>active</code>|<code>completed</code>|<code>cancelled</code>), <code>customer_id</code>, <code>page</code>, <code>per_page</code> (1–100), plus the shared Query DSL.</td>
+<td>Paginated list of layaways. Filter by status (active/completed/cancelled) and customer_id.</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/api/layaways/{layaway_id}</code></td>
 <td><code>apartado.view</code></td>
-<td>Single layaway with items, payments, customer, creator, linked <code>sale_id</code>.</td>
+<td>Return a single layaway by ID with items, payments, and customer info.</td>
 </tr>
 <tr>
 <td>PATCH</td>
 <td><code>/api/layaways/{layaway_id}</code></td>
 <td><code>apartado.edit</code></td>
-<td>Update <code>notes</code> on an active layaway.</td>
-</tr>
-<tr>
-<td>POST</td>
-<td><code>/api/layaways/{layaway_id}/payments</code></td>
-<td><code>apartado.edit</code></td>
-<td>Add payment: positive and ≤ balance; auto-completes (creates linked Sale) when balance hits $0.</td>
-</tr>
-<tr>
-<td>POST</td>
-<td><code>/api/layaways/{layaway_id}/items</code></td>
-<td><code>apartado.edit</code></td>
-<td>Add item to active layaway; locks current price, decrements stock, recalculates total/balance.</td>
-</tr>
-<tr>
-<td>DELETE</td>
-<td><code>/api/layaways/{layaway_id}/items/{item_id}</code></td>
-<td><code>apartado.edit</code></td>
-<td>Remove item from active layaway; restores stock; must keep ≥ 1 item; new total must not drop below payments made.</td>
-</tr>
-<tr>
-<td>PUT</td>
-<td><code>/api/layaways/{layaway_id}/items/{item_id}</code></td>
-<td><code>apartado.edit</code></td>
-<td>Change item quantity (≥ 1); delta-adjusts stock; same payments floor rule.</td>
+<td>Update top-level layaway fields (notes) on an active layaway.</td>
 </tr>
 <tr>
 <td>PATCH</td>
 <td><code>/api/layaways/{layaway_id}/cancel</code></td>
 <td><code>apartado.edit</code></td>
-<td>Cancel active layaway; restores all stock; payments history retained.</td>
+<td>Cancel an active layaway and restore all product stock.</td>
 </tr>
 <tr>
 <td>PATCH</td>
 <td><code>/api/layaways/{layaway_id}/complete</code></td>
 <td><code>apartado.edit</code></td>
-<td>Manually complete active layaway; creates linked Sale (idempotent).</td>
+<td>Manually complete an active layaway, creating a linked Sale record. Idempotent if already completed.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/layaways/{layaway_id}/items</code></td>
+<td><code>apartado.edit</code></td>
+<td>Add a new product to an active layaway. Stock is decremented and total/balance recalculated. Price is locked from current product price.</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/layaways/{layaway_id}/items/{item_id}</code></td>
+<td><code>apartado.edit</code></td>
+<td>Remove an item from an active layaway. Stock is restored and total/balance recalculated. Must keep at least 1 item.</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/layaways/{layaway_id}/items/{item_id}</code></td>
+<td><code>apartado.edit</code></td>
+<td>Change the quantity of an item in an active layaway. Stock is delta-adjusted and total/balance recalculated.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/layaways/{layaway_id}/payments</code></td>
+<td><code>apartado.edit</code></td>
+<td>Add a payment to an active layaway. Amount cannot exceed the outstanding balance. Automatically completes when balance reaches $0.</td>
 </tr>
 </tbody>
 </table>
@@ -697,7 +703,7 @@ top of their endpoint-specific parameters.</p>
 <td><code>limit</code></td>
 <td>int</td>
 <td><code>100</code></td>
-<td>Max records to return (1–200)</td>
+<td>Max records to return (1-200)</td>
 </tr>
 </tbody>
 </table>
@@ -751,7 +757,7 @@ pagination and returns all matches.</p>
 <tr>
 <td><code>__like</code></td>
 <td>Case-insensitive LIKE (raw <code>%</code> / <code>_</code> wildcards)</td>
-<td><code>?name__like=%25cuervo%25</code></td>
+<td><code>?name__like=%%25cuervo%%25</code></td>
 </tr>
 <tr>
 <td><code>__contains</code></td>
@@ -824,7 +830,7 @@ non-selectable fields return <strong>400</strong>.</p>
 <h3>Products</h3>
 <ul>
 <li><code>code</code> is globally unique (enforced on create <strong>and</strong> update; error names the conflicting product).</li>
-<li><code>name</code>, <code>code</code>, and <code>price</code> required; <code>price ≥ 0</code>.</li>
+<li><code>name</code>, <code>code</code>, and <code>price</code> required; <code>price &gt;= 0</code>.</li>
 <li>All referenced <code>category_ids</code> / <code>color_ids</code> must exist (count validated).</li>
 <li>List endpoint always filters <code>stock &gt; 0</code>; stock can still dip to 0 via sell-through.</li>
 <li>Old image file is deleted on image change (update) and on delete.</li>
@@ -832,25 +838,25 @@ non-selectable fields return <strong>400</strong>.</p>
 </ul>
 <h3>Sales</h3>
 <ul>
-<li>At least one item required: <code>"La venta debe tener al menos un artículo"</code>.</li>
+<li>At least one item required: <code>"La venta debe tener al menos un articulo"</code>.</li>
 <li>Each product must exist (404) and have sufficient stock (400).</li>
 <li><code>unit_price</code> comes from the product <strong>at sale time</strong>, never from the request; <code>total</code> is computed server-side.</li>
-<li>Stock decrement + sale creation wrap in a SQLAlchemy <strong>savepoint</strong> (<code>db.begin_nested()</code>): any failure → no partial sale, no stock change.</li>
+<li>Stock decrement + sale creation wrap in a SQLAlchemy <strong>savepoint</strong> (<code>db.begin_nested()</code>): any failure -&gt; no partial sale, no stock change.</li>
 <li>Sales are immutable: no delete/update endpoints.</li>
 </ul>
 <h3>Layaways (apartados)</h3>
 <ul>
 <li>Exactly one of <code>customer_id</code> / inline <code>customer</code>.</li>
-<li><code>deposit &gt; 0</code> and <code>deposit ≤ total</code>; initial deposit recorded as first <code>LayawayPayment</code>.</li>
+<li><code>deposit &gt; 0</code> and <code>deposit &lt;= total</code>; initial deposit recorded as first <code>LayawayPayment</code>.</li>
 <li>Each item locks the current <code>unit_price</code> and <strong>decrements stock</strong> at creation.</li>
-<li>Payments only on <code>active</code> layaways; <code>amount &gt; 0</code> and <code>amount ≤ balance</code>.</li>
+<li>Payments only on <code>active</code> layaways; <code>amount &gt; 0</code> and <code>amount &lt;= balance</code>.</li>
 <li>Payment that brings <code>balance</code> to $0 <strong>auto-completes</strong>: creates a linked <code>Sale</code> with the locked prices (no second stock decrement).</li>
 <li>Manual <code>complete</code> is idempotent (no-op if <code>sale_id</code> already set); any remaining positive balance is recorded as a final payment and zeroed.</li>
 <li>Edit notes / add / remove / quantity-change / cancel only on <code>active</code> layaways.</li>
-<li>Remove item → restores stock, must keep ≥ 1 item.</li>
-<li>Quantity change → delta stock adjustment (increase decrements, decrease restores).</li>
+<li>Remove item -&gt; restores stock, must keep &gt;= 1 item.</li>
+<li>Quantity change -&gt; delta stock adjustment (increase decrements, decrease restores).</li>
 <li>Remove/quantity-decrease blocked when the new total would fall below total payments.</li>
-<li>Cancel → restores all stock, status <code>cancelled</code>, payments history retained.</li>
+<li>Cancel -&gt; restores all stock, status <code>cancelled</code>, payments history retained.</li>
 </ul>
 <h3>Image uploads</h3>
 <ul>
@@ -864,9 +870,9 @@ non-selectable fields return <strong>400</strong>.</p>
 <ul>
 <li>Only in-stock products (<code>stock &gt; 0</code>); optional <code>ids</code> and <code>q</code> filters.</li>
 <li>Ordering: the first <strong>64</strong> products are the newest (by <code>created_at</code>, descending); the rest sort by category product-count (desc), category name, color name, then stock (uncategorized last).</li>
-<li>4-column × 4-row card grid = <strong>16 products/page</strong> (A4).</li>
-<li>Each card: center-cropped image (40×48 mm @ 72 DPI, JPEG q85) or an initial-letter placeholder, name (truncated to ~2 lines), and a price band with the code.</li>
-<li>Weekly header on every page: <code>Válido de {lunes} a {domingo} | semana {N}</code> (Spanish month names, ISO week number, based on today).</li>
+<li>4-column x 4-row card grid = <strong>16 products/page</strong> (A4).</li>
+<li>Each card: center-cropped image (40x48 mm @ 72 DPI, JPEG q85) or an initial-letter placeholder, name (truncated to ~2 lines), and a price band with the code.</li>
+<li>Weekly header on every page: <code>Valido de {lunes} a {domingo} | semana {N}</code> (Spanish month names, ISO week number, based on today).</li>
 <li>Themes: <code>classic</code>, <code>nocturno</code>, <code>kraft</code>, <code>elegante</code>, <code>marino</code>, <code>sol</code>, <code>cyber</code>, <code>vino</code>, <code>rosa</code>, <code>arcoiris</code>, <code>nebulosa</code>, <code>triangulos</code>, <code>olas</code>, <code>mandala</code>, <code>aurora</code>, <code>confeti</code>, <code>galaxia</code>, <code>marco</code>, <code>flores</code>.</li>
 <li>Output: PDF (attachment) or HTML (inline); <code>format</code>/<code>theme</code>/<code>ids</code> validation errors are 400.</li>
 <li>Layout mirrors <a href="card-mockup.html"><code>docs/card-mockup.html</code></a>.</li>
@@ -1027,13 +1033,13 @@ non-selectable fields return <strong>400</strong>.</p>
 </table>
 <h2>Service endpoints (not in OpenAPI)</h2>
 <ul>
-<li><code>GET /docs</code> — this reference as HTML (rendered from this Markdown).</li>
-<li><code>GET /redoc</code> — ReDoc UI (pinned v2.1.5).</li>
-<li><code>GET /api/health</code> — <code>{"status": "ok", "db": "connected"}</code>; <strong>503</strong> when the database is unreachable (used by Cloud Run probes).</li>
+<li><code>GET /docs</code> -- this reference as HTML (rendered from this Markdown).</li>
+<li><code>GET /redoc</code> -- ReDoc UI (pinned v2.1.5).</li>
+<li><code>GET /api/health</code> -- <code>{"status": "ok", "db": "connected"}</code>; <strong>503</strong> when the database is unreachable (used by Cloud Run probes).</li>
 </ul>
 <hr />
-<p><em>Maintenance: edit this file, then run <code>python scripts/gen_api_docs.py</code> from
-<a href="../backend"><code>backend/</code></a> and commit the regenerated <a href="../backend/docs.html"><code>backend/docs.html</code></a>.</em></p>
+<p><em>Maintenance: this file is generated from code. Do not edit manually.</em>
+*Regenerate with: <code>python scripts/generate_api_reference.py</code> from <code>backend/</code>.</p>
 <footer>Store Catalog API &mdash; FastAPI + SQLAlchemy 2.0 + PostgreSQL</footer>
 </div>
 </body>

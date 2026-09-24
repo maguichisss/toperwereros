@@ -34,8 +34,10 @@ pytest tests/test_sales.py -q
 
 The public API is documented from a single source of truth —
 [`docs/api-reference.md`](../api-reference.md) — rendered to [`backend/docs.html`](../../backend/docs.html) by
-[`backend/scripts/gen_api_docs.py`](../../backend/scripts/gen_api_docs.py) (adds a dev-only `markdown` dependency to
-[`requirements-dev.txt`](../../backend/requirements-dev.txt)). Two tests keep everything consistent:
+[`scripts/generate_docs_html.py`](../../scripts/generate_docs_html.py) (adds a dev-only `markdown` dependency to
+[`requirements-dev.txt`](../../backend/requirements-dev.txt)). The markdown itself is generated from the
+code by [`scripts/generate_api_reference.py`](../../scripts/generate_api_reference.py); the
+[`scripts/generate_docs.sh`](../../scripts/generate_docs.sh) wrapper drives both. Two tests keep everything consistent:
 
 1. **[`test_docs_permissions.py`](../../backend/tests/test_docs_permissions.py)** — the permission matrix embedded in
    [`api-reference.md`](../api-reference.md) must exactly match `app.auth.ROLE_PERMISSIONS`. Edit
@@ -45,16 +47,20 @@ The public API is documented from a single source of truth —
    [`api-reference.md`](../api-reference.md), regenerate and commit the HTML:
 
 ```sh
-cd backend
-python scripts/gen_api_docs.py        # writes backend/docs.html
-pytest tests/test_docs_generated.py -q
+bash scripts/generate_docs.sh   # regenerates docs/api-reference.md + backend/docs.html
+pytest tests/test_docs_generated.py tests/test_docs_permissions.py -q
 ```
+
+A third guard — [`test_route_permissions.py`](../../backend/tests/test_route_permissions.py) — enforces the
+route-coverage invariants (every non-public route declares a valid permission,
+every permission is enforced somewhere).
 
 ## CI
 
-[`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) runs a `test` job (Python 3.13, cached pip,
-`pytest tests/ -q`) for every push. Only the *default branch* push triggers
-`build-and-deploy`, and only after tests pass — so the drift guards gate every
+[`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) runs a `test` job for every
+push (Python 3.13, cached pip): `pytest tests/ -q` **and** `bash scripts/generate_docs.sh --check`
+(with a throwaway `JWT_SECRET`, since `.env` is absent in CI). Only the *default branch* push
+triggers `build-and-deploy`, and only after tests pass — so the drift guards gate every
 production deploy.
 
 ## Notes on test speed & isolation

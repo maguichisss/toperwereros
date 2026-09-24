@@ -6,7 +6,7 @@ API contract. This script converts it to the styled HTML page served at
 
 Usage (from anywhere in the repo)::
 
-    python backend/scripts/gen_api_docs.py
+    python scripts/generate_docs_html.py
 
 Use ``--output`` to write to a different path (used by tests to keep the
 generator deterministic).
@@ -21,10 +21,11 @@ import argparse
 import json
 import os
 import re
+import sys
 
 import markdown
 
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DEFAULT_MD_PATH = os.path.join(REPO_ROOT, "docs", "api-reference.md")
 DEFAULT_OUT_PATH = os.path.join(REPO_ROOT, "backend", "docs.html")
 
@@ -151,6 +152,9 @@ def generate(md_path: str = DEFAULT_MD_PATH, out_path: str = DEFAULT_OUT_PATH) -
     """Read *md_path*, render to HTML, and write *out_path*."""
     with open(md_path, "r", encoding="utf-8") as fh:
         html = render_html(fh.read())
+    if out_path == "-":
+        sys.stdout.write(html)
+        return ""
     os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(html)
@@ -162,10 +166,12 @@ def main() -> None:
         description="Render the Markdown API reference into backend/docs.html."
     )
     parser.add_argument(
-        "--output", default=DEFAULT_OUT_PATH, help="Output HTML path (default: backend/docs.html)"
+        "--output", default=DEFAULT_OUT_PATH, help="Output HTML path (default: backend/docs.html, use - for stdout)"
     )
     args = parser.parse_args()
-    print(generate(out_path=args.output))
+    result = generate(out_path=args.output)
+    if result:
+        print(f"Generated {result}", file=sys.stderr)
 
 
 if __name__ == "__main__":

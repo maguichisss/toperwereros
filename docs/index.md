@@ -26,9 +26,13 @@ La documentación está dividida en cuatro audiencias:
 ## Fuente de verdad y protección contra desvíos
 
 - La **referencia de API** ([`api-reference.md`](api-reference.md)) es la fuente única de verdad del
-  contrato público. [`backend/scripts/gen_api_docs.py`](../backend/scripts/gen_api_docs.py) la convierte en
+  contrato público. Se genera desde el código por
+  [`scripts/generate_api_reference.py`](../scripts/generate_api_reference.py) y
+  [`scripts/generate_docs_html.py`](../scripts/generate_docs_html.py) la convierte en
   [`backend/docs.html`](../backend/docs.html) (la misma página servida en `/api/docs`).
-- Dos pruebas de pytest verifican que la documentación no se desvíe del código:
-  la matriz de permisos debe coincidir con [`app/auth.py`](../backend/app/auth.py), y [`docs.html`](../backend/docs.html)
-  regenerado debe ser idéntico al archivo versionado.
+- Tres pruebas de pytest verifican que la documentación no se desvíe del código:
+  la matriz de permisos debe coincidir con [`app/auth.py`](../backend/app/auth.py), cada ruta debe
+  declarar un permiso válido y cubrir todos los definidos, y [`docs.html`](../backend/docs.html)
+  regenerado debe ser idéntico al archivo versionado. En CI, `bash scripts/generate_docs.sh --check`
+  falla ante cualquier desvío.
 - Los diagramas Mermaid se renderizan automáticamente en GitHub.
