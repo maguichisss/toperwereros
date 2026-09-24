@@ -25,12 +25,10 @@ clientes.
 
 ## Orden de presentación
 
-1. **Los 64 más recientes primero** (`RECENT_CATALOG_COUNT = 64`): los
-   productos recién agregados encabezan el catálogo, del más nuevo al más viejo.
-2. El resto sigue el orden del catálogo: por **cantidad de productos por
-   categoría (desc)**, luego categoría (asc), luego color (asc), luego stock
-   (asc); los que no tienen categoría van **al final**.
-3. En cada página: rejilla de **4 columnas × 4 filas = 16 productos por
+1. Los productos se ordenan por **cantidad de productos por categoría
+   (desc)**, luego categoría (asc), luego color (asc), luego stock (asc);
+   los que no tienen categoría van **al final**.
+2. En cada página: rejilla de **4 columnas × 4 filas = 16 productos por
    página**, con encabezado semanal (ver abajo).
 
 ## Contenido de cada tarjeta

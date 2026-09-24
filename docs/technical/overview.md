@@ -33,8 +33,8 @@ the same job.
    inside a savepoint; on any failure nothing is persisted.
 2. **Layaways can auto-complete into a sale.** When a layaway's balance reaches
    zero it is finalized against a linked `Sale`, debiting the reserved stock.
-3. **The PDF catalog shows in-stock products only**, ordered newest-first for
-   the first 64 products and by category/color/stock afterwards.
+3. **The PDF catalog shows in-stock products only**, ordered by category
+   product-count (desc), category, color, and stock (uncategorized last).
 4. **Auth is JWT-based with refresh-token rotation.** Every role maps to a
    permission set defined in [`backend/app/auth.py`](../../backend/app/auth.py); behavioral summaries live
    in [Docs: business (ES)](../business/index.md).

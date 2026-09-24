@@ -43,9 +43,6 @@ _FONT_FILES: dict[tuple[str, str], str] = {
     ("DejaVuMono", ""): "DejaVuSansMono.ttf",
 }
 
-# How many of the most recently added products lead the catalog.
-RECENT_CATALOG_COUNT = 64
-
 # WhatsApp brand color used for the per-card "Escríbenos" link.
 WHATSAPP_GREEN = (37, 211, 102)
 _WHATSAPP_GREEN_CSS = "#25D366"
@@ -1326,32 +1323,6 @@ def order_by_category_color_stock(products: list[Product]) -> list[Product]:
     return sorted(products, key=sort_key)
 
 
-def order_recent_first(products: list[Product], recent_count: int = RECENT_CATALOG_COUNT) -> list[Product]:
-    """Feature the newest products first, then keep the catalog order.
-
-    The first ``recent_count`` products are the most recently added ones
-    (newest first, by ``created_at``); products without a creation date sort
-    last.  The remainder keeps the usual display order
-    (``order_by_category_color_stock``).
-
-    Args:
-        products: Products in any input order.
-        recent_count: How many newest products to feature first.
-
-    Returns:
-        The products in display order.
-    """
-
-    newest = sorted(
-        products,
-        key=lambda p: p.created_at or datetime.min,
-        reverse=True,
-    )
-    recent = newest[:recent_count]
-    rest = order_by_category_color_stock(newest[recent_count:])
-    return recent + rest
-
-
 def _select_cover_products(products: list[Product], week_num: int, n: int, cfg: PDFConfig) -> list[Product]:
     """Pick up to ``n`` products with an available image, deterministically by week."""
     with_image = [p for p in products if cfg._get_image_bytes(p)]
@@ -1460,13 +1431,11 @@ def catalog_pdf(
 ) -> Response:
     """Generate a product catalog for in-stock products as PDF or HTML.
 
-    The first ``RECENT_CATALOG_COUNT`` products are the most recently added
-    (newest first, by creation date); the rest follow by descending category
-    product count, then category name, then color, then stock
-    (uncategorized products last), rendered in a continuous 4-column card
-    grid (16 per page).  Each card contains a cropped product image, name,
-    and a price band with the code.  A weekly header with the valid date
-    range is added to every page.
+    Products are ordered by descending category product count, then category
+    name, then color, then stock (uncategorized products last), rendered in a
+    continuous 4-column card grid (16 per page).  Each card contains a cropped
+    product image, name, and a price band with the code.  A weekly header with
+    the valid date range is added to every page.
 
     Args:
         ids: Optional comma-separated product IDs to include.  When empty, all
@@ -1523,7 +1492,7 @@ def catalog_pdf(
     logger.debug("catalog_pdf: loaded %d products in %.2fs", len(products), time.perf_counter() - t0)
 
     if format == "csv":
-        ordered_products = order_recent_first(products)
+        ordered_products = order_by_category_color_stock(products)
 
         def csv_cell(v):
             s = "" if v is None else str(v)
@@ -1561,7 +1530,7 @@ def catalog_pdf(
         week_num = monday.isocalendar()[1]
 
         t_order = time.perf_counter()
-        ordered_products = order_recent_first(products)
+        ordered_products = order_by_category_color_stock(products)
         logger.debug("catalog_pdf: ordered %d products in %.2fs", len(ordered_products), time.perf_counter() - t_order)
 
         if format == "html":

@@ -308,7 +308,7 @@ non-selectable fields return **400**.
 ### PDF catalog
 
 - Only in-stock products (`stock > 0`); optional `ids` and `q` filters.
-- Ordering: the first **64** products are the newest (by `created_at`, descending); the rest sort by category product-count (desc), category name, color name, then stock (uncategorized last).
+- Ordering: by category product-count (desc), category name, color name, then stock (uncategorized last).
 - 4-column x 4-row card grid = **16 products/page** (A4).
 - Each card: center-cropped image (40x48 mm @ 72 DPI, JPEG q85) or an initial-letter placeholder, name (truncated to ~2 lines), and a price band with the code.
 - Weekly header on every page: `Valido de {lunes} a {domingo} | semana {N}` (Spanish month names, ISO week number, based on today).

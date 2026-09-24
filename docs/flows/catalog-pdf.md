@@ -14,11 +14,9 @@ flowchart TD
     C -- "ids no numéricos" --> C3[400 El parámetro ids…]
     C -- Sí --> D[Consulta productos<br/>SOLO stock > 0<br/>+ filtros]
 
-    D --> E[Ordenar]
-    E --> E1["1) Los 64 más recientes primero<br/>(RECENT_CATALOG_COUNT)"]
-    E1 --> E2["2) El resto: tamaño de categoría desc,<br/>categoría asc, color asc, stock asc<br/>(sin categoría al final)"]
+    D --> E[Ordenar: tamaño de categoría desc,<br/>categoría asc, color asc, stock asc<br/>(sin categoría al final)]
 
-    E2 --> F[Renderizar]
+    E --> F[Renderizar]
     F --> F1["Páginas A4: 4 columnas × 4 filas = 16 tarjetas/página"]
     F --> F2["Encabezado: «Válido de lunes a domingo | semana N» (ES)"]
     F --> F3["Tarjeta: imagen (recorte central) o inicial si no hay,<br/>nombre (máx 2 líneas), franja de precio + código"]

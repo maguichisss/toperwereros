@@ -869,7 +869,7 @@ non-selectable fields return <strong>400</strong>.</p>
 <h3>PDF catalog</h3>
 <ul>
 <li>Only in-stock products (<code>stock &gt; 0</code>); optional <code>ids</code> and <code>q</code> filters.</li>
-<li>Ordering: the first <strong>64</strong> products are the newest (by <code>created_at</code>, descending); the rest sort by category product-count (desc), category name, color name, then stock (uncategorized last).</li>
+<li>Ordering: by category product-count (desc), category name, color name, then stock (uncategorized last).</li>
 <li>4-column x 4-row card grid = <strong>16 products/page</strong> (A4).</li>
 <li>Each card: center-cropped image (40x48 mm @ 72 DPI, JPEG q85) or an initial-letter placeholder, name (truncated to ~2 lines), and a price band with the code.</li>
 <li>Weekly header on every page: <code>Valido de {lunes} a {domingo} | semana {N}</code> (Spanish month names, ISO week number, based on today).</li>

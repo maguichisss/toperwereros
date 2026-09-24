@@ -287,7 +287,7 @@ def render_static_sections() -> str:
         "- Stored to local `uploads/` or GCS (`GCS_BUCKET`); `safe_upload_path` blocks traversal.\n\n"
         "### PDF catalog\n\n"
         "- Only in-stock products (`stock > 0`); optional `ids` and `q` filters.\n"
-        "- Ordering: the first **64** products are the newest (by `created_at`, descending); the rest sort by category product-count (desc), category name, color name, then stock (uncategorized last).\n"
+        "- Ordering: by category product-count (desc), category name, color name, then stock (uncategorized last).\n"
         "- 4-column x 4-row card grid = **16 products/page** (A4).\n"
         "- Each card: center-cropped image (40x48 mm @ 72 DPI, JPEG q85) or an initial-letter placeholder, name (truncated to ~2 lines), and a price band with the code.\n"
         "- Weekly header on every page: `Valido de {lunes} a {domingo} | semana {N}` (Spanish month names, ISO week number, based on today).\n"
