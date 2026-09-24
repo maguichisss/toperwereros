@@ -13,6 +13,8 @@ from types import SimpleNamespace
 
 from app import i18n
 
+UNROUTED = "__UNROUTED__"
+
 
 def _req(accept_language: str = ""):
     return SimpleNamespace(headers={"accept-language": accept_language})
@@ -112,11 +114,13 @@ class TestHandlerIntegration:
 
 
 def _collect_details():
-    """Yield (path, lineno, message, is_static) for every detail message.
+    """Yield (path, lineno, parts, is_static) for every detail message.
 
-    ``is_static`` is True for plain string literals (must be in
-    ``TRANSLATIONS``); f-string messages are split into their constant parts
-    and must only be Spanish-free (they are matched by ``PATTERNS``).
+    ``parts`` is the list of constant string fragments: a single element for
+    plain string literals, the constant parts for f-strings.  ``is_static``
+    is True only for plain literals (must be in ``TRANSLATIONS``); f-strings
+    must match a registered ``PATTERNS`` shape.  Unrouted forms (variables,
+    expressions) are reported with ``parts == [UNROUTED]``.
     """
     def is_httpexception(node):
         f = node.func
@@ -134,33 +138,69 @@ def _collect_details():
                 values += [kw.value for kw in node.keywords if kw.arg == "detail"]
             elif isinstance(node, ast.Dict):
                 for k, v in zip(node.keys, node.values):
-                    if isinstance(k, ast.Constant) and k.value == "detail":
+                    if (
+                        isinstance(k, ast.Constant)
+                        and k.value == "detail"
+                        and isinstance(v, ast.Constant)
+                        and isinstance(v.value, str)
+                    ):
                         values.append(v)
             for value in values:
                 if isinstance(value, ast.Constant) and isinstance(value.value, str):
-                    yield (str(path), node.lineno, value.value, True)
+                    yield (str(path), node.lineno, [value.value], True)
                 elif isinstance(value, ast.JoinedStr):
-                    for part in value.values:
-                        if isinstance(part, ast.Constant) and isinstance(part.value, str):
-                            yield (str(path), node.lineno, part.value, False)
+                    parts = [
+                        part.value
+                        for part in value.values
+                        if isinstance(part, ast.Constant) and isinstance(part.value, str)
+                    ]
+                    yield (str(path), node.lineno, parts, False)
+                else:
+                    yield (str(path), node.lineno, [UNROUTED], False)
+
+
+class TestShape:
+    def test_stock_shape_is_covered(self):
+        parts = ["Insufficient stock for '", "': ", " available, ", " requested"]
+        assert i18n.shape_covered(parts)
+
+    def test_unregistered_shape_is_not_covered(self):
+        assert not i18n.shape_covered(["Something completely new: ", " broken"])
 
 
 class TestCanonicalMessages:
     def test_no_spanish_detail_messages(self):
         spanish = [
             f"{path}:{lineno}:{msg!r}"
-            for path, lineno, msg, _ in _collect_details()
-            if re.search(r"[áéíóúñ¿¡]", msg, re.I)
+            for path, lineno, parts, _ in _collect_details()
+            for msg in parts
+            if msg != UNROUTED and re.search(r"[áéíóúñ¿¡]", msg, re.I)
         ]
         assert not spanish, f"mensajes en español restantes: {spanish}"
 
     def test_static_details_are_covered(self):
         uncovered = [
             f"{path}:{lineno}:{msg!r}"
-            for path, lineno, msg, is_static in _collect_details()
-            if is_static and not i18n.covered(msg)
+            for path, lineno, parts, is_static in _collect_details()
+            if is_static and any(not i18n.covered(msg) for msg in parts)
         ]
         assert not uncovered, f"mensajes sin traducción: {uncovered}"
+
+    def test_dynamic_details_have_registered_shape(self):
+        unshaped = [
+            f"{path}:{lineno}:{parts!r}"
+            for path, lineno, parts, is_static in _collect_details()
+            if not is_static and parts != [UNROUTED] and not i18n.shape_covered(parts)
+        ]
+        assert not unshaped, f"mensajes interpolados sin patrón en i18n.PATTERNS: {unshaped}"
+
+    def test_no_unrouted_detail_forms(self):
+        unrouted = [
+            f"{path}:{lineno}"
+            for path, lineno, parts, is_static in _collect_details()
+            if not is_static and parts == [UNROUTED]
+        ]
+        assert not unrouted, f"detail debe ser literal o f-string con patrón en: {unrouted}"
 
     def test_success_detail_is_covered(self):
         assert i18n.covered("Password updated successfully")

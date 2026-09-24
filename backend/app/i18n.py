@@ -195,3 +195,61 @@ def pattern_covered(message: str) -> bool:
 
 def covered(message: str) -> bool:
     return exact_covered(message) or pattern_covered(message)
+
+
+def _shape_skeleton(regex: "re.Pattern[str]") -> str:
+    """Turn a pattern regex into a non-anchored skeleton regex.
+
+    Escaped literals are kept as-is and capture groups become wildcards
+    (``.*?``), so the skeleton matches the constant parts of the f-string
+    with the interpolated slots handled as gaps.  Only supports the
+    constructs used by ``PATTERNS``.
+    """
+    source = regex.pattern
+    skeleton = []
+    i = 0
+    while i < len(source):
+        char = source[i]
+        if char == "\\" and i + 1 < len(source):
+            nxt = source[i + 1]
+            if nxt.isalnum():
+                skeleton.append(re.escape(source[i : i + 2]))
+            else:
+                skeleton.append(re.escape(nxt))
+            i += 2
+        elif char == "(":
+            depth = 1
+            i += 1
+            while i < len(source) and depth:
+                if source[i] == "\\":
+                    i += 2
+                elif source[i] == "(":
+                    depth += 1
+                    i += 1
+                elif source[i] == ")":
+                    depth -= 1
+                    i += 1
+                else:
+                    i += 1
+            skeleton.append(".*?")
+        elif char in ("^", "$"):
+            i += 1
+        else:
+            skeleton.append(re.escape(char))
+            i += 1
+    return "".join(skeleton)
+
+
+def shape_covered(constant_parts: list[str]) -> bool:
+    """True if the constant parts of an f-string fit some ``PATTERNS`` shape.
+
+    The concatenated parts must fully match the skeleton of a pattern
+    (capture groups acting as ``.*?`` gaps).  This enforces that
+    interpolated detail messages always have a registered translation
+    (see ``tests/test_i18n.py``).
+    """
+    text = "".join(constant_parts)
+    return any(
+        re.fullmatch(_shape_skeleton(regex), text)
+        for regex, _ in PATTERNS
+    )
