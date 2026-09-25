@@ -121,11 +121,38 @@ export async function request(url, options = {}) {
   return data
 }
 
+let _categoriesCache = null
+let _categoriesFetchedAt = 0
+const CATEGORIES_TTL_MS = 60000
+
+export function invalidateCategories() {
+  _categoriesCache = null
+  _categoriesFetchedAt = 0
+}
+
 export const categoriesApi = {
-  list: () => request('/categories'),
-  create: (name) => request('/categories', { method: 'POST', body: JSON.stringify({ name }) }),
-  update: (id, data) => request(`/categories/${id}`, { method: 'PUT', body: JSON.stringify(typeof data === 'string' ? { name: data } : data) }),
-  remove: (id) => request(`/categories/${id}`, { method: 'DELETE' }),
+  list: async () => {
+    const now = Date.now()
+    if (_categoriesCache && now - _categoriesFetchedAt < CATEGORIES_TTL_MS) {
+      return _categoriesCache
+    }
+    const data = await request('/categories')
+    _categoriesCache = data
+    _categoriesFetchedAt = now
+    return data
+  },
+  create: (name) => {
+    invalidateCategories()
+    return request('/categories', { method: 'POST', body: JSON.stringify({ name }) })
+  },
+  update: (id, data) => {
+    invalidateCategories()
+    return request(`/categories/${id}`, { method: 'PUT', body: JSON.stringify(typeof data === 'string' ? { name: data } : data) })
+  },
+  remove: (id) => {
+    invalidateCategories()
+    return request(`/categories/${id}`, { method: 'DELETE' })
+  },
 }
 
 export const productsApi = {

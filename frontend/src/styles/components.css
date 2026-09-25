@@ -2383,6 +2383,12 @@
   color: var(--text-muted);
 }
 
+.page-loading {
+  padding: 3rem 0;
+  text-align: center;
+  color: var(--text-muted);
+}
+
 /* ═══ Compact screens ══════════════════════════════════════════════ */
 
 @media (max-width: 640px) {

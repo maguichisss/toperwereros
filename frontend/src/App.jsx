@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
+import { lazy, Suspense, useState, useEffect, useRef } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import { CartProvider, useCart } from './context/CartContext.jsx'
 import LoginPage from './components/LoginPage.jsx'
-import ProductList from './components/ProductList.jsx'
-import CatalogExportPage from './components/CatalogExportPage.jsx'
-import LayawayView from './components/LayawayView.jsx'
-import ProfilePage from './components/ProfilePage.jsx'
-import ManagementPage from './components/ManagementPage.jsx'
+const ProductList = lazy(() => import('./components/ProductList.jsx'))
+const CatalogExportPage = lazy(() => import('./components/CatalogExportPage.jsx'))
+const LayawayView = lazy(() => import('./components/LayawayView.jsx'))
+const ProfilePage = lazy(() => import('./components/ProfilePage.jsx'))
+const ManagementPage = lazy(() => import('./components/ManagementPage.jsx'))
 import { formatPrice } from './utils.js'
 import { CartIcon, LogoutIcon, UserIcon } from './components/icons.jsx'
 
@@ -228,11 +228,13 @@ function AppContent() {
         </div>
       </header>
       <main className="container">
-        {tab === 'productos' && <ProductList />}
-        {tab === 'catalogo' && can('product.view') && <CatalogExportPage />}
-        {tab === 'apartados' && <LayawayView initialMode={createMode ? 'create' : undefined} />}
-        {tab === 'management' && <ManagementPage defaultSubTab={managementSubTab} onSubTabHandled={() => setManagementSubTab(null)} />}
-        {tab === 'perfil' && <ProfilePage />}
+        <Suspense fallback={<p className="page-loading">Cargando…</p>}>
+          {tab === 'productos' && <ProductList />}
+          {tab === 'catalogo' && can('product.view') && <CatalogExportPage />}
+          {tab === 'apartados' && <LayawayView initialMode={createMode ? 'create' : undefined} />}
+          {tab === 'management' && <ManagementPage defaultSubTab={managementSubTab} onSubTabHandled={() => setManagementSubTab(null)} />}
+          {tab === 'perfil' && <ProfilePage />}
+        </Suspense>
       </main>
       {cartOpen && (
         <CartPanel
