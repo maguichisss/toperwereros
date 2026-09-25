@@ -49,6 +49,29 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
+@app.middleware("http")
+async def cache_uploads(request: Request, call_next):
+    """Cache uploaded images aggressively since filenames are immutable UUIDs.
+
+    Args:
+        request: The incoming HTTP request.
+        call_next: The next ASGI application in the stack.
+
+    Returns:
+        The response with a long-lived ``Cache-Control`` header for paths
+        under ``/uploads/``.
+    """
+
+    response = await call_next(request)
+    if (
+        not GCS_BUCKET
+        and request.url.path.startswith("/uploads/")
+        and 200 <= response.status_code < 300
+    ):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return response
+
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     """Localize HTTPException detail based on the Accept-Language header."""

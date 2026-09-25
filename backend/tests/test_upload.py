@@ -17,6 +17,22 @@ class TestUploadImage:
         assert resp.status_code == 200
         assert resp.json()["image_url"].startswith("/uploads/")
 
+    def test_uploaded_image_is_served_with_long_cache(self, client, admin_headers):
+        from tests.conftest import _make_image_bytes
+        content = _make_image_bytes("png")
+        resp = client.post(
+            "/api/upload",
+            files={"image": ("test.png", io.BytesIO(content), "image/png")},
+            headers=admin_headers,
+        )
+        image_url = resp.json()["image_url"]
+        served = client.get(image_url)
+        assert served.status_code == 200
+        assert served.headers["cache-control"] == "public, max-age=31536000, immutable"
+        missing = client.get("/uploads/does-not-exist.png")
+        assert missing.status_code == 404
+        assert "cache-control" not in missing.headers
+
     def test_upload_jpg(self, client, admin_headers):
         from tests.conftest import _make_image_bytes
         content = _make_image_bytes("jpg")
