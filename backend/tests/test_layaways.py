@@ -22,8 +22,8 @@ def _create_customer(db, name="Jane Doe"):
     return cust
 
 
-def _create_layaway(client, admin_headers, db, deposit="30.00", product_price="100.00", quantity=1):
-    p = _create_product(db, price=product_price)
+def _create_layaway(client, admin_headers, db, deposit="30.00", product_price="100.00", quantity=1, code="W001"):
+    p = _create_product(db, price=product_price, code=code)
     c = _create_customer(db)
     resp = client.post(
         "/api/layaways",
@@ -390,6 +390,24 @@ class TestListLayaways:
         resp = client.get("/api/layaways?status=cancelled", headers=admin_headers)
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
+
+    def test_list_page_beyond_range_keeps_total(self, client, admin_headers, db):
+        for i in range(3):
+            _create_layaway(client, admin_headers, db, code=f"W{i:03d}")
+        resp = client.get("/api/layaways?page=99&per_page=2", headers=admin_headers)
+        assert resp.status_code == 200
+        assert resp.json()["layaways"] == []
+        assert resp.json()["total"] == 3
+
+    def test_list_projection_page_beyond_range_keeps_total(self, client, admin_headers, db):
+        for i in range(3):
+            _create_layaway(client, admin_headers, db, code=f"W{i:03d}")
+        resp = client.get(
+            "/api/layaways?modo=basico&page=99&per_page=2", headers=admin_headers
+        )
+        assert resp.status_code == 200
+        assert resp.json()["layaways"] == []
+        assert resp.json()["total"] == 3
 
 
 class TestEmployeeLayawayAccess:

@@ -5,16 +5,19 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from slowapi import Limiter
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.models import Product, Sale, SaleItem, User
 from app.schemas import SaleCreate, SaleResponse, SaleItemResponse
 from app.auth import require_permission
+from app.config import get_rate_limit_key
 from app.query_filters import (
     SALE_BASIC,
     SALE_FIELDS,
     apply_filters,
+    fetch_page,
     json_response,
     parse_filters,
     parse_projection,
@@ -25,6 +28,8 @@ from app.query_filters import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+limiter = Limiter(key_func=get_rate_limit_key)
 
 
 def serialize_sale(sale: Sale) -> SaleResponse:
@@ -99,6 +104,10 @@ def list_sales(
         HTTPException: 500 on unexpected database errors.
     """
 
+    params = {k: v for k, v in request.query_params.multi_items()}
+    parsed = parse_filters(params, SALE_FIELDS)
+    projection = parse_projection(modo, campos, SALE_FIELDS, SALE_BASIC)
+
     try:
         stmt = db.query(Sale)
         if start_date:
@@ -107,22 +116,18 @@ def list_sales(
         if end_date:
             dt = datetime.fromisoformat(end_date) + timedelta(days=1)
             stmt = stmt.where(Sale.created_at < dt)
-        params = {k: v for k, v in request.query_params.multi_items()}
-        parsed = parse_filters(params, SALE_FIELDS)
         stmt = apply_filters(stmt, parsed)
-        projection = parse_projection(modo, campos, SALE_FIELDS, SALE_BASIC)
-        total = stmt.count()
         offset, limit_count = resolve_pagination(
             skip=skip, limit=limit, page=page, per_page=per_page
         )
-        base = stmt.options(
+        if projection is not None and projection.active:
+            rows, total = fetch_page(stmt, Sale, Sale.created_at, offset, limit_count)
+            return json_response({"sales": project_rows(rows, projection), "total": total})
+        eager = stmt.options(
             selectinload(Sale.items).selectinload(SaleItem.product),
             selectinload(Sale.creator),
-        ).order_by(Sale.created_at.desc())
-        if projection is not None and projection.active:
-            rows = base.offset(offset).limit(limit_count).all()
-            return json_response({"sales": project_rows(rows, projection), "total": total})
-        sales = base.offset(offset).limit(limit_count).all()
+        )
+        sales, _ = fetch_page(eager, Sale, Sale.created_at, offset, limit_count)
     except Exception:
         logger.exception("Failed to list sales")
         raise HTTPException(500, "Error fetching sales")
@@ -170,7 +175,9 @@ def get_sale(
 
 @router.post("", response_model=SaleResponse, status_code=201, tags=["Sales"], summary="Create sale",
               description="Create a new sale. Atomic stock decrement via savepoint. Unit price is captured from the product at sale time. created_by tracks the authenticated user.")
+@limiter.limit("20/minute")
 def create_sale(
+    request: Request,
     data: SaleCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("sale.create")),

@@ -179,3 +179,50 @@ class TestViewerSaleAccess:
         resp = client.get("/api/sales?page=1&per_page=2", headers=admin_headers)
         assert resp.status_code == 200
         assert len(resp.json()) == 2
+
+    def test_list_sales_projection_out_of_range_total(self, client, admin_headers, db):
+        for i in range(3):
+            p = _create_product(db, name=f"P{i}", code=f"C{i:03d}", stock=10)
+            client.post(
+                "/api/sales",
+                json={"items": [{"product_id": p.id, "quantity": 1}]},
+                headers=admin_headers,
+            )
+        resp = client.get(
+            "/api/sales?modo=basico&page=99&per_page=2", headers=admin_headers
+        )
+        assert resp.status_code == 200
+        assert resp.json()["sales"] == []
+        assert resp.json()["total"] == 3
+
+    def test_list_sales_projection_default(self, client, admin_headers, db):
+        p = _create_product(db, name="P", code="C01", stock=10)
+        client.post(
+            "/api/sales",
+            json={"items": [{"product_id": p.id, "quantity": 1}]},
+            headers=admin_headers,
+        )
+        resp = client.get("/api/sales?modo=basico", headers=admin_headers)
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 1
+        assert "total" in resp.json()["sales"][0]
+
+    def test_list_sales_invalid_projection_returns_400(self, client, admin_headers):
+        resp = client.get("/api/sales?campos=not_a_field", headers=admin_headers)
+        assert resp.status_code == 400
+        assert "not_a_field" in resp.json()["detail"]
+
+
+class TestCreateSaleRateLimit:
+    def test_create_sale_rate_limited(self, client, admin_headers, db):
+        p = _create_product(db, name="Rate", code="R001", stock=100)
+        statuses = []
+        for _ in range(21):
+            resp = client.post(
+                "/api/sales",
+                json={"items": [{"product_id": p.id, "quantity": 1}]},
+                headers=admin_headers,
+            )
+            statuses.append(resp.status_code)
+        assert statuses[:-1] == [201] * 20
+        assert statuses[-1] == 429

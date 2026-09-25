@@ -61,9 +61,16 @@ def _setup_db():
     Base.metadata.drop_all(bind=engine)
     # Clear rate limiter state between tests so limits don't carry over
     app.state.limiter._storage.reset()
-    from app.routers import auth as auth_router, upload as upload_router
+    from app.routers import (
+        auth as auth_router,
+        upload as upload_router,
+        layaways as layaways_router,
+        sales as sales_router,
+    )
     auth_router.limiter._storage.reset()
     upload_router.limiter._storage.reset()
+    layaways_router.limiter._storage.reset()
+    sales_router.limiter._storage.reset()
 
 
 @pytest.fixture()

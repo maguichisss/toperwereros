@@ -4,9 +4,11 @@ import logging
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from slowapi import Limiter
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
+from app.config import get_rate_limit_key
 from app.models import (
     Product,
     Customer,
@@ -33,6 +35,7 @@ from app.query_filters import (
     LAYAWAY_BASIC,
     LAYAWAY_FIELDS,
     apply_filters,
+    fetch_page,
     json_response,
     parse_filters,
     parse_projection,
@@ -43,6 +46,8 @@ from app.query_filters import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+limiter = Limiter(key_func=get_rate_limit_key)
 
 
 def serialize_layaway(layaway: Layaway) -> LayawayResponse:
@@ -99,7 +104,9 @@ def serialize_layaway(layaway: Layaway) -> LayawayResponse:
 
 @router.post("", response_model=LayawayResponse, status_code=201, tags=["Layaways"], summary="Create layaway",
               description="Create a new layaway (apartado). Provide customer_id or inline customer object. Deposit locks in prices and decrements stock. Initial deposit is recorded as the first payment.")
+@limiter.limit("20/minute")
 def create_layaway(
+    request: Request,
     data: LayawayCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("apartado.create")),
@@ -261,22 +268,25 @@ def list_layaways(
     projection = parse_projection(modo, campos, LAYAWAY_FIELDS, LAYAWAY_BASIC)
 
     try:
-        total = query.count()
         offset, limit_count = resolve_pagination(
             skip=skip, limit=limit, page=page, per_page=per_page
         )
-        base = query.options(
+        if projection is not None and projection.active:
+            rows, total = fetch_page(
+                query, Layaway, Layaway.created_at, offset, limit_count
+            )
+            return json_response(
+                {"layaways": project_rows(rows, projection), "total": total}
+            )
+        eager = query.options(
             selectinload(Layaway.items).selectinload(LayawayItem.product),
             selectinload(Layaway.payments),
             selectinload(Layaway.customer),
             selectinload(Layaway.creator),
-        ).order_by(Layaway.created_at.desc())
-        if projection is not None and projection.active:
-            rows = base.offset(offset).limit(limit_count).all()
-            return json_response(
-                {"layaways": project_rows(rows, projection), "total": total}
-            )
-        layaways = base.offset(offset).limit(limit_count).all()
+        )
+        layaways, total = fetch_page(
+            eager, Layaway, Layaway.created_at, offset, limit_count
+        )
     except Exception:
         logger.exception("Failed to list layaways")
         raise HTTPException(500, "Error fetching layaways")
@@ -370,7 +380,9 @@ def update_layaway(
 
 @router.post("/{layaway_id}/payments", response_model=LayawayResponse, status_code=201, tags=["Layaways"], summary="Add payment",
               description="Add a payment to an active layaway. Amount cannot exceed the outstanding balance. Automatically completes when balance reaches $0.")
+@limiter.limit("20/minute")
 def add_payment(
+    request: Request,
     layaway_id: int,
     data: PaymentCreate,
     db: Session = Depends(get_db),
