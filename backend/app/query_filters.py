@@ -37,6 +37,7 @@ from typing import Any
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from sqlalchemy import func
 from sqlalchemy.orm import InstrumentedAttribute, Query
 
 from app.config import escape_like
@@ -414,4 +415,44 @@ CATEGORY_BASIC: tuple[str, ...] = ("id", "name")
 COLOR_FIELDS: dict[str, FieldSpec] = _scalar_fields(
     Color, ["id", "name", "hex", "created_at"]
 )
+
+
+def fetch_page(
+    query: Query,
+    model: type,
+    order_col: InstrumentedAttribute,
+    offset: int,
+    limit_count: int | None,
+) -> tuple[list, int]:
+    """Return a page of rows and the total filtered count in one round trip.
+
+    Uses a window ``count(*) OVER()`` so ``total`` reflects the full filtered
+    set without a separate COUNT query.  When ``limit_count`` is None (export),
+    all rows are returned and ``total`` equals their length.
+
+    Args:
+        query: An SQLAlchemy query built from the route filters/eager loads.
+        model: ORM model type whose ``created_at`` ordering is applied.
+        order_col: Column to order by descending (typically ``model.created_at``).
+        offset: Number of rows to skip.
+        limit_count: Max rows to return, or None for all.
+
+    Returns:
+        Tuple of ``(rows, total)``.
+    """
+
+    ordered = query.order_by(order_col.desc())
+    if limit_count is None:
+        rows = ordered.all()
+        return rows, len(rows)
+    rows_with_total = (
+        ordered.with_entities(model, func.count().over().label("_total"))
+        .offset(offset)
+        .limit(limit_count)
+        .all()
+    )
+    if rows_with_total:
+        rows = [row[0] for row in rows_with_total]
+        return rows, rows_with_total[0][1]
+    return [], query.count()
 COLOR_BASIC: tuple[str, ...] = ("id", "name", "hex")

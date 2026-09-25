@@ -4,7 +4,8 @@ import logging
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import or_, String, func
+from sqlalchemy import or_, String
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
@@ -16,6 +17,7 @@ from app.query_filters import (
     PRODUCT_BASIC,
     PRODUCT_FIELDS,
     apply_filters,
+    fetch_page,
     json_response,
     parse_filters,
     parse_projection,
@@ -26,6 +28,25 @@ from app.query_filters import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _find_conflicting(
+    db: Session, code: str, exclude_id: int | None = None
+) -> Product | None:
+    """Return the product holding ``code``, excluding ``exclude_id`` if given."""
+    query = db.query(Product).filter(Product.code == code)
+    if exclude_id is not None:
+        query = query.filter(Product.id != exclude_id)
+    return query.first()
+
+
+def _ensure_unique_code(db: Session, code: str, exclude_id: int | None = None) -> None:
+    """Raise 400 when another product already uses the given code."""
+    existing = _find_conflicting(db, code, exclude_id)
+    if existing:
+        raise HTTPException(
+            400, f"A product with code '{existing.name}' already exists"
+        )
 
 
 @router.get("", response_model=ProductListResponse, tags=["Products"], summary="List products",
@@ -98,7 +119,7 @@ def list_products(
         offset, limit_count = resolve_pagination(
             skip=skip, limit=limit, page=page, per_page=per_page, export=export
         )
-        rows, total = _fetch_page(query, offset, limit_count)
+        rows, total = fetch_page(query, Product, Product.created_at, offset, limit_count)
         return json_response(
             {"products": project_rows(rows, projection), "total": total}
         )
@@ -110,34 +131,8 @@ def list_products(
     offset, limit_count = resolve_pagination(
         skip=skip, limit=limit, page=page, per_page=per_page, export=export
     )
-    products, total = _fetch_page(eager, offset, limit_count)
+    products, total = fetch_page(eager, Product, Product.created_at, offset, limit_count)
     return ProductListResponse(products=products, total=total)
-
-
-def _fetch_page(
-    query: Session, offset: int, limit_count: int | None
-) -> tuple[list, int]:
-    """Fetch rows for a page and total count in a single query round trip.
-
-    Uses a window ``count(*) OVER()`` so ``total`` reflects the full filtered
-    set without a separate COUNT query.  When ``limit_count`` is None (export)
-    all rows are returned and ``total`` equals their length.
-    """
-
-    ordered = query.order_by(Product.created_at.desc())
-    if limit_count is None:
-        rows = ordered.all()
-        return rows, len(rows)
-    rows_with_total = (
-        ordered.with_entities(Product, func.count().over().label("_total"))
-        .offset(offset)
-        .limit(limit_count)
-        .all()
-    )
-    if rows_with_total:
-        rows = [row[0] for row in rows_with_total]
-        return rows, rows_with_total[0][1]
-    return [], query.count()
 
 
 @router.get("/{product_id}", response_model=ProductResponse, tags=["Products"], summary="Get product",
@@ -198,9 +193,7 @@ def create_product(
     code = data.code.strip()
     if not code:
         raise HTTPException(400, "Code is required")
-    existing = db.query(Product).filter(Product.code == code).first()
-    if existing:
-        raise HTTPException(400, f"A product with code '{existing.name}' already exists")
+    _ensure_unique_code(db, code)
     if data.price is None or data.price < 0:
         raise HTTPException(400, "Price must be valid")
     categories = []
@@ -227,6 +220,15 @@ def create_product(
     db.add(product)
     try:
         db.commit()
+    except IntegrityError:
+        db.rollback()
+        conflicting = _find_conflicting(db, code)
+        if conflicting:
+            raise HTTPException(
+                400, f"A product with code '{conflicting.name}' already exists"
+            )
+        logger.exception("Failed to create product (unexpected integrity error)")
+        raise HTTPException(500, "Error creating product")
     except Exception:
         db.rollback()
         logger.exception("Failed to create product")
@@ -274,9 +276,7 @@ def update_product(
     code = data.code.strip()
     if not code:
         raise HTTPException(400, "Code is required")
-    existing = db.query(Product).filter(Product.code == code, Product.id != product_id).first()
-    if existing:
-        raise HTTPException(400, f"A product with code '{existing.name}' already exists")
+    _ensure_unique_code(db, code, exclude_id=product_id)
     colors = product.colors
     if data.color_ids is not None:
         colors = db.query(Color).filter(Color.id.in_(data.color_ids)).all()
@@ -305,6 +305,15 @@ def update_product(
     product.colors = colors
     try:
         db.commit()
+    except IntegrityError:
+        db.rollback()
+        conflicting = _find_conflicting(db, code, product_id)
+        if conflicting:
+            raise HTTPException(
+                400, f"A product with code '{conflicting.name}' already exists"
+            )
+        logger.exception("Failed to update product %d (unexpected integrity error)", product_id)
+        raise HTTPException(500, "Error updating product")
     except Exception:
         db.rollback()
         logger.exception("Failed to update product %d", product_id)

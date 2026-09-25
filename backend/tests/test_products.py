@@ -139,6 +139,20 @@ class TestCreateProduct:
         )
         assert resp.status_code == 400
 
+    def test_create_duplicate_code_race_returns_400(self, client, admin_headers, db):
+        _create_product(db, code="RACE01")
+        with patch(
+            "app.routers.products._ensure_unique_code", return_value=None
+        ) as mock_precheck:
+            resp = client.post(
+                "/api/products",
+                json={"name": "Other", "code": "RACE01", "price": "5.00"},
+                headers=admin_headers,
+            )
+        mock_precheck.assert_called_once()
+        assert resp.status_code == 400
+        assert "RACE01" not in resp.json()["detail"] or "already exists" in resp.json()["detail"]
+
     def test_create_empty_name(self, client, admin_headers):
         resp = client.post(
             "/api/products",
@@ -348,3 +362,18 @@ class TestUpdateProductDuplicateCode:
             headers=admin_headers,
         )
         assert resp.status_code == 400
+
+    def test_update_duplicate_code_race_returns_400(self, client, admin_headers, db):
+        dup = _create_product(db, name="First", code="RACE01")
+        p2 = _create_product(db, name="Second", code="RACE02")
+        with patch(
+            "app.routers.products._ensure_unique_code", return_value=None
+        ) as mock_precheck:
+            resp = client.put(
+                f"/api/products/{p2.id}",
+                json={"name": "Second", "code": "RACE01", "price": "10.00"},
+                headers=admin_headers,
+            )
+        mock_precheck.assert_called_once()
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == f"A product with code '{dup.name}' already exists"
