@@ -141,7 +141,7 @@ export default function UserManager() {
           </div>
           <div className="form-group">
             <label htmlFor="new-user-role">Rol</label>
-            <select id="new-user-role" value={roleId} onChange={(e) => setRoleId(Number(e.target.value))} autoComplete="off">
+            <select id="new-user-role" value={roleId ?? ''} onChange={(e) => setRoleId(Number(e.target.value))} autoComplete="off">
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
