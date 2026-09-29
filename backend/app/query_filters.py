@@ -423,6 +423,7 @@ def fetch_page(
     order_col: InstrumentedAttribute,
     offset: int,
     limit_count: int | None,
+    desc: bool = True,
 ) -> tuple[list, int]:
     """Return a page of rows and the total filtered count in one round trip.
 
@@ -432,16 +433,17 @@ def fetch_page(
 
     Args:
         query: An SQLAlchemy query built from the route filters/eager loads.
-        model: ORM model type whose ``created_at`` ordering is applied.
-        order_col: Column to order by descending (typically ``model.created_at``).
+        model: ORM model type whose columns are selected with the window count.
+        order_col: Column to order by (typically ``model.created_at``/``name``).
         offset: Number of rows to skip.
         limit_count: Max rows to return, or None for all.
+        desc: Order descending when True (default), ascending otherwise.
 
     Returns:
         Tuple of ``(rows, total)``.
     """
 
-    ordered = query.order_by(order_col.desc())
+    ordered = query.order_by(order_col.desc() if desc else order_col.asc())
     if limit_count is None:
         rows = ordered.all()
         return rows, len(rows)

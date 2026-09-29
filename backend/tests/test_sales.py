@@ -84,7 +84,7 @@ class TestListSales:
         )
         resp = client.get("/api/sales", headers=admin_headers)
         assert resp.status_code == 200
-        assert len(resp.json()) == 1
+        assert len(resp.json()["sales"]) == 1
 
     def test_get_sale(self, client, admin_headers, db):
         p = _create_product(db)
@@ -151,7 +151,7 @@ class TestEmployeeSaleAccess:
         )
         resp = client.get("/api/sales", headers=employee_headers)
         assert resp.status_code == 200
-        assert len(resp.json()) == 1
+        assert len(resp.json()["sales"]) == 1
 
 
 class TestViewerSaleAccess:
@@ -178,7 +178,8 @@ class TestViewerSaleAccess:
             )
         resp = client.get("/api/sales?page=1&per_page=2", headers=admin_headers)
         assert resp.status_code == 200
-        assert len(resp.json()) == 2
+        assert len(resp.json()["sales"]) == 2
+        assert resp.json()["total"] == 3
 
     def test_list_sales_projection_out_of_range_total(self, client, admin_headers, db):
         for i in range(3):

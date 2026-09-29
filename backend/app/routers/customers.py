@@ -8,12 +8,13 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.config import escape_like
 from app.models import Customer, User
-from app.schemas import CustomerCreate, CustomerResponse
+from app.schemas import CustomerCreate, CustomerResponse, CustomerListResponse
 from app.auth import require_permission
 from app.query_filters import (
     CUSTOMER_BASIC,
     CUSTOMER_FIELDS,
     apply_filters,
+    fetch_page,
     json_response,
     parse_filters,
     parse_projection,
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("", response_model=list[CustomerResponse], tags=["Customers"], summary="List customers",
+@router.get("", response_model=CustomerListResponse, tags=["Customers"], summary="List customers",
               description="Return all customers, optionally filtered by name or phone (ILIKE search).")
 def list_customers(
     q: str | None = Query(None),
@@ -37,7 +38,7 @@ def list_customers(
     request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("customer.view")),
-) -> list[Customer]:
+) -> CustomerListResponse:
     """Return all customers, optionally filtered by name/phone search and
     the shared query DSL (operator filters and ``modo``/``campos``).
 
@@ -52,7 +53,7 @@ def list_customers(
         current_user: Authenticated user with ``customer.view`` permission.
 
     Returns:
-        List of Customer records.
+        CustomerListResponse with ``customers`` list and ``total`` count.
 
     Raises:
         HTTPException: 403 if the user lacks ``customer.view`` permission.
@@ -72,14 +73,15 @@ def list_customers(
     offset, limit_count = resolve_pagination(
         skip=skip, limit=limit, default_paginated=False
     )
-    query = query.order_by(Customer.name.asc()).offset(offset)
-    if limit_count is not None:
-        query = query.limit(limit_count)
-    rows = query.all()
+    rows, total = fetch_page(
+        query, Customer, Customer.name, offset, limit_count, desc=False
+    )
 
     if projection is not None and projection.active:
-        return json_response(project_rows(rows, projection))
-    return rows
+        return json_response(
+            {"customers": project_rows(rows, projection), "total": total}
+        )
+    return CustomerListResponse(customers=rows, total=total)
 
 
 @router.get("/{customer_id}", response_model=CustomerResponse, tags=["Customers"], summary="Get customer",

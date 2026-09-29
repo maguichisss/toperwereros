@@ -31,7 +31,7 @@ export default function LayawayCreateView({ onBack, onCreated }) {
     if (!q.trim()) { setCustomerResults([]); return; }
     try {
       const res = await customersApi.list(q);
-      setCustomerResults(res);
+      setCustomerResults(res.customers);
       setShowCustomerResults(true);
     } catch {}
   }, []);

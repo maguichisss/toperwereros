@@ -18,13 +18,14 @@ class TestListColors:
     def test_empty_list(self, client, admin_headers):
         resp = client.get("/api/colors", headers=admin_headers)
         assert resp.status_code == 200
-        assert len(resp.json()) == 0
+        assert len(resp.json()["colors"]) == 0
 
     def test_list_with_data(self, client, admin_headers, db):
         _create_color(db, "Red", "#FF0000")
         _create_color(db, "Blue", "#0000FF")
         resp = client.get("/api/colors", headers=admin_headers)
-        assert len(resp.json()) == 2
+        assert len(resp.json()["colors"]) == 2
+        assert resp.json()["total"] == 2
 
 
 class TestCreateColor:
@@ -120,7 +121,7 @@ class TestEmployeeColorAccess:
         _create_color(db)
         resp = client.get("/api/colors", headers=employee_headers)
         assert resp.status_code == 200
-        assert len(resp.json()) == 1
+        assert len(resp.json()["colors"]) == 1
 
     def test_employee_cannot_create_color(self, client, employee_headers):
         resp = client.post("/api/colors", json={"name": "Green", "hex": "#00FF00"}, headers=employee_headers)
@@ -142,7 +143,7 @@ class TestViewerColorAccess:
         _create_color(db)
         resp = client.get("/api/colors", headers=viewer_headers)
         assert resp.status_code == 200
-        assert len(resp.json()) == 1
+        assert len(resp.json()["colors"]) == 1
 
     def test_viewer_cannot_create_color(self, client, viewer_headers):
         resp = client.post("/api/colors", json={"name": "X", "hex": "#000000"}, headers=viewer_headers)

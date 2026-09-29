@@ -17,26 +17,27 @@ class TestListCustomers:
     def test_empty_list(self, client, admin_headers):
         resp = client.get("/api/customers", headers=admin_headers)
         assert resp.status_code == 200
-        assert len(resp.json()) == 0
+        assert len(resp.json()["customers"]) == 0
 
     def test_list_with_data(self, client, admin_headers, db):
         _create_customer(db, "Alice", "555-0001")
         _create_customer(db, "Bob", "555-0002")
         resp = client.get("/api/customers", headers=admin_headers)
-        assert len(resp.json()) == 2
+        assert len(resp.json()["customers"]) == 2
+        assert resp.json()["total"] == 2
 
     def test_search_by_name(self, client, admin_headers, db):
         _create_customer(db, "Alice Smith", "555-0001")
         _create_customer(db, "Bob Jones", "555-0002")
         resp = client.get("/api/customers?q=Alice", headers=admin_headers)
-        assert len(resp.json()) == 1
-        assert resp.json()[0]["name"] == "Alice Smith"
+        assert len(resp.json()["customers"]) == 1
+        assert resp.json()["customers"][0]["name"] == "Alice Smith"
 
     def test_search_by_phone(self, client, admin_headers, db):
         _create_customer(db, "Alice", "555-1234")
         _create_customer(db, "Bob", "555-5678")
         resp = client.get("/api/customers?q=1234", headers=admin_headers)
-        assert len(resp.json()) == 1
+        assert len(resp.json()["customers"]) == 1
 
 
 class TestGetCustomer:
@@ -132,7 +133,7 @@ class TestEmployeeCustomerAccess:
         _create_customer(db)
         resp = client.get("/api/customers", headers=employee_headers)
         assert resp.status_code == 200
-        assert len(resp.json()) == 1
+        assert len(resp.json()["customers"]) == 1
 
     def test_employee_can_create_customer(self, client, employee_headers):
         resp = client.post(
@@ -163,7 +164,7 @@ class TestViewerCustomerAccess:
         _create_customer(db)
         resp = client.get("/api/customers", headers=viewer_headers)
         assert resp.status_code == 200
-        assert len(resp.json()) == 1
+        assert len(resp.json()["customers"]) == 1
 
     def test_viewer_cannot_create_customer(self, client, viewer_headers):
         resp = client.post(

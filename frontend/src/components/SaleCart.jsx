@@ -69,7 +69,7 @@ export default function SaleCart() {
     try {
       const { startDate, endDate } = getDateRange();
       const res = await salesApi.list({ page: salesPage, perPage: 20, startDate, endDate });
-      setSales(res);
+      setSales(res.sales);
     } catch {}
   }, [salesPage, datePreset, dateFrom, dateTo]);
 

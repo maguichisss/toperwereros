@@ -35,7 +35,7 @@ export default function ProductList() {
       ]);
       setProducts(res.products);
       setTotal(res.total);
-      setCategories(c);
+      setCategories(c.categories);
     } catch {}
   }, [page, perPage, pendingSearch]);
 

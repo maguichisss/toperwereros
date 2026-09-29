@@ -20,7 +20,7 @@ export default function CustomerManager() {
 
   async function load() {
     try {
-      setCustomers(await customersApi.list());
+      setCustomers((await customersApi.list()).customers);
     } catch {}
   }
 

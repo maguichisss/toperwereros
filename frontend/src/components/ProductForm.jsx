@@ -31,7 +31,7 @@ export default function ProductForm({ product, categories, onSave, onCancel }) {
   const priceRef = useRef(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   useEffect(() => {
-    colorsApi.list().then(setColors).catch(() => {});
+    colorsApi.list().then((res) => setColors(res.colors)).catch(() => {});
   }, []);
   useEffect(() => {
     if (imageFile) {

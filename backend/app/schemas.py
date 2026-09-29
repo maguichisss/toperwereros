@@ -52,6 +52,13 @@ class CategoryResponse(BaseModel):
     updated_at: datetime
 
 
+class CategoryListResponse(BaseModel):
+    """Paginated category list response with total count."""
+
+    categories: list[CategoryResponse]
+    total: int
+
+
 # ── Colors ──────────────────────────────────────────────────────────────────
 
 class ColorCreate(BaseModel):
@@ -72,6 +79,13 @@ class ColorResponse(BaseModel):
     id: int
     name: str
     hex: str
+
+
+class ColorListResponse(BaseModel):
+    """Paginated color list response with total count."""
+
+    colors: list[ColorResponse]
+    total: int
 
 
 # ── Products ────────────────────────────────────────────────────────────────
@@ -318,6 +332,13 @@ class SaleResponse(BaseModel):
     items: list[SaleItemResponse]
 
 
+class SaleListResponse(BaseModel):
+    """Paginated sale list response with total count."""
+
+    sales: list[SaleResponse]
+    total: int
+
+
 # ── Customers ───────────────────────────────────────────────────────────────
 
 class CustomerCreate(BaseModel):
@@ -339,6 +360,13 @@ class CustomerResponse(BaseModel):
     email: str | None = None
     notes: str | None = None
     created_at: datetime
+
+
+class CustomerListResponse(BaseModel):
+    """Paginated customer list response with total count."""
+
+    customers: list[CustomerResponse]
+    total: int
 
 
 # ── Layaways ────────────────────────────────────────────────────────────────

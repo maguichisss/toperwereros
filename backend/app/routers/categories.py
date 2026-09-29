@@ -8,12 +8,13 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Category, product_categories, User
-from app.schemas import CategoryCreate, CategoryResponse
+from app.schemas import CategoryCreate, CategoryResponse, CategoryListResponse
 from app.auth import require_permission
 from app.query_filters import (
     CATEGORY_BASIC,
     CATEGORY_FIELDS,
     apply_filters,
+    fetch_page,
     json_response,
     parse_filters,
     parse_projection,
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("", response_model=list[CategoryResponse], tags=["Categories"], summary="List categories",
+@router.get("", response_model=CategoryListResponse, tags=["Categories"], summary="List categories",
               description="Return all categories ordered alphabetically.")
 def list_categories(
     skip: int | None = Query(None, ge=0, description="Number of records to skip"),
@@ -36,7 +37,7 @@ def list_categories(
     request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("category.view")),
-) -> list[Category]:
+) -> CategoryListResponse:
     """Return all categories ordered alphabetically, with optional shared
     query DSL operator filters and ``modo``/``campos`` projection.
 
@@ -50,7 +51,7 @@ def list_categories(
         current_user: Authenticated user with ``category.view`` permission.
 
     Returns:
-        List of Category records.
+        CategoryListResponse with ``categories`` list and ``total`` count.
 
     Raises:
         HTTPException: 403 if the user lacks ``category.view`` permission.
@@ -65,14 +66,15 @@ def list_categories(
     offset, limit_count = resolve_pagination(
         skip=skip, limit=limit, default_paginated=False
     )
-    query = query.order_by(Category.name.asc()).offset(offset)
-    if limit_count is not None:
-        query = query.limit(limit_count)
-    rows = query.all()
+    rows, total = fetch_page(
+        query, Category, Category.name, offset, limit_count, desc=False
+    )
 
     if projection is not None and projection.active:
-        return json_response(project_rows(rows, projection))
-    return rows
+        return json_response(
+            {"categories": project_rows(rows, projection), "total": total}
+        )
+    return CategoryListResponse(categories=rows, total=total)
 
 
 @router.post("", response_model=CategoryResponse, status_code=201, tags=["Categories"], summary="Create category",

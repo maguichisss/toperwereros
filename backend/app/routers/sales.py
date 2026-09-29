@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.models import Product, Sale, SaleItem, User
-from app.schemas import SaleCreate, SaleResponse, SaleItemResponse
+from app.schemas import SaleCreate, SaleResponse, SaleListResponse, SaleItemResponse
 from app.auth import require_permission
 from app.config import get_rate_limit_key
 from app.query_filters import (
@@ -64,7 +64,7 @@ def serialize_sale(sale: Sale) -> SaleResponse:
     )
 
 
-@router.get("", response_model=list[SaleResponse], tags=["Sales"], summary="List sales",
+@router.get("", response_model=SaleListResponse, tags=["Sales"], summary="List sales",
               description="Paginated list of sales, newest first. Each sale includes line items and creator username.")
 def list_sales(
     page: int = Query(1, ge=1),
@@ -98,7 +98,7 @@ def list_sales(
         current_user: Authenticated user with ``sale.view`` permission.
 
     Returns:
-        List of serialized SaleResponse objects.
+        SaleListResponse with ``sales`` list and ``total`` count.
 
     Raises:
         HTTPException: 500 on unexpected database errors.
@@ -127,11 +127,11 @@ def list_sales(
             selectinload(Sale.items).selectinload(SaleItem.product),
             selectinload(Sale.creator),
         )
-        sales, _ = fetch_page(eager, Sale, Sale.created_at, offset, limit_count)
+        sales, total = fetch_page(eager, Sale, Sale.created_at, offset, limit_count)
     except Exception:
         logger.exception("Failed to list sales")
         raise HTTPException(500, "Error fetching sales")
-    return [serialize_sale(s) for s in sales]
+    return SaleListResponse(sales=[serialize_sale(s) for s in sales], total=total)
 
 
 @router.get("/{sale_id}", response_model=SaleResponse, tags=["Sales"], summary="Get sale",

@@ -18,7 +18,7 @@ export default function CategoryManager() {
 
   async function load() {
     try {
-      setCategories(await categoriesApi.list());
+      setCategories((await categoriesApi.list()).categories);
     } catch {}
   }
 

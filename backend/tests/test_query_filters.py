@@ -320,7 +320,7 @@ class TestCustomersDSL:
         db.add(Customer(name="Bob", phone="222"))
         db.commit()
         resp = client.get("/api/customers?name__contains=lic", headers=admin_headers)
-        assert [c["name"] for c in resp.json()] == ["Alice"]
+        assert [c["name"] for c in resp.json()["customers"]] == ["Alice"]
 
     def test_email_is_null(self, client, admin_headers, db):
         db.add(Customer(name="NoEmail"))
@@ -329,16 +329,17 @@ class TestCustomersDSL:
         resp = client.get(
             "/api/customers?email__is_null=true", headers=admin_headers
         )
-        assert [c["name"] for c in resp.json()] == ["NoEmail"]
+        assert [c["name"] for c in resp.json()["customers"]] == ["NoEmail"]
 
     def test_no_pagination_by_default(self, client, admin_headers, db):
         for i in range(3):
             db.add(Customer(name=f"Customer{i}", phone=str(i)))
         db.commit()
         resp = client.get("/api/customers", headers=admin_headers)
-        assert len(resp.json()) == 3
+        assert len(resp.json()["customers"]) == 3
         resp = client.get("/api/customers?limit=2", headers=admin_headers)
-        assert len(resp.json()) == 2
+        assert len(resp.json()["customers"]) == 2
+        assert resp.json()["total"] == 3
 
 
 class TestSalesDSL:
@@ -347,7 +348,7 @@ class TestSalesDSL:
         db.add(Sale(total=Decimal("250.00")))
         db.commit()
         resp = client.get("/api/sales?total__gt=150", headers=admin_headers)
-        assert len(resp.json()) == 1
+        assert len(resp.json()["sales"]) == 1
 
     def test_created_after(self, client, admin_headers, db):
         sale = Sale(total=Decimal("50.00"), created_at=datetime(2026, 3, 1))
@@ -356,11 +357,11 @@ class TestSalesDSL:
         resp = client.get(
             "/api/sales?created_at__gte=2026-01-01", headers=admin_headers
         )
-        assert len(resp.json()) == 1
+        assert len(resp.json()["sales"]) == 1
         resp = client.get(
             "/api/sales?created_at__gte=2026-04-01", headers=admin_headers
         )
-        assert resp.json() == []
+        assert resp.json()["sales"] == []
 
 
 class TestLayawaysDSL:
@@ -412,11 +413,11 @@ class TestCategoriesColorsDSL:
         resp = client.get(
             "/api/categories?name__startswith=tequi", headers=admin_headers
         )
-        assert [c["name"] for c in resp.json()] == ["Tequilas"]
+        assert [c["name"] for c in resp.json()["categories"]] == ["Tequilas"]
 
     def test_color_hex_exact(self, client, admin_headers, db):
         _create_color(db, "Red", "#FF0000")
         _create_color(db, "Blue", "#0000FF")
         resp = client.get("/api/categories")  # touch categories route
         resp = client.get("/api/colors?hex=%23FF0000", headers=admin_headers)
-        assert [c["name"] for c in resp.json()] == ["Red"]
+        assert [c["name"] for c in resp.json()["colors"]] == ["Red"]

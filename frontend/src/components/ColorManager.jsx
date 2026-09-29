@@ -20,7 +20,7 @@ export default function ColorManager() {
 
   async function load() {
     try {
-      setColors(await colorsApi.list());
+      setColors((await colorsApi.list()).colors);
     } catch {}
   }
 

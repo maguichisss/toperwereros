@@ -9,12 +9,13 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Color, product_colors, User
-from app.schemas import ColorCreate, ColorResponse
+from app.schemas import ColorCreate, ColorResponse, ColorListResponse
 from app.auth import require_permission
 from app.query_filters import (
     COLOR_BASIC,
     COLOR_FIELDS,
     apply_filters,
+    fetch_page,
     json_response,
     parse_filters,
     parse_projection,
@@ -29,7 +30,7 @@ router = APIRouter()
 HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
-@router.get("", response_model=list[ColorResponse], tags=["Colors"], summary="List colors",
+@router.get("", response_model=ColorListResponse, tags=["Colors"], summary="List colors",
               description="Return all colors ordered alphabetically.")
 def list_colors(
     skip: int | None = Query(None, ge=0, description="Number of records to skip"),
@@ -39,7 +40,7 @@ def list_colors(
     request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("color.view")),
-) -> list[Color]:
+) -> ColorListResponse:
     """Return all colors ordered alphabetically, with optional shared
     query DSL operator filters and ``modo``/``campos`` projection.
 
@@ -53,7 +54,7 @@ def list_colors(
         current_user: Authenticated user with ``color.view`` permission.
 
     Returns:
-        List of Color records.
+        ColorListResponse with ``colors`` list and ``total`` count.
 
     Raises:
         HTTPException: 403 if the user lacks ``color.view`` permission.
@@ -68,14 +69,11 @@ def list_colors(
     offset, limit_count = resolve_pagination(
         skip=skip, limit=limit, default_paginated=False
     )
-    query = query.order_by(Color.name.asc()).offset(offset)
-    if limit_count is not None:
-        query = query.limit(limit_count)
-    rows = query.all()
+    rows, total = fetch_page(query, Color, Color.name, offset, limit_count, desc=False)
 
     if projection is not None and projection.active:
-        return json_response(project_rows(rows, projection))
-    return rows
+        return json_response({"colors": project_rows(rows, projection), "total": total})
+    return ColorListResponse(colors=rows, total=total)
 
 
 @router.post("", response_model=ColorResponse, status_code=201, tags=["Colors"], summary="Create color",

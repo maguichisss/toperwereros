@@ -89,9 +89,9 @@ export default function CatalogExportPage() {
   useEffect(() => {
     Promise.all([
       categoriesApi.list(),
-      can('color.view') ? colorsApi.list() : Promise.resolve([]),
+      can('color.view') ? colorsApi.list() : Promise.resolve({ colors: [] }),
     ])
-      .then(([c, col]) => { setCategories(c); setColors(col); })
+      .then(([c, col]) => { setCategories(c.categories); setColors(col.colors); })
       .catch(() => {});
   }, [can]);
 
