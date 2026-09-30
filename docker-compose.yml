@@ -36,6 +36,9 @@ services:
     restart: ${RESTART_POLICY:-unless-stopped}
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/store_catalog}
+      # Dev always uses the local compose db: never start the Cloud SQL proxy,
+      # even if backend/.env carries a stale CLOUD_SQL_CONNECTION_STRING.
+      CLOUD_SQL_CONNECTION_STRING: ""
     env_file: ./backend/.env
     ports:
       - "${BACKEND_PORT:-3001}:3001"
