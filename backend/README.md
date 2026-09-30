@@ -7,7 +7,7 @@ FastAPI backend for the Toperwereros store catalog — products, sales, layaways
 - **Framework:** FastAPI 0.115
 - **ORM:** SQLAlchemy 2.0 (Mapped style)
 - **Database:** PostgreSQL 16
-- **Auth:** JWT (python-jose) + bcrypt (passlib)
+- **Auth:** JWT (PyJWT) + bcrypt (passlib)
 - **PDF:** fpdf2 + Pillow
 - **Rate Limiting:** slowapi
 - **File Uploads:** python-multipart

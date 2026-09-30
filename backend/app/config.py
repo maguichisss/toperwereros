@@ -3,7 +3,7 @@
 import os
 
 from fastapi import HTTPException, Request
-from jose import JWTError, jwt
+import jwt
 
 UPLOAD_DIR: str = os.path.join(os.getcwd(), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -106,7 +106,7 @@ def get_rate_limit_key(request: Request) -> str:
     if auth.startswith("Bearer ") and _JWT_SECRET:
         try:
             payload = jwt.decode(auth[7:], _JWT_SECRET, algorithms=[_JWT_ALGORITHM])
-        except JWTError:
+        except jwt.PyJWTError:
             pass
         else:
             sub = payload.get("sub")

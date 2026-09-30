@@ -7,7 +7,7 @@ psycopg2-binary==2.9.10
 python-multipart==0.0.20
 fpdf2==2.8.2
 Pillow>=10.0
-python-jose[cryptography]==3.3.0
+PyJWT==2.15.1
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 slowapi==0.1.10

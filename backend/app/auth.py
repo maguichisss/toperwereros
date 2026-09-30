@@ -15,7 +15,7 @@ from typing import Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
+import jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
@@ -168,7 +168,7 @@ def get_current_user(
         if sub is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         user_id: int = int(sub)
-    except (JWTError, TypeError, ValueError):
+    except (jwt.PyJWTError, TypeError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid token")
 
     user = db.query(User).filter(User.id == user_id).first()

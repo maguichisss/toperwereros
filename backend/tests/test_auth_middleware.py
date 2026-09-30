@@ -1,18 +1,55 @@
 """Tests for auth middleware: JWT validation, wildcard permissions, inactive users."""
 
+import base64
+import hashlib
+import hmac
+import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
-from jose import jwt
+import jwt
 
-from app.auth import create_access_token, ROLE_PERMISSIONS
+from app.auth import JWT_SECRET as APP_JWT_SECRET, create_access_token, ROLE_PERMISSIONS
 from app.main import app
 from app.models import User, Role
 
 
 JWT_SECRET = "dev-secret-change-in-production"
 ALGORITHM = "HS256"
+
+
+def _legacy_style_token(secret: str) -> str:
+    """Build an HS256 token with stdlib only, as python-jose would.
+
+    Independent of any JWT library: header/payload/signature are assembled by
+    hand, so the test proves tokens minted before the python-jose -> PyJWT
+    migration still validate against the app (JWT_SECRET, decode, exp check).
+    """
+
+    def b64(raw: bytes) -> str:
+        return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+    header = b64(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
+    payload = b64(
+        json.dumps(
+            {"sub": "999999", "iat": 1759000000, "exp": 4070908800},
+            separators=(",", ":"),
+        ).encode()
+    )
+    signing_input = f"{header}.{payload}".encode()
+    signature = b64(hmac.new(secret.encode(), signing_input, hashlib.sha256).digest())
+    return f"{header}.{payload}.{signature}"
+
+
+class TestLegacyTokenFormat:
+    def test_pre_migration_token_still_validates(self, client):
+        resp = client.get(
+            "/api/auth/me",
+            headers={"Authorization": f"Bearer {_legacy_style_token(APP_JWT_SECRET)}"},
+        )
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == "User not found or inactive"
 
 
 class TestExpiredToken:
