@@ -1,0 +1,135 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+  GCP_REGION: ${{ secrets.GCP_REGION }}
+  AR_HOST: ${{ secrets.GCP_REGION }}-docker.pkg.dev
+  AR_REPO: store-catalog
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements-dev.txt
+
+      - name: Run tests
+        run: cd backend && pytest tests/ -q
+
+      - name: Verify docs in sync with code
+        env:
+          JWT_SECRET: test-secret-for-testing
+        run: bash scripts/generate_docs.sh --check
+
+  build-and-deploy:
+    name: Build & Deploy
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Auth to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${{ env.AR_HOST }} --quiet
+
+      - name: Set image tag
+        id: tag
+        run: echo "tag=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build backend image
+        run: |
+          docker build \
+            --target backend-prod \
+            -t ${{ env.AR_HOST }}/${{ env.GCP_PROJECT }}/${{ env.AR_REPO }}/backend:${{ steps.tag.outputs.tag }} \
+            ./backend
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            --target frontend-prod \
+            -t ${{ env.AR_HOST }}/${{ env.GCP_PROJECT }}/${{ env.AR_REPO }}/frontend:${{ steps.tag.outputs.tag }} \
+            ./frontend
+
+      - name: Push backend image
+        run: docker push ${{ env.AR_HOST }}/${{ env.GCP_PROJECT }}/${{ env.AR_REPO }}/backend:${{ steps.tag.outputs.tag }}
+
+      - name: Push frontend image
+        run: docker push ${{ env.AR_HOST }}/${{ env.GCP_PROJECT }}/${{ env.AR_REPO }}/frontend:${{ steps.tag.outputs.tag }}
+
+      - name: Deploy backend to Cloud Run
+        run: |
+          gcloud run deploy store-catalog-backend \
+            --image=${{ env.AR_HOST }}/${{ env.GCP_PROJECT }}/${{ env.AR_REPO }}/backend:${{ steps.tag.outputs.tag }} \
+            --region=${{ env.GCP_REGION }} \
+            --platform=managed \
+            --service-account=store-catalog-backend@${{ env.GCP_PROJECT }}.iam.gserviceaccount.com \
+            --add-cloudsql-instances=${{ env.GCP_PROJECT }}:${{ env.GCP_REGION }}:store-catalog \
+            --set-secrets="JWT_SECRET=jwt-secret:latest,DEFAULT_ADMIN_PASSWORD=admin-password:latest,DATABASE_URL=db-url:latest" \
+            --set-env-vars="CLOUD_SQL_CONNECTION_STRING=${{ env.GCP_PROJECT }}:${{ env.GCP_REGION }}:store-catalog,GCS_BUCKET=${{ secrets.GCS_BUCKET }},GCP_PROJECT=${{ env.GCP_PROJECT }},CORS_ORIGINS=*,LOG_LEVEL=WARNING" \
+            --port=8080 \
+            --memory=512Mi \
+            --cpu=1 \
+            --min-instances=0 \
+            --max-instances=10 \
+            --no-allow-unauthenticated
+
+      - name: Get backend URL
+        id: backend
+        run: echo "url=$(gcloud run services describe store-catalog-backend --region=${{ env.GCP_REGION }} --format='value(status.url)')" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy frontend to Cloud Run
+        run: |
+          gcloud run deploy store-catalog-frontend \
+            --image=${{ env.AR_HOST }}/${{ env.GCP_PROJECT }}/${{ env.AR_REPO }}/frontend:${{ steps.tag.outputs.tag }} \
+            --region=${{ env.GCP_REGION }} \
+            --platform=managed \
+            --set-env-vars="BACKEND_URL=${{ steps.backend.outputs.url }}" \
+            --port=8080 \
+            --memory=256Mi \
+            --cpu=1 \
+            --min-instances=0 \
+            --max-instances=5 \
+            --allow-unauthenticated
+
+      - name: Get frontend URL
+        id: frontend
+        run: echo "url=$(gcloud run services describe store-catalog-frontend --region=${{ env.GCP_REGION }} --format='value(status.url)')" >> "$GITHUB_OUTPUT"
+
+      - name: Update backend CORS with frontend URL
+        run: |
+          gcloud run services update store-catalog-backend \
+            --region=${{ env.GCP_REGION }} \
+            --set-env-vars="CORS_ORIGINS=${{ steps.frontend.outputs.url }},LOG_LEVEL=WARNING" \
+            --quiet
+
+      - name: Summary
+        run: |
+          echo "## Deployment Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Service | URL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---------|-----|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Frontend | ${{ steps.frontend.outputs.url }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Backend | ${{ steps.backend.outputs.url }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Health | ${{ steps.backend.outputs.url }}/api/health |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Docs | ${{ steps.backend.outputs.url }}/swagger |" >> "$GITHUB_STEP_SUMMARY"
