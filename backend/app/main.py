@@ -21,7 +21,7 @@ from app import i18n
 from app.logging_config import setup_logging
 from app.config import UPLOAD_DIR, GCS_BUCKET, get_rate_limit_key
 from app.routers.docs import REDOC_HTML
-from app.routers import categories, products, upload, colors, catalog, sales, customers, layaways, auth
+from app.routers import categories, products, upload, colors, catalog, sales, customers, layaways, auth, dashboard
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -43,6 +43,7 @@ app = FastAPI(
         {"name": "Sales", "description": "Sale creation and history with atomic stock decrement."},
         {"name": "Customers", "description": "Customer records with name/phone search."},
         {"name": "Layaways", "description": "Layaway (apartado) lifecycle: create, pay, cancel, complete."},
+        {"name": "Dashboard", "description": "Aggregated store metrics for a period: sales, rankings, layaways, customers and inventory."},
     ],
 )
 app.state.limiter = limiter
@@ -127,6 +128,7 @@ app.include_router(auth.router, prefix="/api/auth")
 app.include_router(sales.router, prefix="/api/sales")
 app.include_router(customers.router, prefix="/api/customers")
 app.include_router(layaways.router, prefix="/api/layaways")
+app.include_router(dashboard.router, prefix="/api/dashboard")
 
 
 @app.get("/docs", response_class=HTMLResponse, include_in_schema=False)

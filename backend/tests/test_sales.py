@@ -1,9 +1,10 @@
 """Tests for sales creation, stock validation, and listing."""
 
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
-from app.models import Product
+from app.models import Product, Sale, SaleItem
 
 
 def _create_product(db, name="Widget", code="W001", price="19.99", stock=10):
@@ -212,6 +213,62 @@ class TestViewerSaleAccess:
         resp = client.get("/api/sales?campos=not_a_field", headers=admin_headers)
         assert resp.status_code == 400
         assert "not_a_field" in resp.json()["detail"]
+
+
+class TestListSalesDateFilters:
+    def test_invalid_start_date_returns_400(self, client, admin_headers):
+        resp = client.get("/api/sales?start_date=abc", headers=admin_headers)
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == "Invalid date format. Use YYYY-MM-DD"
+
+    def test_invalid_end_date_returns_400(self, client, admin_headers):
+        resp = client.get("/api/sales?end_date=xyz", headers=admin_headers)
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == "Invalid date format. Use YYYY-MM-DD"
+
+    def test_invalid_dates_in_spanish(self, client, admin_headers):
+        headers = {**admin_headers, "Accept-Language": "es-MX"}
+        start = client.get("/api/sales?start_date=abc", headers=headers)
+        end = client.get("/api/sales?end_date=xyz", headers=headers)
+        assert start.status_code == 400 and end.status_code == 400
+        assert start.json()["detail"] == "Formato de fecha inválido. Use YYYY-MM-DD"
+        assert end.json()["detail"] == "Formato de fecha inválido. Use YYYY-MM-DD"
+
+    def test_valid_range_filters_sales(self, client, admin_headers, db):
+        p = _create_product(db, stock=10)
+        today = date.today()
+        sale = Sale(
+            total=Decimal("19.99"),
+            created_at=datetime.combine(today, time(hour=12)),
+        )
+        sale.items = [
+            SaleItem(product_id=p.id, quantity=1, unit_price=Decimal("19.99"))
+        ]
+        db.add(sale)
+        db.commit()
+
+        inside = client.get(
+            f"/api/sales?start_date={today.isoformat()}&end_date={today.isoformat()}",
+            headers=admin_headers,
+        )
+        outside = client.get(
+            f"/api/sales?start_date={(today - timedelta(days=3)).isoformat()}"
+            f"&end_date={(today - timedelta(days=2)).isoformat()}",
+            headers=admin_headers,
+        )
+        assert inside.status_code == 200 and inside.json()["total"] == 1
+        assert outside.status_code == 200 and outside.json()["total"] == 0
+
+    def test_max_end_date_does_not_overflow(self, client, admin_headers, db):
+        p = _create_product(db, stock=10)
+        client.post(
+            "/api/sales",
+            json={"items": [{"product_id": p.id, "quantity": 1}]},
+            headers=admin_headers,
+        )
+        resp = client.get("/api/sales?end_date=9999-12-31", headers=admin_headers)
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 1
 
 
 class TestCreateSaleRateLimit:

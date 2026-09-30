@@ -4,16 +4,20 @@ Covers the ``skip``/``limit`` / ``field__op=value`` / ``modo`` / ``campos``
 behaviour on every list GET endpoint plus unit tests for the parser.
 """
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 import pytest
+from fastapi import HTTPException
 
 from app.models import Product, Category, Color, Customer, Sale, Layaway
 from app.query_filters import (
     PRODUCT_FIELDS,
     SALE_FIELDS,
     apply_filters,
+    end_of_day,
+    parse_date_range,
+    parse_day,
     parse_filters,
     parse_projection,
     project_rows,
@@ -184,6 +188,84 @@ class TestProjectRows:
         row = project_rows([p], proj)[0]
         assert row["price"] == 12.5
         assert row["name"] == "X"
+
+
+class TestParseDateRange:
+    def test_no_dates(self):
+        assert parse_date_range(None, None) == (None, None)
+
+    def test_start_only(self):
+        start, end = parse_date_range("2024-05-01", None)
+        assert start == datetime(2024, 5, 1, 0, 0, 0)
+        assert end is None
+
+    def test_end_only_is_inclusive(self):
+        start, end = parse_date_range(None, "2024-05-01")
+        assert start is None
+        assert end == datetime(2024, 5, 2, 0, 0, 0)
+
+    def test_both_dates(self):
+        assert parse_date_range("2024-05-01", "2024-05-31") == (
+            datetime(2024, 5, 1, 0, 0, 0),
+            datetime(2024, 6, 1, 0, 0, 0),
+        )
+
+    def test_month_end_boundaries(self):
+        assert parse_date_range("2024-01-31", "2024-02-29")[1] == datetime(2024, 3, 1)
+
+    def test_invalid_start_raises_400(self):
+        with pytest.raises(HTTPException) as exc:
+            parse_date_range("abc", None)
+        assert exc.value.status_code == 400
+        assert exc.value.detail == "Invalid date format. Use YYYY-MM-DD"
+
+    def test_invalid_end_raises_400(self):
+        with pytest.raises(HTTPException) as exc:
+            parse_date_range(None, "2024-13-45")
+        assert exc.value.status_code == 400
+        assert exc.value.detail == "Invalid date format. Use YYYY-MM-DD"
+
+    def test_does_not_validate_ordering(self):
+        start, end = parse_date_range("2024-05-31", "2024-05-01")
+        assert start == datetime(2024, 5, 31)
+        assert end == datetime(2024, 5, 2)
+
+    def test_max_end_date_is_capped(self):
+        assert parse_date_range(None, "9999-12-31") == (None, datetime.max)
+
+    def test_max_both_dates_are_capped(self):
+        assert parse_date_range("9999-12-31", "9999-12-31") == (
+            datetime(9999, 12, 31),
+            datetime.max,
+        )
+
+    def test_min_end_date_keeps_its_own_day(self):
+        assert parse_date_range(None, "0001-01-01") == (
+            None,
+            datetime(1, 1, 2),
+        )
+
+
+class TestParseDay:
+    def test_valid_date(self):
+        assert parse_day("2024-05-01") == date(2024, 5, 1)
+
+    def test_invalid_raises_400(self):
+        with pytest.raises(HTTPException) as exc:
+            parse_day("abc")
+        assert exc.value.status_code == 400
+        assert exc.value.detail == "Invalid date format. Use YYYY-MM-DD"
+
+
+class TestEndOfDay:
+    def test_returns_midnight_of_next_day(self):
+        assert end_of_day(date(2024, 5, 1)) == datetime(2024, 5, 2)
+
+    def test_max_date_is_capped_instead_of_overflowing(self):
+        assert end_of_day(date.max) == datetime.max
+
+    def test_min_date_advances_normally(self):
+        assert end_of_day(date.min) == datetime(1, 1, 2)
 
 
 # ── Endpoint tests: products ───────────────────────────────────────────────

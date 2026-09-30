@@ -8,6 +8,7 @@ vista del negocio de Toperwereros. Está separada en dominios:
 | [Roles y permisos](roles-permissions.md) | Quién puede hacer qué |
 | [Productos](products.md) | Catálogo, búsqueda, stock, imágenes |
 | [Ventas (POS)](sales-pos.md) | Cobro de ventas y descuento de stock |
+| [Panel (dashboard)](dashboard.md) | Métricas de la tienda por periodo (admin) |
 | [Clientes](customers.md) | Registro y búsqueda de clientes |
 | [Apartados](layaways-apartados.md) | Enganche, abonos, liquidación, cancelación |
 | [Catálogo PDF](catalog-pdf.md) | Impresión del catálogo semanal |

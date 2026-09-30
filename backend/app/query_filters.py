@@ -26,11 +26,14 @@ Supports:
 - Projection via ``modo=basico|detallado`` and ``campos=a,b,c`` (comma
   separated).  When used, rows are returned as plain dicts with only the
   requested fields; otherwise routers keep their existing typed responses.
+- Optional ``start_date``/``end_date`` windows via ``parse_date_range`` /
+  ``parse_day`` / ``end_of_day``, whose arithmetic is capped at ``date.min`` and
+  ``datetime.max`` so extreme dates never overflow.
 """
 
 import logging
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -317,6 +320,79 @@ def project_rows(rows: list[Any], projection: Projection) -> list[dict[str, Any]
 def json_response(payload: Any) -> JSONResponse:
     """Build a JSON response with proper Decimal/datetime encoding."""
     return JSONResponse(content=jsonable_encoder(payload))
+
+
+def parse_day(raw: str) -> date:
+    """Parse a ``YYYY-MM-DD`` string into a calendar date.
+
+    Args:
+        raw: The date string to parse.
+
+    Returns:
+        The parsed calendar date.
+
+    Raises:
+        HTTPException: 400 if ``raw`` is not a valid ``YYYY-MM-DD`` string.
+    """
+
+    try:
+        return date.fromisoformat(raw)
+    except ValueError as exc:
+        raise HTTPException(400, "Invalid date format. Use YYYY-MM-DD") from exc
+
+
+def end_of_day(day: date) -> datetime:
+    """Return the exclusive end of ``day``, capped at ``datetime.max``.
+
+    Midnight of the following day keeps ``created_at < end`` filters inclusive
+    of ``day``.  The cap avoids the ``OverflowError`` that adding a day to
+    ``date.max`` would raise, so ``9999-12-31`` still covers its whole day.
+
+    Args:
+        day: The calendar day to close.
+
+    Returns:
+        Midnight of the next day, or ``datetime.max`` when that instant is not
+        representable.
+    """
+
+    if day >= date.max:
+        return datetime.max
+    return datetime.combine(day, time.min) + timedelta(days=1)
+
+
+def parse_date_range(
+    start_date: str | None, end_date: str | None
+) -> tuple[datetime | None, datetime | None]:
+    """Resolve an inclusive ``start_date``/``end_date`` pair to a half-open range.
+
+    The returned pair can be used directly as ``created_at >= start`` and
+    ``created_at < end`` so the whole ``end_date`` day is included.  The ``end``
+    side is capped at ``datetime.max``, so an extreme ``end_date`` (e.g.
+    ``9999-12-31``) still covers its whole day instead of overflowing.
+
+    Args:
+        start_date: Inclusive start date as ``YYYY-MM-DD``, or None.
+        end_date: Inclusive end date as ``YYYY-MM-DD``, or None.
+
+    Returns:
+        A ``(start, end)`` tuple of midnight datetimes where ``start`` is the
+        first instant of ``start_date`` and ``end`` is midnight of the day
+        after ``end_date``; each side is None when its input is None.  Order is
+        not validated here.
+
+    Raises:
+        HTTPException: 400 if either date is not a valid ``YYYY-MM-DD`` string.
+    """
+
+    def midnight(raw: str, *, exclusive: bool = False) -> datetime:
+        """Return midnight of the parsed day, or its capped exclusive end."""
+        day = parse_day(raw)
+        return end_of_day(day) if exclusive else datetime.combine(day, time.min)
+
+    start = midnight(start_date) if start_date else None
+    end = midnight(end_date, exclusive=True) if end_date else None
+    return start, end
 
 
 def resolve_pagination(

@@ -32,6 +32,10 @@ TRANSLATIONS = {
     "Invalid image path": "Ruta de imagen inválida",
     # app/query_filters.py
     "The 'modo' parameter must be 'basico' or 'detallado'": "El parámetro modo debe ser 'basico' o 'detallado'",
+    "Invalid date format. Use YYYY-MM-DD": "Formato de fecha inválido. Use YYYY-MM-DD",
+    # app/routers/dashboard.py
+    "start_date must be before or equal to end_date": "start_date debe ser menor o igual que end_date",
+    "The requested date range is too wide (max 365 days)": "El rango de fechas solicitado es demasiado amplio (máx 365 días)",
     # app/routers/auth.py
     "Incorrect username or password": "Usuario o contraseña incorrectos",
     "Inactive user": "Usuario inactivo",
@@ -146,6 +150,8 @@ PATTERNS = [
      "El filtro {0} requiere al menos un valor"),
     (re.compile(r"^Unknown filter parameter: (.+)$"),
      "Parámetro de filtro desconocido: {0}"),
+    (re.compile(r"^Unknown category: (.+)$"),
+     "Categoría desconocida: {0}"),
     (re.compile(r"^The operator '(.+?)' only applies to text fields$"),
      "El operador '{0}' solo aplica a campos de texto"),
     (re.compile(r"^Unknown filter operator: (.+)$"),

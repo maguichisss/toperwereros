@@ -1,7 +1,6 @@
 """Sales endpoints — create, list, and retrieve sales with stock validation."""
 
 import logging
-from datetime import datetime, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -19,6 +18,7 @@ from app.query_filters import (
     apply_filters,
     fetch_page,
     json_response,
+    parse_date_range,
     parse_filters,
     parse_projection,
     project_rows,
@@ -101,21 +101,21 @@ def list_sales(
         SaleListResponse with ``sales`` list and ``total`` count.
 
     Raises:
+        HTTPException: 400 if ``start_date``/``end_date`` is not YYYY-MM-DD.
         HTTPException: 500 on unexpected database errors.
     """
 
     params = {k: v for k, v in request.query_params.multi_items()}
     parsed = parse_filters(params, SALE_FIELDS)
     projection = parse_projection(modo, campos, SALE_FIELDS, SALE_BASIC)
+    range_start, range_end = parse_date_range(start_date, end_date)
 
     try:
         stmt = db.query(Sale)
-        if start_date:
-            dt = datetime.fromisoformat(start_date)
-            stmt = stmt.where(Sale.created_at >= dt)
-        if end_date:
-            dt = datetime.fromisoformat(end_date) + timedelta(days=1)
-            stmt = stmt.where(Sale.created_at < dt)
+        if range_start is not None:
+            stmt = stmt.where(Sale.created_at >= range_start)
+        if range_end is not None:
+            stmt = stmt.where(Sale.created_at < range_end)
         stmt = apply_filters(stmt, parsed)
         offset, limit_count = resolve_pagination(
             skip=skip, limit=limit, page=page, per_page=per_page

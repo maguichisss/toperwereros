@@ -57,8 +57,8 @@
 </div>
 
 <div class="grid">
-<div class="stat"><div class="num">48</div><div class="label">Endpoints</div></div>
-<div class="stat"><div class="num">10</div><div class="label">Modules</div></div>
+<div class="stat"><div class="num">49</div><div class="label">Endpoints</div></div>
+<div class="stat"><div class="num">11</div><div class="label">Modules</div></div>
 <div class="stat"><div class="num">3</div><div class="label">Roles</div></div>
 <div class="stat"><div class="num">21</div><div class="label">Permissions</div></div>
 </div>
@@ -263,26 +263,26 @@ matched by a <code>.*</code> parent (e.g. a role holding <code>product.*</code> 
 <a href="../backend/tests/test_route_permissions.py"><code>test_route_permissions.py</code></a>.</p>
 <pre><code class="language-text">Permission Coverage Report
 ==================================================
-Total routes analyzed:    48
+Total routes analyzed:    49
   Public:                 2
-  With permission:        39
+  With permission:        40
   Authenticated only:     5
   (allowlisted):          5
   (violations):           0
 
 Permissions:
-  In inventory (declared ∪ explicit): 22
-  Declared on routes:                 22
+  In inventory (declared ∪ explicit): 23
+  Declared on routes:                 23
   Undefined (not in inventory):       0
   Truly unused:                       0
-  Admin-only (wildcard):              7
+  Admin-only (wildcard):              8
 
 Coverage Tiers:
   ✅ Explicitly assigned:    15   (explicitly given to employee/viewer)
-  🔑 Admin-only (wildcard):   7   (only admin reaches them)
+  🔑 Admin-only (wildcard):   8   (only admin reaches them)
   ❌ Truly unused:            0   (not declared anywhere)
 
-Total: 22 = 15 + 7 + 0
+Total: 23 = 15 + 8 + 0
 </code></pre>
 <h2>Endpoint Reference</h2>
 <h3>Auth -- <code>/api/auth</code></h3>
@@ -675,6 +675,25 @@ Total: 22 = 15 + 7 + 0
 <td><code>/api/layaways/{layaway_id}/payments</code></td>
 <td><code>apartado.edit</code></td>
 <td>Add a payment to an active layaway. Amount cannot exceed the outstanding balance. Automatically completes when balance reaches $0.</td>
+</tr>
+</tbody>
+</table>
+<h3>Dashboard -- <code>/api/dashboard</code></h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Permission</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/dashboard</code></td>
+<td><code>dashboard.view</code></td>
+<td>Aggregated store metrics for a period: sales, daily series, top products, category split, layaways, customers and inventory. Optional start_date/end_date (YYYY-MM-DD, inclusive, at most 365 days); dias sets the default window; top sizes the product rankings; category filters the sales, series, top products and inventory blocks.</td>
 </tr>
 </tbody>
 </table>

@@ -133,6 +133,10 @@ class Sale(Base):
     created_by: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
 
+    __table_args__ = (
+        Index("ix_sales_created_at", "created_at"),
+    )
+
     items: Mapped[list["SaleItem"]] = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
     creator: Mapped[Optional["User"]] = relationship("User")
 
@@ -147,6 +151,10 @@ class SaleItem(Base):
     product_id: Mapped[int] = mapped_column(Integer, ForeignKey("products.id"), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+
+    __table_args__ = (
+        Index("ix_sale_items_product_id", "product_id"),
+    )
 
     sale: Mapped["Sale"] = relationship("Sale", back_populates="items")
     product: Mapped["Product"] = relationship("Product")
@@ -182,6 +190,10 @@ class Layaway(Base):
     notes: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        Index("ix_layaways_status", "status"),
+    )
 
     customer: Mapped["Customer"] = relationship("Customer")
     items: Mapped[list["LayawayItem"]] = relationship("LayawayItem", back_populates="layaway", cascade="all, delete-orphan")

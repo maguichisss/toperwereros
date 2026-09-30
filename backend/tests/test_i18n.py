@@ -72,6 +72,28 @@ class TestTranslate:
             "Ya existe un producto con ese código: 'ABC'"
         )
 
+    def test_invalid_date_format(self):
+        assert i18n.translate("Invalid date format. Use YYYY-MM-DD", "es") == (
+            "Formato de fecha inválido. Use YYYY-MM-DD"
+        )
+
+    def test_inverted_date_range(self):
+        msg = "start_date must be before or equal to end_date"
+        assert i18n.translate(msg, "es") == (
+            "start_date debe ser menor o igual que end_date"
+        )
+
+    def test_unknown_category(self):
+        assert i18n.translate("Unknown category: Zapatos", "es") == (
+            "Categoría desconocida: Zapatos"
+        )
+
+    def test_date_range_too_wide(self):
+        msg = "The requested date range is too wide (max 365 days)"
+        assert i18n.translate(msg, "es") == (
+            "El rango de fechas solicitado es demasiado amplio (máx 365 días)"
+        )
+
     def test_unknown_falls_back_to_english(self):
         assert i18n.translate("Something completely new", "es") == "Something completely new"
 
@@ -163,6 +185,9 @@ class TestShape:
     def test_stock_shape_is_covered(self):
         parts = ["Insufficient stock for '", "': ", " available, ", " requested"]
         assert i18n.shape_covered(parts)
+
+    def test_unknown_category_shape_is_covered(self):
+        assert i18n.shape_covered(["Unknown category: ", ""])
 
     def test_unregistered_shape_is_not_covered(self):
         assert not i18n.shape_covered(["Something completely new: ", " broken"])

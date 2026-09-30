@@ -469,3 +469,89 @@ class LayawayItemUpdate(BaseModel):
         populate_by_name=True,
     )
     quantity: int = Field(ge=1)
+
+
+class DashboardParams(BaseModel):
+    """Resolved dashboard window and filter options echoed back to the client."""
+
+    dias: int
+    top: int
+    category: str | None = None
+    start_date: str
+    end_date: str
+
+
+class SalesKpis(BaseModel):
+    """Aggregated sales totals for the dashboard period."""
+
+    revenue: Decimal
+    sales_count: int
+    avg_ticket: Decimal
+    units_sold: int
+
+
+class DailyPoint(BaseModel):
+    """One day of the dashboard sales series, with zeros for days without sales."""
+
+    date: str
+    revenue: Decimal
+    sales_count: int
+
+
+class ProductRank(BaseModel):
+    """A product entry in a dashboard ranking, with units and revenue."""
+
+    product_id: int
+    code: str
+    name: str
+    units: int
+    revenue: Decimal
+
+
+class CategoryRank(BaseModel):
+    """Revenue and units attributed to one category."""
+
+    category: str
+    revenue: Decimal
+    units: int
+
+
+class LayawayKpis(BaseModel):
+    """Layaway (apartado) totals: open plans, balances, deposits and new plans."""
+
+    active_count: int
+    outstanding_balance: Decimal
+    deposits: Decimal
+    new_count: int
+
+
+class CustomerKpis(BaseModel):
+    """Customer totals: size of the base, new records and layaway holders."""
+
+    total: int
+    new_count: int
+    with_active_layaway: int
+
+
+class InventoryKpis(BaseModel):
+    """Catalog inventory totals including stock alerts and value at sale price."""
+
+    sku_count: int
+    units: int
+    out_of_stock: int
+    low_stock: int
+    catalog_value: Decimal
+
+
+class DashboardSummary(BaseModel):
+    """Full dashboard payload: resolved params plus every metric block."""
+
+    params: DashboardParams
+    sales: SalesKpis
+    daily: list[DailyPoint]
+    top_products: list[ProductRank]
+    top_products_by_revenue: list[ProductRank]
+    category_breakdown: list[CategoryRank]
+    layaways: LayawayKpis
+    customers: CustomerKpis
+    inventory: InventoryKpis

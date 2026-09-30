@@ -13,7 +13,7 @@ categories, colors, image upload, PDF catalog generation, sales (POS),
 customers, and layaways (apartados). Every endpoint except `POST /api/auth/login`
 requires a JWT Bearer token. Response/error messages are in Spanish.
 
-<!-- API-META: {"endpoints": 48, "modules": 10, "roles": 3, "permissions": 21} -->
+<!-- API-META: {"endpoints": 49, "modules": 11, "roles": 3, "permissions": 21} -->
 
 ## Authentication
 
@@ -87,26 +87,26 @@ Computed from the live routes and `ROLE_PERMISSIONS`; enforced by
 ```text
 Permission Coverage Report
 ==================================================
-Total routes analyzed:    48
+Total routes analyzed:    49
   Public:                 2
-  With permission:        39
+  With permission:        40
   Authenticated only:     5
   (allowlisted):          5
   (violations):           0
 
 Permissions:
-  In inventory (declared ∪ explicit): 22
-  Declared on routes:                 22
+  In inventory (declared ∪ explicit): 23
+  Declared on routes:                 23
   Undefined (not in inventory):       0
   Truly unused:                       0
-  Admin-only (wildcard):              7
+  Admin-only (wildcard):              8
 
 Coverage Tiers:
   ✅ Explicitly assigned:    15   (explicitly given to employee/viewer)
-  🔑 Admin-only (wildcard):   7   (only admin reaches them)
+  🔑 Admin-only (wildcard):   8   (only admin reaches them)
   ❌ Truly unused:            0   (not declared anywhere)
 
-Total: 22 = 15 + 7 + 0
+Total: 23 = 15 + 8 + 0
 ```
 
 ## Endpoint Reference
@@ -201,6 +201,12 @@ Total: 22 = 15 + 7 + 0
 | DELETE | `/api/layaways/{layaway_id}/items/{item_id}` | `apartado.edit` | Remove an item from an active layaway. Stock is restored and total/balance recalculated. Must keep at least 1 item. |
 | PUT | `/api/layaways/{layaway_id}/items/{item_id}` | `apartado.edit` | Change the quantity of an item in an active layaway. Stock is delta-adjusted and total/balance recalculated. |
 | POST | `/api/layaways/{layaway_id}/payments` | `apartado.edit` | Add a payment to an active layaway. Amount cannot exceed the outstanding balance. Automatically completes when balance reaches $0. |
+
+### Dashboard -- `/api/dashboard`
+
+| Method | Path | Permission | Description |
+| --- | --- | --- | --- |
+| GET | `/api/dashboard` | `dashboard.view` | Aggregated store metrics for a period: sales, daily series, top products, category split, layaways, customers and inventory. Optional start_date/end_date (YYYY-MM-DD, inclusive, at most 365 days); dias sets the default window; top sizes the product rankings; category filters the sales, series, top products and inventory blocks. |
 
 
 ## Query DSL (list endpoints)

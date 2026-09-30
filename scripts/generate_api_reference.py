@@ -100,6 +100,7 @@ def collect_routes() -> List[Dict[str, Any]]:
         "/api/sales": 6,
         "/api/customers": 7,
         "/api/layaways": 8,
+        "/api/dashboard": 9,
     }
     def sort_key(r):
         prefix = next((p for p in tag_order if r["path"].startswith(p)), "zzz")
@@ -130,11 +131,13 @@ def group_by_tag(routes: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]
             tag = "Customers"
         elif r["path"].startswith("/api/layaways"):
             tag = "Layaways"
+        elif r["path"].startswith("/api/dashboard"):
+            tag = "Dashboard"
         else:
             tag = "Other"
         groups.setdefault(tag, []).append(r)
     tag_order = ["Auth", "Products", "Categories", "Colors", "Upload",
-                 "Catalog", "Sales", "Customers", "Layaways", "Other"]
+                 "Catalog", "Sales", "Customers", "Layaways", "Dashboard", "Other"]
     return {tag: groups[tag] for tag in tag_order if tag in groups}
 
 
@@ -418,7 +421,7 @@ def build_markdown() -> str:
 
     section_order = [
         "Auth", "Products", "Categories", "Colors", "Upload",
-        "Catalog", "Sales", "Customers", "Layaways",
+        "Catalog", "Sales", "Customers", "Layaways", "Dashboard",
     ]
     for tag in section_order:
         if tag not in groups:
@@ -434,6 +437,7 @@ def build_markdown() -> str:
             "Sales": "Sales -- `/api/sales`",
             "Customers": "Customers -- `/api/customers`",
             "Layaways": "Layaways (apartados) -- `/api/layaways`",
+            "Dashboard": "Dashboard -- `/api/dashboard`",
         }.get(tag, tag)
         parts.append(f"### {tag_display}")
         parts.append("")
