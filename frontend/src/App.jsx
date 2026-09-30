@@ -13,7 +13,7 @@ import { CartIcon, LogoutIcon, UserIcon } from './components/icons.jsx'
 
 const TABS = [
   { key: 'productos', label: 'Productos' },
-  { key: 'panel', label: 'Panel' },
+  { key: 'dashboard', label: 'Dashboard' },
   { key: 'catalogo', label: 'Catálogo' },
   { key: 'apartados', label: 'Apartados' },
   { key: 'management', label: 'Administración' },
@@ -22,7 +22,7 @@ const TABS = [
 
 const TAB_TITLES = {
   productos: 'Productos',
-  panel: 'Panel',
+  dashboard: 'Dashboard',
   catalogo: 'Catálogo',
   apartados: 'Apartados',
   management: 'Administración',
@@ -173,7 +173,7 @@ function AppContent() {
   }
 
   const visibleTabs = TABS.filter(t => {
-    if (t.key === 'panel') return can('dashboard.view')
+    if (t.key === 'dashboard') return can('dashboard.view')
     if (t.key === 'management') return can('user.manage') || can('customer.create')
     return true
   })
@@ -234,7 +234,7 @@ function AppContent() {
       <main className="container">
         <Suspense fallback={<p className="page-loading">Cargando…</p>}>
           {tab === 'productos' && <ProductList />}
-          {tab === 'panel' && can('dashboard.view') && <Dashboard />}
+          {tab === 'dashboard' && can('dashboard.view') && <Dashboard />}
           {tab === 'catalogo' && can('product.view') && <CatalogExportPage />}
           {tab === 'apartados' && <LayawayView initialMode={createMode ? 'create' : undefined} />}
           {tab === 'management' && <ManagementPage defaultSubTab={managementSubTab} onSubTabHandled={() => setManagementSubTab(null)} />}
