@@ -213,6 +213,19 @@ export const salesApi = {
   get: (id) => request(`/sales/${id}`),
 }
 
+export const dashboardApi = {
+  summary: ({ startDate, endDate, dias, top, category } = {}) => {
+    const qs = toQueryString({
+      start_date: startDate,
+      end_date: endDate,
+      dias,
+      top,
+      category,
+    }).toString()
+    return request(withQs('/dashboard', qs))
+  },
+}
+
 export const customersApi = {
   list: (qOrObj = {}) => {
     const { q, filters } = typeof qOrObj === 'string' ? { q: qOrObj } : qOrObj

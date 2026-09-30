@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import { CartProvider, useCart } from './context/CartContext.jsx'
 import LoginPage from './components/LoginPage.jsx'
 const ProductList = lazy(() => import('./components/ProductList.jsx'))
+const Dashboard = lazy(() => import('./components/Dashboard.jsx'))
 const CatalogExportPage = lazy(() => import('./components/CatalogExportPage.jsx'))
 const LayawayView = lazy(() => import('./components/LayawayView.jsx'))
 const ProfilePage = lazy(() => import('./components/ProfilePage.jsx'))
@@ -12,6 +13,7 @@ import { CartIcon, LogoutIcon, UserIcon } from './components/icons.jsx'
 
 const TABS = [
   { key: 'productos', label: 'Productos' },
+  { key: 'panel', label: 'Panel' },
   { key: 'catalogo', label: 'Catálogo' },
   { key: 'apartados', label: 'Apartados' },
   { key: 'management', label: 'Administración' },
@@ -20,6 +22,7 @@ const TABS = [
 
 const TAB_TITLES = {
   productos: 'Productos',
+  panel: 'Panel',
   catalogo: 'Catálogo',
   apartados: 'Apartados',
   management: 'Administración',
@@ -170,6 +173,7 @@ function AppContent() {
   }
 
   const visibleTabs = TABS.filter(t => {
+    if (t.key === 'panel') return can('dashboard.view')
     if (t.key === 'management') return can('user.manage') || can('customer.create')
     return true
   })
@@ -230,6 +234,7 @@ function AppContent() {
       <main className="container">
         <Suspense fallback={<p className="page-loading">Cargando…</p>}>
           {tab === 'productos' && <ProductList />}
+          {tab === 'panel' && can('dashboard.view') && <Dashboard />}
           {tab === 'catalogo' && can('product.view') && <CatalogExportPage />}
           {tab === 'apartados' && <LayawayView initialMode={createMode ? 'create' : undefined} />}
           {tab === 'management' && <ManagementPage defaultSubTab={managementSubTab} onSubTabHandled={() => setManagementSubTab(null)} />}
