@@ -247,7 +247,7 @@ def _cover_phone_display(number: str) -> str:
 def _register_fonts(pdf: FPDF) -> None:
     """Register the bundled DejaVu TrueType families on a fresh PDF instance."""
     for (family, style), fname in _FONT_FILES.items():
-        pdf.add_font(family, style, os.path.join(_FONT_DIR, fname), uni=True)
+        pdf.add_font(family, style, os.path.join(_FONT_DIR, fname))
 
 
 def css_color(color: tuple[int, int, int]) -> str:

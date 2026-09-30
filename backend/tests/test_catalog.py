@@ -614,6 +614,7 @@ class TestCardWhatsApp:
         img = Image.open(io.BytesIO(white_png))
         assert img.size == (256, 256)
         assert img.mode == "RGBA"
-        pixels = list(img.getdata())
-        colored = {(r, g, b) for r, g, b, a in pixels if a > 60}
+        colors = img.getcolors(maxcolors=1 << 24)
+        assert colors is not None
+        colored = {(r, g, b) for _, (r, g, b, a) in colors if a > 60}
         assert colored and colored == {(255, 255, 255)}
