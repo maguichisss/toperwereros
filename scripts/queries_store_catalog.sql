@@ -110,3 +110,10 @@ LEFT JOIN category_counts cc ON cc.category = pp.category
 ORDER BY category_count DESC, pp.category ASC, pp.color ASC, pp.stock ASC;
 
 
+select p.name, p.code, p.price, s.sale_id, v.created_at
+from products p, sale_items s, sales v
+where p.id=s.product_id
+and s.sale_id=v.id
+and p.name like '%wist%'
+order by v.created_at
+;
