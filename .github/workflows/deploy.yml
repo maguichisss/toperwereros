@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r backend/requirements-dev.txt
 
+      - name: Validate agent configuration
+        run: python .opencode/bin/validate-agents.py
+
       - name: Run tests
         run: cd backend && pytest tests/ -q
 
