@@ -137,7 +137,10 @@ red piden confirmación.
 
 - `bash` global: `"*": ask` + allowlist de lectura (`cat`, `grep`, `ls`…); guards
   `*.env*` y `*secrets/*` → `ask`.
-- `build` conserva `bash: allow` (orquestación); los subagentes heredan el baseline.
+- `build` conserva `bash` allow (orquestación) pero pide confirmación para deploy;
+  los subagentes heredan el baseline.
+- Deploy Pi/Prod: `scripts/deploy*`, compose Pi/Prod, `docker push` y
+  `gcloud … deploy`/`builds submit` requieren confirmación (`ask`).
 - Dev agents: `git` de lectura + `add`/`commit` allow; `push`/`reset`/`clean`/
   `checkout` quedan en `ask`.
 - `bash`/`sh`/`python` acotados a `scripts/*`; `-c` y comandos sueltos → `ask`.
@@ -150,6 +153,17 @@ red piden confirmación.
   `small_model` = `opencode/mimo-v2.6-flash-free`.
 - `.opencode/` está versionado (solo dependencias ignoradas). Validar con
   `python .opencode/bin/validate-agents.py` (también corre en CI).
+
+## Deploy (Pi/Prod)
+
+- GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) solo
+  corre tests, validador de agentes y docs. **No despliega.**
+- Nunca desplegar a Pi ni a Prod sin instrucción explícita del usuario:
+  `scripts/deploy*.sh`, `docker compose -f docker-compose.pi.yml|prod.yml`,
+  `docker push`, `gcloud run deploy`, `gcloud builds submit` → siempre `ask`.
+- Deploy manual: `scripts/deploy.sh` (GCP) o
+  `docker compose -f docker-compose.pi.yml up -d --build` (Pi); verificar
+  `/api/health` después.
 
 ## Capas de entorno
 

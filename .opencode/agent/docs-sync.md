@@ -20,6 +20,7 @@ permission:
     "git show*": allow
     "bash*": ask
     "bash scripts/*": allow
+    "*scripts/deploy*": ask
     "python*": ask
     "python scripts/*": allow
     "grep*": allow

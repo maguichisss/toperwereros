@@ -28,6 +28,13 @@ permission:
     "docker compose rm*": ask
     "docker compose down*": ask
     "docker system prune*": ask
+    "*scripts/deploy*": ask
+    "docker push*": ask
+    "docker stack deploy*": ask
+    "docker compose *docker-compose.pi.yml*": ask
+    "docker compose *docker-compose.prod.yml*": ask
+    "*COMPOSE_FILE=docker-compose.pi.yml docker compose*": ask
+    "*COMPOSE_FILE=docker-compose.prod.yml docker compose*": ask
     "psql*": allow
     "pg_dump*": allow
     "pg_restore*": allow

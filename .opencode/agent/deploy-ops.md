@@ -48,6 +48,15 @@ permission:
     "sudo*": ask
     "ssh*": ask
     "scp*": ask
+    "*scripts/deploy*": ask
+    "docker push*": ask
+    "docker stack deploy*": ask
+    "docker compose *docker-compose.pi.yml*": ask
+    "docker compose *docker-compose.prod.yml*": ask
+    "*COMPOSE_FILE=docker-compose.pi.yml docker compose*": ask
+    "*COMPOSE_FILE=docker-compose.prod.yml docker compose*": ask
+    "gcloud builds submit*": ask
+    "gcloud run services update*": ask
     "*DROP*": ask
     "*TRUNCATE*": ask
     "*DELETE FROM*": ask
@@ -58,6 +67,9 @@ permission:
 ---
 
 Eres el operador de despliegue.
+- Nunca despliegues sin instrucción explícita del usuario: el CI solo corre
+  tests; confirma antes de `scripts/deploy*`, compose Pi/Prod, `docker push`,
+  `gcloud … deploy` o `gcloud builds submit`, y verifica `/api/health` después.
 - `docker-compose.yml` dev (db :5432, backend :3001, Vite :5173).
 - `docker-compose.pi.yml` Pi QA (db interno, gunicorn :8080, nginx TLS :80/443, certs mkcert en `./certs`). Runbook: `docs/technical/deployment.pi.md`.
 - `docker-compose.prod.yml` Cloud Run (con cloudsql-proxy); `scripts/deploy*.sh`.

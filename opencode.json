@@ -19,6 +19,16 @@
       "git diff*": "allow",
       "git log*": "allow",
       "git show*": "allow",
+      "*scripts/deploy*": "ask",
+      "docker push*": "ask",
+      "docker stack deploy*": "ask",
+      "docker compose *docker-compose.pi.yml*": "ask",
+      "docker compose *docker-compose.prod.yml*": "ask",
+      "*COMPOSE_FILE=docker-compose.pi.yml docker compose*": "ask",
+      "*COMPOSE_FILE=docker-compose.prod.yml docker compose*": "ask",
+      "gcloud run deploy*": "ask",
+      "gcloud builds submit*": "ask",
+      "gcloud * deploy*": "ask",
       "*.env*": "ask",
       "*secrets/*": "ask"
     },
@@ -28,7 +38,21 @@
   "agent": {
     "build": {
       "permission": {
-        "bash": "allow",
+        "bash": {
+          "*": "allow",
+          "*scripts/deploy*": "ask",
+          "docker push*": "ask",
+          "docker stack deploy*": "ask",
+          "docker compose *docker-compose.pi.yml*": "ask",
+          "docker compose *docker-compose.prod.yml*": "ask",
+          "*COMPOSE_FILE=docker-compose.pi.yml docker compose*": "ask",
+          "*COMPOSE_FILE=docker-compose.prod.yml docker compose*": "ask",
+          "gcloud run deploy*": "ask",
+          "gcloud builds submit*": "ask",
+          "gcloud * deploy*": "ask",
+          "*.env*": "ask",
+          "*secrets/*": "ask"
+        },
         "webfetch": "allow",
         "websearch": "allow"
       }

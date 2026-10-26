@@ -7,7 +7,17 @@ steps: 30
 color: "#16a34a"
 permission:
   edit: deny
-  bash: allow
+  bash:
+    "*": ask
+    "git*": ask
+    "git status*": allow
+    "git diff*": allow
+    "git log*": allow
+    "git show*": allow
+    "git add*": allow
+    "git commit*": allow
+    "git rev-parse*": allow
+    "git ls-files*": allow
   task: deny
 ---
 
