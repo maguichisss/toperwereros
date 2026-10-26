@@ -128,6 +128,29 @@ los agentes — solo el(s) del área del cambio.
 - El commit real **solo** tras aprobación explícita con "daleee" (nunca auto-commitear).
 - La verificación de cierre sigue la sección «Verificación antes de cerrar un cambio».
 
+### Permisos de agentes
+
+La política vive en [`opencode.json`](opencode.json) (baseline global) y en el
+frontmatter de `.opencode/agent/*.md` (overrides por agente; en el merge gana el
+agente). Criterio: lectura y desarrollo sin prompts; destructivo, privilegiado y
+red piden confirmación.
+
+- `bash` global: `"*": ask` + allowlist de lectura (`cat`, `grep`, `ls`…); guards
+  `*.env*` y `*secrets/*` → `ask`.
+- `build` conserva `bash: allow` (orquestación); los subagentes heredan el baseline.
+- Dev agents: `git` de lectura + `add`/`commit` allow; `push`/`reset`/`clean`/
+  `checkout` quedan en `ask`.
+- `bash`/`sh`/`python` acotados a `scripts/*`; `-c` y comandos sueltos → `ask`.
+- `edit` role-aware: `.env*`/`secrets/**` deny (deploy-ops: `.env*` ask);
+  auth/config, migraciones y compose prod/CI según el dueño del área.
+- `webfetch`/`websearch`/`task` deny en agentes de solo lectura; `task` solo desde
+  dev agents hacia su dominio.
+- `steps`: 20 (dev/tester/docs/reviewer/security), 30 (db-helper/deploy-ops/commit).
+- Modelos: `frontend-dev`/`commit` en `opencode/deepseek-v4.1-flash-free`;
+  `small_model` = `opencode/mimo-v2.6-flash-free`.
+- `.opencode/` está versionado (solo dependencias ignoradas). Validar con
+  `python .opencode/bin/validate-agents.py` (también corre en CI).
+
 ## Capas de entorno
 
 - `./.env` raíz: solo interpolación de Docker Compose (la app NO la lee).
@@ -145,3 +168,4 @@ los agentes — solo el(s) del área del cambio.
 4. Cambios funcionales traen/ajustan tests.
 5. Seguridad: sin secretos en código/logs/commits; permisos coherentes con
    `ROLE_PERMISSIONS` y la matriz en `docs/api-reference.md`.
+6. Agentes: `python .opencode/bin/validate-agents.py` pasa (también en CI).
