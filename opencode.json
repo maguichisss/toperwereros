@@ -1,0 +1,37 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "small_model": "opencode/mimo-v2.6-flash-free",
+  "permission": {
+    "bash": {
+      "*": "ask",
+      "cat*": "allow",
+      "sed*": "allow",
+      "tail*": "allow",
+      "head*": "allow",
+      "sort*": "allow",
+      "wc*": "allow",
+      "ls*": "allow",
+      "diff*": "allow",
+      "find*": "allow",
+      "echo*": "allow",
+      "cd*": "allow",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git show*": "allow",
+      "*.env*": "ask",
+      "*secrets/*": "ask"
+    },
+    "webfetch": "ask",
+    "websearch": "ask"
+  },
+  "agent": {
+    "build": {
+      "permission": {
+        "bash": "allow",
+        "webfetch": "allow",
+        "websearch": "allow"
+      }
+    }
+  }
+}
