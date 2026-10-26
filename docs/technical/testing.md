@@ -57,11 +57,11 @@ every permission is enforced somewhere).
 
 ## CI
 
-[`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) runs a `test` job for every
-push (Python 3.13, cached pip): `pytest tests/ -q` **and** `bash scripts/generate_docs.sh --check`
-(with a throwaway `JWT_SECRET`, since `.env` is absent in CI). Only the *default branch* push
-triggers `build-and-deploy`, and only after tests pass — so the drift guards gate every
-production deploy.
+[`ci.yml`](../../.github/workflows/ci.yml) runs on every push to `main`, pull requests and
+manual dispatch: the agent-config validator, `pytest tests/ -q`,
+`bash scripts/generate_docs.sh --check` (with a throwaway `JWT_SECRET`, since `.env` is absent
+in CI) and `python scripts/check-doc-links.py`. CI has no GCP credentials and does not deploy;
+Pi and Cloud Run deploys are manual (see [deployment.md](deployment.md)).
 
 ## Notes on test speed & isolation
 

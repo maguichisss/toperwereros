@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      JWT_SECRET: test-secret-for-testing
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements-dev.txt
+
+      - name: Validate agent configuration
+        run: python .opencode/bin/validate-agents.py
+
+      - name: Run tests
+        run: cd backend && pytest tests/ -q
+
+      - name: Verify docs in sync with code
+        run: bash scripts/generate_docs.sh --check
+
+      - name: Check doc links
+        run: python scripts/check-doc-links.py

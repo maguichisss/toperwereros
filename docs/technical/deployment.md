@@ -146,9 +146,13 @@ Both default to [`docker-compose.yml`](../../docker-compose.yml) (`COMPOSE_FILE`
 
 ## CI
 
-[`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) drives the GCP pipeline (setup → build/push →
-deploy). Docker pushes from CI already gated behind conditions on that
-workflow; run sizes/args are defined inline there.
+GitHub Actions runs tests only ([`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)) on
+push to `main`, pull requests and manual dispatch: agent-config validation, `pytest tests/ -q`,
+`bash scripts/generate_docs.sh --check` and `python scripts/check-doc-links.py`. It has no GCP
+credentials and never deploys.
+
+Pi and Cloud Run deploys are manual and require explicit approval: [`scripts/deploy*.sh`](../../scripts)
+for GCP and `docker compose -f docker-compose.pi.yml up -d --build` for the Pi.
 
 ## Operational checklist (all envs)
 
