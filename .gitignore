@@ -6,6 +6,7 @@ frontend/dist-new/
 backend/uploads/
 backend/.env*
 .env*
+!backend/.env.example
 *.pem
 __pycache__/
 *.pyc
