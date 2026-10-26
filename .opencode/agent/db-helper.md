@@ -15,6 +15,7 @@ permission:
     "backend/app/auth.py": deny
     "backend/app/config.py": deny
     "backend/alembic/versions/**": ask
+  task: deny
   bash:
     "bash*": ask
     "bash scripts/*": allow

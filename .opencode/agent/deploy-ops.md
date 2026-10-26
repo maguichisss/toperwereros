@@ -18,6 +18,7 @@ permission:
   external_directory:
     "*": ask
     "~/.config/gcloud/**": allow
+  task: deny
   bash:
     "bash*": ask
     "bash scripts/*": allow

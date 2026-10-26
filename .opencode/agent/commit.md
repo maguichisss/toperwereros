@@ -8,6 +8,7 @@ color: "#16a34a"
 permission:
   edit: deny
   bash: allow
+  task: deny
 ---
 
 Eres el agente de commits de store-catalog. Tienes DOS fases, decididas por la
@@ -29,8 +30,8 @@ Nunca ejecutes `git add`/`git commit` ni edites archivos en esta fase.
    - **Otros** (docker/*, `.github`, etc.)
 3. Entrega TRES bloques:
    - **(1) Archivos a commitear** (staged + modified + untracked relevantes).
-   - **(2) No se commitearán + motivo**: `.opencode/` (gitignored, local-only),
-     `.env*`/`secrets/` (nunca), artefactos regenerados sin diff
+   - **(2) No se commitearán + motivo**: `.env*`/`secrets/` (nunca),
+     artefactos regenerados sin diff
      (`docs/api-reference.md`, `backend/docs.html`), staged previo no relacionado,
      y archivos ajenos a la tarea en curso.
    - **(3) Mensaje de commit propuesto**: inglés plano, SIN prefijos conventional,
